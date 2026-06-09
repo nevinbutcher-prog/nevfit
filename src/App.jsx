@@ -3,6 +3,8 @@ import { exerciseCatalog } from "./data/exerciseCatalog";
 import { routineDays } from "./data/routineDays";
 import { weekSchedule } from "./data/weekSchedule";
 
+const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
+
 const routineOptions = [
   { id: "day-a", label: "Day A" },
   { id: "day-b", label: "Day B" },
@@ -16,6 +18,46 @@ const getRoutineDay = (routineDayId) =>
 
 const getExercise = (exerciseId) =>
   exerciseCatalog.find((exercise) => exercise.id === exerciseId);
+
+const validRoutineDayIds = new Set(routineDays.map((day) => day.id));
+
+function isValidSchedule(value) {
+  return (
+    Array.isArray(value) &&
+    value.length === weekSchedule.length &&
+    value.every((day, index) => {
+      const defaultDay = weekSchedule[index];
+
+      return (
+        day &&
+        day.id === defaultDay.id &&
+        day.label === defaultDay.label &&
+        (day.routineDayId === null || validRoutineDayIds.has(day.routineDayId)) &&
+        typeof day.note === "string"
+      );
+    })
+  );
+}
+
+function loadStoredSchedule() {
+  try {
+    const storedSchedule = window.localStorage.getItem(SCHEDULE_STORAGE_KEY);
+
+    if (!storedSchedule) {
+      return weekSchedule;
+    }
+
+    const parsedSchedule = JSON.parse(storedSchedule);
+
+    return isValidSchedule(parsedSchedule) ? parsedSchedule : weekSchedule;
+  } catch {
+    return weekSchedule;
+  }
+}
+
+function persistSchedule(schedule) {
+  window.localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
+}
 
 function createWorkoutSession(scheduleDay, routineDay) {
   return {
@@ -37,17 +79,14 @@ function createWorkoutSession(scheduleDay, routineDay) {
 }
 
 function App() {
-  const [schedule, setSchedule] = useState(weekSchedule);
+  const [schedule, setSchedule] = useState(loadStoredSchedule);
   const [selectedDayId, setSelectedDayId] = useState(weekSchedule[0]?.id ?? null);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
-
-  function getSelectedScheduleDay() {
-    return schedule.find((day) => day.id === selectedDayId);
-  }
+  const [viewMode, setViewMode] = useState("planner");
 
   function assignRoutineToDay(dayId, routineDayId) {
-    setSchedule((currentSchedule) =>
-      currentSchedule.map((day) =>
+    setSchedule((currentSchedule) => {
+      const nextSchedule = currentSchedule.map((day) =>
         day.id === dayId
           ? {
               ...day,
@@ -55,16 +94,36 @@ function App() {
               note: routineDayId ? "" : "Rest",
             }
           : day,
-      ),
-    );
+      );
+
+      persistSchedule(nextSchedule);
+
+      return nextSchedule;
+    });
 
     if (!routineDayId && activeWorkoutSession?.scheduleDayId === dayId) {
       setActiveWorkoutSession(null);
+      setViewMode("planner");
     }
   }
 
   function openWorkout(scheduleDay, routineDay) {
-    setActiveWorkoutSession(createWorkoutSession(scheduleDay, routineDay));
+    setActiveWorkoutSession((currentSession) => {
+      if (
+        currentSession?.scheduleDayId === scheduleDay.id &&
+        currentSession?.routineDayId === routineDay.id
+      ) {
+        return currentSession;
+      }
+
+      return createWorkoutSession(scheduleDay, routineDay);
+    });
+    setViewMode("workout");
+  }
+
+  function closeWorkout() {
+    setActiveWorkoutSession(null);
+    setViewMode("planner");
   }
 
   function updateSetValue(exerciseId, setNumber, field, value) {
@@ -93,8 +152,6 @@ function App() {
     });
   }
 
-  const selectedDay = getSelectedScheduleDay();
-  const selectedRoutineDay = getRoutineDay(selectedDay?.routineDayId);
   const activeWorkoutDay = schedule.find(
     (day) => day.id === activeWorkoutSession?.scheduleDayId,
   );
@@ -108,87 +165,98 @@ function App() {
   return (
     <main className="min-h-screen bg-slate-950 p-4 text-white">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-6">
-          <h1 className="text-4xl font-bold">NevFit</h1>
-          <p className="text-slate-400 mt-1">This week&apos;s training plan</p>
-        </header>
+        {viewMode === "planner" ? (
+          <>
+            <header className="mb-6">
+              <h1 className="text-4xl font-bold">NevFit</h1>
+              <p className="mt-1 text-slate-400">This week&apos;s training plan</p>
+            </header>
 
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
-          {schedule.map((day) => {
-            const routineDay = getRoutineDay(day.routineDayId);
-            const isSelected = day.id === selectedDayId;
-
-            return (
-              <button
-                key={day.id}
-                type="button"
-                onClick={() => setSelectedDayId(day.id)}
-                className={`min-h-32 rounded-2xl border p-4 text-left transition ${
-                  isSelected
-                    ? "border-emerald-400 bg-slate-800 ring-2 ring-emerald-400/30"
-                    : "border-slate-800 bg-slate-900 hover:border-slate-600"
-                }`}
-              >
-                <h2 className="font-semibold text-slate-200">{day.label}</h2>
-
-                <p className="mt-4 text-lg font-bold">
-                  {routineDay?.name ?? "Rest"}
-                </p>
-
-                {day.note ? (
-                  <p className="mt-2 text-sm text-slate-400">{day.note}</p>
-                ) : null}
-              </button>
-            );
-          })}
-        </section>
-
-        {selectedDay ? (
-          <section className="mt-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-xl font-bold">Plan {selectedDay.label}</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  {selectedRoutineDay?.name ?? selectedDay.note ?? "Rest"}
-                </p>
-              </div>
-
-              {selectedRoutineDay ? (
-                <button
-                  type="button"
-                  onClick={() => openWorkout(selectedDay, selectedRoutineDay)}
-                  className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
-                >
-                  Open Workout
-                </button>
-              ) : null}
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {routineOptions.map((option) => {
-                const isAssigned = selectedDay.routineDayId === option.id;
+            <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+              {schedule.map((day) => {
+                const routineDay = getRoutineDay(day.routineDayId);
+                const isSelected = day.id === selectedDayId;
 
                 return (
-                  <button
-                    key={option.label}
-                    type="button"
-                    onClick={() => assignRoutineToDay(selectedDay.id, option.id)}
-                    className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                      isAssigned
-                        ? "border-emerald-400 bg-emerald-400 text-slate-950"
-                        : "border-slate-700 bg-slate-950 text-slate-200 hover:border-slate-500"
+                  <article
+                    key={day.id}
+                    className={`min-h-32 rounded-2xl border p-4 text-left transition ${
+                      isSelected
+                        ? "border-emerald-400 bg-slate-800 ring-2 ring-emerald-400/30"
+                        : "border-slate-800 bg-slate-900 hover:border-slate-600"
                     }`}
                   >
-                    {option.label}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedDayId((currentDayId) =>
+                          currentDayId === day.id ? null : day.id,
+                        )
+                      }
+                      className="block w-full text-left"
+                    >
+                      <h2 className="font-semibold text-slate-200">{day.label}</h2>
+
+                      <p className="mt-4 text-lg font-bold">
+                        {routineDay?.name ?? "Rest"}
+                      </p>
+
+                      {day.note ? (
+                        <p className="mt-2 text-sm text-slate-400">{day.note}</p>
+                      ) : null}
+                    </button>
+
+                    {isSelected ? (
+                      <div className="mt-4 border-t border-slate-700 pt-4">
+                        <div className="flex flex-wrap gap-2">
+                          {routineOptions.map((option) => {
+                            const isAssigned = day.routineDayId === option.id;
+
+                            return (
+                              <button
+                                key={option.label}
+                                type="button"
+                                onClick={() => assignRoutineToDay(day.id, option.id)}
+                                className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                                  isAssigned
+                                    ? "border-emerald-400 bg-emerald-400 text-slate-950"
+                                    : "border-slate-700 bg-slate-950 text-slate-200 hover:border-slate-500"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {routineDay ? (
+                          <button
+                            type="button"
+                            onClick={() => openWorkout(day, routineDay)}
+                            className="mt-4 w-full rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                          >
+                            Open Workout
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </article>
                 );
               })}
-            </div>
-          </section>
+            </section>
+          </>
         ) : null}
 
-        {activeWorkoutSession && activeWorkoutDay && activeRoutineDay ? (
+        {viewMode === "workout" && activeWorkoutSession && activeWorkoutDay && activeRoutineDay ? (
           <section className="mt-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <button
+              type="button"
+              onClick={() => setViewMode("planner")}
+              className="mb-4 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+            >
+              ← Back To Planner
+            </button>
+
             <div className="flex flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <h2 className="text-2xl font-bold">
@@ -203,7 +271,7 @@ function App() {
 
               <button
                 type="button"
-                onClick={() => setActiveWorkoutSession(null)}
+                onClick={closeWorkout}
                 className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
               >
                 Close Workout

@@ -6,6 +6,8 @@ import { weekSchedule } from "./data/weekSchedule";
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
 const DEFAULT_REST_SECONDS = 120;
+const workoutNumberInputClassName =
+  "min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
 
 const routineOptions = [
   { id: "day-a", label: "Day A" },
@@ -703,7 +705,7 @@ function App() {
                                 event.target.value,
                               )
                             }
-                            className="min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400"
+                            className={workoutNumberInputClassName}
                           />
                           <input
                             type="number"
@@ -719,7 +721,7 @@ function App() {
                                 event.target.value,
                               )
                             }
-                            className="min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400"
+                            className={workoutNumberInputClassName}
                           />
                         </div>
                       ))}

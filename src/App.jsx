@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { exerciseCatalog } from "./data/exerciseCatalog";
 import { routineDays } from "./data/routineDays";
 import { weekSchedule } from "./data/weekSchedule";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
+const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
 
 const routineOptions = [
   { id: "day-a", label: "Day A" },
@@ -59,6 +60,62 @@ function persistSchedule(schedule) {
   window.localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
 }
 
+function isValidCompletedWorkout(value) {
+  return (
+    value &&
+    typeof value.id === "string" &&
+    typeof value.completedAt === "string" &&
+    !Number.isNaN(Date.parse(value.completedAt)) &&
+    typeof value.scheduleDayId === "string" &&
+    typeof value.routineDayId === "string" &&
+    typeof value.routineDayName === "string" &&
+    Array.isArray(value.exercises) &&
+    value.exercises.every(
+      (exercise) =>
+        exercise &&
+        typeof exercise.exerciseId === "string" &&
+        typeof exercise.exerciseName === "string" &&
+        (typeof exercise.restSeconds === "number" ||
+          exercise.restSeconds === null) &&
+        Array.isArray(exercise.sets) &&
+        exercise.sets.every(
+          (set) =>
+            set &&
+            typeof set.setNumber === "number" &&
+            typeof set.weight === "string" &&
+            typeof set.reps === "string",
+        ),
+    )
+  );
+}
+
+function loadCompletedWorkouts() {
+  try {
+    const storedWorkouts = window.localStorage.getItem(
+      COMPLETED_WORKOUTS_STORAGE_KEY,
+    );
+
+    if (!storedWorkouts) {
+      return [];
+    }
+
+    const parsedWorkouts = JSON.parse(storedWorkouts);
+
+    return Array.isArray(parsedWorkouts)
+      ? parsedWorkouts.filter(isValidCompletedWorkout)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistCompletedWorkouts(completedWorkouts) {
+  window.localStorage.setItem(
+    COMPLETED_WORKOUTS_STORAGE_KEY,
+    JSON.stringify(completedWorkouts),
+  );
+}
+
 function createWorkoutSession(scheduleDay, routineDay) {
   return {
     scheduleDayId: scheduleDay.id,
@@ -78,11 +135,72 @@ function createWorkoutSession(scheduleDay, routineDay) {
   };
 }
 
+function createCompletedWorkoutRecord(workoutSession, routineDay) {
+  return {
+    id: `workout-${Date.now()}`,
+    completedAt: new Date().toISOString(),
+    scheduleDayId: workoutSession.scheduleDayId,
+    routineDayId: workoutSession.routineDayId,
+    routineDayName: routineDay.name,
+    exercises: workoutSession.exercises.map((sessionExercise) => {
+      const exercise = getExercise(sessionExercise.exerciseId);
+
+      return {
+        exerciseId: sessionExercise.exerciseId,
+        exerciseName: exercise?.name ?? "Unknown exercise",
+        restSeconds: sessionExercise.restSeconds ?? null,
+        sets: sessionExercise.sets.map((set) => ({
+          setNumber: set.setNumber,
+          weight: set.weight,
+          reps: set.reps,
+        })),
+      };
+    }),
+  };
+}
+
+function getPreviousExercisePerformance(exerciseId, completedWorkouts) {
+  return completedWorkouts.reduce((latestPerformance, completedWorkout) => {
+    const exercisePerformance = completedWorkout.exercises.find(
+      (exercise) => exercise.exerciseId === exerciseId,
+    );
+
+    if (!exercisePerformance) {
+      return latestPerformance;
+    }
+
+    if (
+      !latestPerformance ||
+      Date.parse(completedWorkout.completedAt) >
+        Date.parse(latestPerformance.completedAt)
+    ) {
+      return {
+        completedAt: completedWorkout.completedAt,
+        sets: exercisePerformance.sets,
+      };
+    }
+
+    return latestPerformance;
+  }, null);
+}
+
 function App() {
   const [schedule, setSchedule] = useState(loadStoredSchedule);
+  const [completedWorkouts, setCompletedWorkouts] = useState(loadCompletedWorkouts);
   const [selectedDayId, setSelectedDayId] = useState(weekSchedule[0]?.id ?? null);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
   const [viewMode, setViewMode] = useState("planner");
+  const [saveMessage, setSaveMessage] = useState("");
+
+  useEffect(() => {
+    if (!saveMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setSaveMessage(""), 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [saveMessage]);
 
   function assignRoutineToDay(dayId, routineDayId) {
     setSchedule((currentSchedule) => {
@@ -122,6 +240,28 @@ function App() {
   }
 
   function closeWorkout() {
+    setActiveWorkoutSession(null);
+    setViewMode("planner");
+  }
+
+  function saveWorkout() {
+    if (!activeWorkoutSession || !activeRoutineDay) {
+      return;
+    }
+
+    const completedWorkout = createCompletedWorkoutRecord(
+      activeWorkoutSession,
+      activeRoutineDay,
+    );
+
+    setCompletedWorkouts((currentWorkouts) => {
+      const nextWorkouts = [completedWorkout, ...currentWorkouts];
+
+      persistCompletedWorkouts(nextWorkouts);
+
+      return nextWorkouts;
+    });
+    setSaveMessage("Workout saved.");
     setActiveWorkoutSession(null);
     setViewMode("planner");
   }
@@ -171,6 +311,12 @@ function App() {
               <h1 className="text-4xl font-bold">NevFit</h1>
               <p className="mt-1 text-slate-400">This week&apos;s training plan</p>
             </header>
+
+            {saveMessage ? (
+              <p className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">
+                {saveMessage}
+              </p>
+            ) : null}
 
             <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
               {schedule.map((day) => {
@@ -269,18 +415,31 @@ function App() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={closeWorkout}
-                className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
-              >
-                Close Workout
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={saveWorkout}
+                  className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                >
+                  Save Workout
+                </button>
+                <button
+                  type="button"
+                  onClick={closeWorkout}
+                  className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                >
+                  Close Workout
+                </button>
+              </div>
             </div>
 
             <ul className="mt-4 grid gap-4 lg:grid-cols-2">
               {activeWorkoutSession.exercises.map((sessionExercise) => {
                 const exercise = getExercise(sessionExercise.exerciseId);
+                const previousPerformance = getPreviousExercisePerformance(
+                  sessionExercise.exerciseId,
+                  completedWorkouts,
+                );
 
                 return (
                   <li
@@ -296,6 +455,26 @@ function App() {
                         {sessionExercise.repRange}
                         {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
                       </p>
+                    </div>
+
+                    <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Previous Session
+                      </p>
+                      {previousPerformance ? (
+                        <ul className="mt-2 space-y-1 text-sm text-slate-300">
+                          {previousPerformance.sets.map((set) => (
+                            <li key={set.setNumber}>
+                              {set.weight ? `${set.weight}kg` : "-"} &times;{" "}
+                              {set.reps || "-"}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-slate-400">
+                          No previous session logged
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-4 space-y-2">

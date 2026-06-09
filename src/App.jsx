@@ -5,6 +5,7 @@ import { weekSchedule } from "./data/weekSchedule";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
+const DEFAULT_REST_SECONDS = 120;
 
 const routineOptions = [
   { id: "day-a", label: "Day A" },
@@ -184,6 +185,40 @@ function getPreviousExercisePerformance(exerciseId, completedWorkouts) {
   }, null);
 }
 
+function formatTimerSeconds(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function playTimerCompleteSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContext) {
+      return;
+    }
+
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.25);
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.28);
+  } catch {
+    // Visual completion feedback is enough if the browser blocks audio.
+  }
+}
+
 function App() {
   const [schedule, setSchedule] = useState(loadStoredSchedule);
   const [completedWorkouts, setCompletedWorkouts] = useState(loadCompletedWorkouts);
@@ -191,6 +226,7 @@ function App() {
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
   const [viewMode, setViewMode] = useState("planner");
   const [saveMessage, setSaveMessage] = useState("");
+  const [restTimer, setRestTimer] = useState(null);
 
   useEffect(() => {
     if (!saveMessage) {
@@ -201,6 +237,57 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [saveMessage]);
+
+  useEffect(() => {
+    if (
+      viewMode !== "workout" ||
+      !restTimer ||
+      restTimer.paused ||
+      restTimer.status !== "running"
+    ) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setRestTimer((currentTimer) => {
+        if (
+          !currentTimer ||
+          currentTimer.paused ||
+          currentTimer.status !== "running"
+        ) {
+          return currentTimer;
+        }
+
+        if (currentTimer.remainingSeconds <= 1) {
+          playTimerCompleteSound();
+
+          return {
+            ...currentTimer,
+            remainingSeconds: 0,
+            paused: false,
+            status: "complete",
+          };
+        }
+
+        return {
+          ...currentTimer,
+          remainingSeconds: currentTimer.remainingSeconds - 1,
+        };
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [restTimer, viewMode]);
+
+  useEffect(() => {
+    if (restTimer?.status !== "complete") {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setRestTimer(null), 4000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [restTimer?.status]);
 
   function assignRoutineToDay(dayId, routineDayId) {
     setSchedule((currentSchedule) => {
@@ -221,6 +308,7 @@ function App() {
 
     if (!routineDayId && activeWorkoutSession?.scheduleDayId === dayId) {
       setActiveWorkoutSession(null);
+      setRestTimer(null);
       setViewMode("planner");
     }
   }
@@ -236,11 +324,13 @@ function App() {
 
       return createWorkoutSession(scheduleDay, routineDay);
     });
+    setRestTimer(null);
     setViewMode("workout");
   }
 
   function closeWorkout() {
     setActiveWorkoutSession(null);
+    setRestTimer(null);
     setViewMode("planner");
   }
 
@@ -263,12 +353,73 @@ function App() {
     });
     setSaveMessage("Workout saved.");
     setActiveWorkoutSession(null);
+    setRestTimer(null);
     setViewMode("planner");
+  }
+
+  function startRestTimer(sessionExercise) {
+    const totalSeconds = sessionExercise.restSeconds ?? DEFAULT_REST_SECONDS;
+
+    setRestTimer({
+      exerciseId: sessionExercise.exerciseId,
+      remainingSeconds: totalSeconds,
+      totalSeconds,
+      paused: false,
+      status: "running",
+    });
+  }
+
+  function pauseRestTimer() {
+    setRestTimer((currentTimer) =>
+      currentTimer && currentTimer.status === "running"
+        ? { ...currentTimer, paused: true }
+        : currentTimer,
+    );
+  }
+
+  function resumeRestTimer() {
+    setRestTimer((currentTimer) =>
+      currentTimer && currentTimer.status === "running"
+        ? { ...currentTimer, paused: false }
+        : currentTimer,
+    );
+  }
+
+  function restartRestTimer() {
+    setRestTimer((currentTimer) =>
+      currentTimer
+        ? {
+            ...currentTimer,
+            remainingSeconds: currentTimer.totalSeconds,
+            paused: false,
+            status: "running",
+          }
+        : currentTimer,
+    );
+  }
+
+  function skipRestTimer() {
+    setRestTimer(null);
   }
 
   function updateSetValue(exerciseId, setNumber, field, value) {
     if (field !== "weight" && field !== "reps") {
       return;
+    }
+
+    const currentExercise = activeWorkoutSession?.exercises.find(
+      (exercise) => exercise.exerciseId === exerciseId,
+    );
+    const currentSet = currentExercise?.sets.find(
+      (set) => set.setNumber === setNumber,
+    );
+
+    if (!currentExercise || !currentSet || currentSet[field] === value) {
+      return;
+    }
+
+    if (field === "reps") {
+      startRestTimer(currentExercise);
     }
 
     setActiveWorkoutSession((currentSession) => {
@@ -432,6 +583,58 @@ function App() {
                 </button>
               </div>
             </div>
+
+            {restTimer ? (
+              <div className="sticky top-4 z-10 mt-4 rounded-xl border border-emerald-400/40 bg-slate-950/95 p-4 shadow-xl shadow-slate-950/40 backdrop-blur">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Rest Timer
+                    </p>
+                    <p className="mt-1 text-3xl font-bold text-emerald-200">
+                      {restTimer.status === "complete"
+                        ? "Rest Complete"
+                        : `${formatTimerSeconds(restTimer.remainingSeconds)} remaining`}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {restTimer.paused ? (
+                      <button
+                        type="button"
+                        onClick={resumeRestTimer}
+                        className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                      >
+                        Resume
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={pauseRestTimer}
+                        disabled={restTimer.status === "complete"}
+                        className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Pause
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={restartRestTimer}
+                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
+                    >
+                      Restart
+                    </button>
+                    <button
+                      type="button"
+                      onClick={skipRestTimer}
+                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <ul className="mt-4 grid gap-4 lg:grid-cols-2">
               {activeWorkoutSession.exercises.map((sessionExercise) => {

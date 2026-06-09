@@ -7,7 +7,7 @@ const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
 const DEFAULT_REST_SECONDS = 120;
 const workoutNumberInputClassName =
-  "min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
+  "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
 
 const routineOptions = [
   { id: "day-a", label: "Day A" },
@@ -456,8 +456,8 @@ function App() {
     ) ?? 0;
 
   return (
-    <main className="min-h-screen bg-slate-950 p-4 text-white">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-white sm:p-4">
+      <div className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden">
         {viewMode === "planner" ? (
           <>
             <header className="mb-6">
@@ -547,7 +547,7 @@ function App() {
         ) : null}
 
         {viewMode === "workout" && activeWorkoutSession && activeWorkoutDay && activeRoutineDay ? (
-          <section className="mt-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+          <section className="mt-4 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
             <button
               type="button"
               onClick={() => setViewMode("planner")}
@@ -556,19 +556,19 @@ function App() {
               ← Back To Planner
             </button>
 
-            <div className="flex flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-start md:justify-between">
-              <div>
+            <div className="flex min-w-0 flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
                 <h2 className="text-2xl font-bold">
                   {activeWorkoutDay.label} - {activeRoutineDay.name}
                 </h2>
-                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
+                <div className="mt-1 flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
                   <span>{activeRoutineDay.name}</span>
                   <span>{activeWorkoutSession.exercises.length} exercises</span>
                   <span>{activeWorkoutSetCount} prescribed sets</span>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex min-w-0 flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={saveWorkout}
@@ -587,9 +587,9 @@ function App() {
             </div>
 
             {restTimer ? (
-              <div className="sticky top-4 z-10 mt-4 rounded-xl border border-emerald-400/40 bg-slate-950/95 p-4 shadow-xl shadow-slate-950/40 backdrop-blur">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
+              <div className="sticky top-4 z-10 mt-4 min-w-0 overflow-x-hidden rounded-xl border border-emerald-400/40 bg-slate-950/95 p-3 shadow-xl shadow-slate-950/40 backdrop-blur sm:p-4">
+                <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Rest Timer
                     </p>
@@ -600,7 +600,7 @@ function App() {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex min-w-0 flex-wrap gap-2">
                     {restTimer.paused ? (
                       <button
                         type="button"
@@ -638,7 +638,7 @@ function App() {
               </div>
             ) : null}
 
-            <ul className="mt-4 grid gap-4 lg:grid-cols-2">
+            <ul className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
               {activeWorkoutSession.exercises.map((sessionExercise) => {
                 const exercise = getExercise(sessionExercise.exerciseId);
                 const previousPerformance = getPreviousExercisePerformance(
@@ -649,7 +649,7 @@ function App() {
                 return (
                   <li
                     key={sessionExercise.exerciseId}
-                    className="rounded-xl bg-slate-950/60 p-4"
+                    className="min-w-0 rounded-xl bg-slate-950/60 p-3 sm:p-4"
                   >
                     <div>
                       <p className="font-medium text-slate-100">
@@ -662,7 +662,7 @@ function App() {
                       </p>
                     </div>
 
-                    <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                    <div className="mt-4 min-w-0 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                         Previous Session
                       </p>
@@ -682,11 +682,11 @@ function App() {
                       )}
                     </div>
 
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 min-w-0 space-y-2">
                       {sessionExercise.sets.map((set) => (
                         <div
                           key={set.setNumber}
-                          className="grid grid-cols-[4rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2"
+                          className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2"
                         >
                           <span className="text-sm font-medium text-slate-300">
                             Set {set.setNumber}

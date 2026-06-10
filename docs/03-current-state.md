@@ -5,6 +5,15 @@ Implemented
 ✓ Workout save/load
 ✓ Previous performance
 ✓ Rest timer
+✓ Workout history persistence
+✓ Historical session storage
+✓ Previous performance lookup
+✓ Dedicated Routine Editor
+✓ Custom routines
+✓ Routine management (rename, duplicate, archive)
+✓ Exercise search
+✓ Exercise filtering
+✓ Routine save feedback
 
 - Sticky workout footer
 - Timer completion notification improvements
@@ -20,6 +29,8 @@ Known Issues
 Next Likely Work
 
 - Workout history screen
+- Exercise database integration (wger evaluation)
+- Custom exercise support
 - PR tracking
 - Historical progression analysis
 

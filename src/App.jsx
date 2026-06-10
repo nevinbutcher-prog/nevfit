@@ -25,12 +25,10 @@ const builtInRoutineDayIds = new Set(routineDays.map((day) => day.id));
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const setFeedbackStyles = {
-  below:
-    "border-red-500/70 bg-red-500/10 text-red-200 focus:border-red-400",
+  below: "border-red-500/70 bg-red-500/10 text-red-200 focus:border-red-400",
   within:
     "border-amber-400/70 bg-amber-400/10 text-amber-100 focus:border-amber-300",
-  top:
-    "border-emerald-400/80 bg-emerald-400/10 text-emerald-100 focus:border-emerald-300",
+  top: "border-emerald-400/80 bg-emerald-400/10 text-emerald-100 focus:border-emerald-300",
 };
 
 const setFeedbackLabels = {
@@ -148,7 +146,9 @@ function normalizeRoutineDay(value, fallbackDay = null) {
     return null;
   }
 
-  const exercises = value.exercises.map(normalizeRoutineExercise).filter(Boolean);
+  const exercises = value.exercises
+    .map(normalizeRoutineExercise)
+    .filter(Boolean);
 
   return {
     id: fallbackDay?.id ?? value.id.trim(),
@@ -174,9 +174,7 @@ function normalizeRoutineDefinitions(value) {
   const normalizedCustomDays = value
     .filter(
       (day) =>
-        day &&
-        typeof day.id === "string" &&
-        !builtInRoutineDayIds.has(day.id),
+        day && typeof day.id === "string" && !builtInRoutineDayIds.has(day.id),
     )
     .map((day) => normalizeRoutineDay(day))
     .filter(Boolean);
@@ -390,6 +388,47 @@ function createRoutineExerciseFromCatalog(exercise) {
   };
 }
 
+function getExerciseSearchText(exercise) {
+  return [
+    exercise.name,
+    exercise.category,
+    exercise.bodyPart,
+    exercise.primaryMuscle,
+    ...(exercise.secondaryMuscles ?? []),
+    ...(exercise.equipment ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function getEquipmentFilterValue(equipment) {
+  const normalizedEquipment = equipment.toLowerCase();
+
+  if (normalizedEquipment.includes("dumbbell")) {
+    return "Dumbbell";
+  }
+
+  if (normalizedEquipment.includes("barbell")) {
+    return "Barbell";
+  }
+
+  if (normalizedEquipment.includes("cable")) {
+    return "Cable";
+  }
+
+  if (normalizedEquipment.includes("bodyweight")) {
+    return "Bodyweight";
+  }
+
+  return equipment;
+}
+
+function getSortedUniqueValues(values) {
+  return Array.from(new Set(values.filter(Boolean))).sort((first, second) =>
+    first.localeCompare(second),
+  );
+}
+
 function isValidWorkoutSession(value) {
   return (
     value &&
@@ -420,7 +459,9 @@ function isValidWorkoutSession(value) {
 
 function loadStoredActiveWorkoutSession() {
   try {
-    const storedSession = window.localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
+    const storedSession = window.localStorage.getItem(
+      ACTIVE_WORKOUT_STORAGE_KEY,
+    );
 
     if (!storedSession) {
       return null;
@@ -475,7 +516,11 @@ function createCompletedWorkoutRecord(workoutSession, routineDay, completedAt) {
   };
 }
 
-function getPreviousExercisePerformance(exerciseId, routineDayId, completedWorkouts) {
+function getPreviousExercisePerformance(
+  exerciseId,
+  routineDayId,
+  completedWorkouts,
+) {
   return completedWorkouts.reduce((latestPerformance, completedWorkout) => {
     if (completedWorkout.routineDayId !== routineDayId) {
       return latestPerformance;
@@ -649,8 +694,14 @@ function playTimerCompleteSound() {
     oscillator.type = "sine";
     oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
     gain.gain.setValueAtTime(0.001, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.25);
+    gain.gain.exponentialRampToValueAtTime(
+      0.2,
+      audioContext.currentTime + 0.02,
+    );
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioContext.currentTime + 0.25,
+    );
 
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
@@ -666,12 +717,19 @@ function App() {
   const [routineDefinitions, setRoutineDefinitions] = useState(
     loadStoredRoutineDefinitions,
   );
-  const [routineDrafts, setRoutineDrafts] = useState(loadStoredRoutineDefinitions);
+  const [routineDrafts, setRoutineDrafts] = useState(
+    loadStoredRoutineDefinitions,
+  );
   const [selectedRoutineDayId, setSelectedRoutineDayId] = useState(
     routineDays[0]?.id ?? null,
   );
   const [newRoutineName, setNewRoutineName] = useState("");
-  const [completedWorkouts, setCompletedWorkouts] = useState(loadCompletedWorkouts);
+  const [exerciseSearchTerm, setExerciseSearchTerm] = useState("");
+  const [exerciseEquipmentFilter, setExerciseEquipmentFilter] = useState("all");
+  const [exerciseMuscleFilter, setExerciseMuscleFilter] = useState("all");
+  const [completedWorkouts, setCompletedWorkouts] = useState(
+    loadCompletedWorkouts,
+  );
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
@@ -686,7 +744,8 @@ function App() {
   const wakeLockRef = useRef(null);
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
-  const isWorkoutActive = viewMode === "workout" && Boolean(activeWorkoutSession);
+  const isWorkoutActive =
+    viewMode === "workout" && Boolean(activeWorkoutSession);
 
   useEffect(() => {
     if (!saveMessage) {
@@ -924,15 +983,17 @@ function App() {
         day.id === dayId
           ? {
               ...day,
-              exercises: day.exercises.filter((_, index) => index !== exerciseIndex),
+              exercises: day.exercises.filter(
+                (_, index) => index !== exerciseIndex,
+              ),
             }
           : day,
       ),
     );
   }
 
-  function addRoutineExercise(dayId) {
-    const defaultExercise = exerciseCatalog[0];
+  function addRoutineExercise(dayId, exerciseId) {
+    const defaultExercise = getExercise(exerciseId) ?? exerciseCatalog[0];
 
     if (!defaultExercise) {
       return;
@@ -1201,7 +1262,9 @@ function App() {
       const storedWorkouts = readPersistedCompletedWorkoutsForSave();
       const nextWorkouts = [
         completedWorkout,
-        ...storedWorkouts.filter((workout) => workout.id !== completedWorkout.id),
+        ...storedWorkouts.filter(
+          (workout) => workout.id !== completedWorkout.id,
+        ),
       ];
 
       persistCompletedWorkouts(nextWorkouts);
@@ -1231,7 +1294,9 @@ function App() {
     }
 
     if (action.type === "open-workout") {
-      setActiveWorkoutSession(createWorkoutSession(action.scheduleDay, action.routineDay));
+      setActiveWorkoutSession(
+        createWorkoutSession(action.scheduleDay, action.routineDay),
+      );
       setRestTimer(null);
       setViewMode("workout");
       return;
@@ -1345,7 +1410,9 @@ function App() {
             ? {
                 ...exercise,
                 sets: exercise.sets.map((set) =>
-                  set.setNumber === setNumber ? { ...set, [field]: value } : set,
+                  set.setNumber === setNumber
+                    ? { ...set, [field]: value }
+                    : set,
                 ),
               }
             : exercise,
@@ -1379,7 +1446,9 @@ function App() {
   const activeRoutineDefinitions = routineDefinitions.filter(
     (routine) => !routine.archived,
   );
-  const activeRoutineDrafts = routineDrafts.filter((routine) => !routine.archived);
+  const activeRoutineDrafts = routineDrafts.filter(
+    (routine) => !routine.archived,
+  );
   const selectedRoutineDraft = routineDrafts.find(
     (day) => day.id === selectedRoutineDayId,
   );
@@ -1396,17 +1465,66 @@ function App() {
   const selectedRoutineHasUnsavedChanges =
     Boolean(selectedRoutineDraft && selectedSavedRoutine) &&
     (!normalizedSelectedRoutineDraft ||
-      !areRoutineDaysEqual(normalizedSelectedRoutineDraft, selectedSavedRoutine));
+      !areRoutineDaysEqual(
+        normalizedSelectedRoutineDraft,
+        selectedSavedRoutine,
+      ));
   const selectedRoutineSaveStatus =
-    routineSaveStatus?.dayId === selectedRoutineDayId ? routineSaveStatus : null;
-  const selectedRoutineIsBuiltIn = builtInRoutineDayIds.has(
-    selectedRoutineDayId,
-  );
+    routineSaveStatus?.dayId === selectedRoutineDayId
+      ? routineSaveStatus
+      : null;
+  const selectedRoutineIsBuiltIn =
+    builtInRoutineDayIds.has(selectedRoutineDayId);
   const selectedRoutineSaveButtonLabel =
     selectedRoutineSaveStatus?.type === "success" &&
     !selectedRoutineHasUnsavedChanges
       ? "✓ Saved"
       : "Save Routine";
+  const exerciseEquipmentOptions = getSortedUniqueValues(
+    exerciseCatalog.flatMap((exercise) =>
+      (exercise.equipment ?? []).map(getEquipmentFilterValue),
+    ),
+  );
+  const exerciseMuscleOptions = getSortedUniqueValues(
+    exerciseCatalog.flatMap((exercise) => [
+      exercise.bodyPart,
+      exercise.primaryMuscle,
+    ]),
+  );
+  const normalizedExerciseSearchTerm = exerciseSearchTerm.trim().toLowerCase();
+  const filteredExerciseCatalog = exerciseCatalog.filter((exercise) => {
+    const matchesSearch =
+      !normalizedExerciseSearchTerm ||
+      getExerciseSearchText(exercise).includes(normalizedExerciseSearchTerm);
+    const matchesEquipment =
+      exerciseEquipmentFilter === "all" ||
+      exercise.equipment
+        ?.map(getEquipmentFilterValue)
+        .includes(exerciseEquipmentFilter);
+    const matchesMuscle =
+      exerciseMuscleFilter === "all" ||
+      exercise.bodyPart === exerciseMuscleFilter ||
+      exercise.primaryMuscle === exerciseMuscleFilter;
+
+    return matchesSearch && matchesEquipment && matchesMuscle;
+  });
+  const addExerciseCandidate = filteredExerciseCatalog[0] ?? null;
+  const getExercisePickerOptions = (currentExerciseId) => {
+    if (
+      !currentExerciseId ||
+      filteredExerciseCatalog.some(
+        (exercise) => exercise.id === currentExerciseId,
+      )
+    ) {
+      return filteredExerciseCatalog;
+    }
+
+    const currentExercise = getExercise(currentExerciseId);
+
+    return currentExercise
+      ? [currentExercise, ...filteredExerciseCatalog]
+      : filteredExerciseCatalog;
+  };
 
   return (
     <main
@@ -1480,33 +1598,42 @@ function App() {
                       }
                       className="block w-full text-left"
                     >
-                      <h2 className="font-semibold text-slate-200">{day.label}</h2>
+                      <h2 className="font-semibold text-slate-200">
+                        {day.label}
+                      </h2>
 
                       <p className="mt-4 text-lg font-bold">
                         {routineDay?.name ?? "Rest"}
                       </p>
 
                       {day.note ? (
-                        <p className="mt-2 text-sm text-slate-400">{day.note}</p>
+                        <p className="mt-2 text-sm text-slate-400">
+                          {day.note}
+                        </p>
                       ) : null}
                     </button>
 
                     {isSelected ? (
                       <div className="mt-4 border-t border-slate-700 pt-4">
                         <div className="flex flex-wrap gap-2">
-                          {[...activeRoutineDefinitions, { id: null, name: "Rest" }].map((option) => {
+                          {[
+                            ...activeRoutineDefinitions,
+                            { id: null, name: "Rest" },
+                          ].map((option) => {
                             const isAssigned = day.routineDayId === option.id;
 
                             return (
                               <button
                                 key={option.id ?? "rest"}
                                 type="button"
-                                onClick={() => assignRoutineToDay(day.id, option.id)}
+                                onClick={() =>
+                                  assignRoutineToDay(day.id, option.id)
+                                }
                                 className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
                                   isAssigned
                                     ? "border-emerald-400 bg-emerald-400 text-slate-950"
                                     : "border-slate-700 bg-slate-950 text-slate-200 hover:border-slate-500"
-                                  }`}
+                                }`}
                               >
                                 {option.name}
                               </button>
@@ -1560,7 +1687,9 @@ function App() {
                     <input
                       type="text"
                       value={newRoutineName}
-                      onChange={(event) => setNewRoutineName(event.target.value)}
+                      onChange={(event) =>
+                        setNewRoutineName(event.target.value)
+                      }
                       placeholder="Push"
                       className={`${routineEditorInputClassName} mt-1`}
                     />
@@ -1587,7 +1716,9 @@ function App() {
                           : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600"
                       }`}
                     >
-                      <span className="block font-semibold">{routineDay.name}</span>
+                      <span className="block font-semibold">
+                        {routineDay.name}
+                      </span>
                       <span className="mt-1 block text-sm text-slate-400">
                         {routineDay.exercises.length} exercises
                       </span>
@@ -1642,7 +1773,9 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => duplicateRoutine(selectedRoutineDraft.id)}
+                        onClick={() =>
+                          duplicateRoutine(selectedRoutineDraft.id)
+                        }
                         className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
                       >
                         Duplicate
@@ -1661,157 +1794,233 @@ function App() {
                     </div>
                   </div>
 
-                  <ul className="mt-4 space-y-3">
-                    {selectedRoutineDraft.exercises.map((routineExercise, index) => {
-                      const exercise = getExercise(routineExercise.exerciseId);
+                  <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                        Search
+                        <input
+                          type="search"
+                          value={exerciseSearchTerm}
+                          onChange={(event) =>
+                            setExerciseSearchTerm(event.target.value)
+                          }
+                          placeholder="curl, row, press"
+                          className={`${routineEditorInputClassName} mt-1`}
+                        />
+                      </label>
 
-                      return (
-                        <li
-                          key={`${selectedRoutineDraft.id}-${index}`}
-                          className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                        Equipment
+                        <select
+                          value={exerciseEquipmentFilter}
+                          onChange={(event) =>
+                            setExerciseEquipmentFilter(event.target.value)
+                          }
+                          className={`${routineEditorSelectClassName} mt-1`}
                         >
-                          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start">
-                            <div className="flex shrink-0 gap-2 lg:w-28">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  moveRoutineExercise(
-                                    selectedRoutineDraft.id,
-                                    index,
-                                    -1,
-                                  )
-                                }
-                                disabled={index === 0}
-                                className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                aria-label={`Move ${exercise?.name ?? "exercise"} up`}
-                              >
-                                Up
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  moveRoutineExercise(
-                                    selectedRoutineDraft.id,
-                                    index,
-                                    1,
-                                  )
-                                }
-                                disabled={
-                                  index === selectedRoutineDraft.exercises.length - 1
-                                }
-                                className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                aria-label={`Move ${exercise?.name ?? "exercise"} down`}
-                              >
-                                Down
-                              </button>
-                            </div>
+                          <option value="all">All equipment</option>
+                          {exerciseEquipmentOptions.map((equipment) => (
+                            <option key={equipment} value={equipment}>
+                              {equipment}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
 
-                            <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
-                              <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                Exercise
-                                <select
-                                  value={routineExercise.exerciseId}
-                                  onChange={(event) =>
-                                    updateRoutineExercise(
+                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                        Muscle
+                        <select
+                          value={exerciseMuscleFilter}
+                          onChange={(event) =>
+                            setExerciseMuscleFilter(event.target.value)
+                          }
+                          className={`${routineEditorSelectClassName} mt-1`}
+                        >
+                          <option value="all">All muscles</option>
+                          {exerciseMuscleOptions.map((muscle) => (
+                            <option key={muscle} value={muscle}>
+                              {muscle}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <p className="mt-3 text-sm text-slate-400">
+                      {filteredExerciseCatalog.length} exercise
+                      {filteredExerciseCatalog.length === 1 ? "" : "s"} found
+                    </p>
+                  </div>
+
+                  <ul className="mt-4 space-y-3">
+                    {selectedRoutineDraft.exercises.map(
+                      (routineExercise, index) => {
+                        const exercise = getExercise(
+                          routineExercise.exerciseId,
+                        );
+                        const exercisePickerOptions = getExercisePickerOptions(
+                          routineExercise.exerciseId,
+                        );
+
+                        return (
+                          <li
+                            key={`${selectedRoutineDraft.id}-${index}`}
+                            className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                          >
+                            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start">
+                              <div className="flex shrink-0 gap-2 lg:w-28">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    moveRoutineExercise(
                                       selectedRoutineDraft.id,
                                       index,
-                                      { exerciseId: event.target.value },
+                                      -1,
                                     )
                                   }
-                                  className={`${routineEditorSelectClassName} mt-1`}
+                                  disabled={index === 0}
+                                  className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                  aria-label={`Move ${exercise?.name ?? "exercise"} up`}
                                 >
-                                  {exerciseCatalog.map((catalogExercise) => (
-                                    <option
-                                      key={catalogExercise.id}
-                                      value={catalogExercise.id}
-                                    >
-                                      {catalogExercise.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-
-                              <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                Sets
-                                <input
-                                  type="number"
-                                  inputMode="numeric"
-                                  min="1"
-                                  max="12"
-                                  value={routineExercise.sets}
-                                  onChange={(event) =>
-                                    updateRoutineExercise(
+                                  Up
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    moveRoutineExercise(
                                       selectedRoutineDraft.id,
                                       index,
-                                      { sets: event.target.value },
+                                      1,
                                     )
                                   }
-                                  className={`${routineEditorInputClassName} mt-1`}
-                                />
-                              </label>
+                                  disabled={
+                                    index ===
+                                    selectedRoutineDraft.exercises.length - 1
+                                  }
+                                  className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                  aria-label={`Move ${exercise?.name ?? "exercise"} down`}
+                                >
+                                  Down
+                                </button>
+                              </div>
 
-                              <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                Reps
-                                <input
-                                  type="text"
-                                  value={routineExercise.repRange}
-                                  onChange={(event) =>
-                                    updateRoutineExercise(
-                                      selectedRoutineDraft.id,
-                                      index,
-                                      { repRange: event.target.value },
-                                    )
-                                  }
-                                  className={`${routineEditorInputClassName} mt-1`}
-                                />
-                              </label>
+                              <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
+                                <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                  Exercise
+                                  <select
+                                    value={routineExercise.exerciseId}
+                                    onChange={(event) =>
+                                      updateRoutineExercise(
+                                        selectedRoutineDraft.id,
+                                        index,
+                                        { exerciseId: event.target.value },
+                                      )
+                                    }
+                                    className={`${routineEditorSelectClassName} mt-1`}
+                                  >
+                                    {exercisePickerOptions.map(
+                                      (catalogExercise) => (
+                                        <option
+                                          key={catalogExercise.id}
+                                          value={catalogExercise.id}
+                                        >
+                                          {catalogExercise.name}
+                                        </option>
+                                      ),
+                                    )}
+                                  </select>
+                                </label>
 
-                              <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                Rest
-                                <input
-                                  type="number"
-                                  inputMode="numeric"
-                                  min="0"
-                                  max="600"
-                                  value={routineExercise.restSeconds ?? ""}
-                                  placeholder={`${DEFAULT_REST_SECONDS}`}
-                                  onChange={(event) =>
-                                    updateRoutineExercise(
-                                      selectedRoutineDraft.id,
-                                      index,
-                                      { restSeconds: event.target.value },
-                                    )
-                                  }
-                                  className={`${routineEditorInputClassName} mt-1`}
-                                />
-                              </label>
+                                <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                  Sets
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min="1"
+                                    max="12"
+                                    value={routineExercise.sets}
+                                    onChange={(event) =>
+                                      updateRoutineExercise(
+                                        selectedRoutineDraft.id,
+                                        index,
+                                        { sets: event.target.value },
+                                      )
+                                    }
+                                    className={`${routineEditorInputClassName} mt-1`}
+                                  />
+                                </label>
+
+                                <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                  Reps
+                                  <input
+                                    type="text"
+                                    value={routineExercise.repRange}
+                                    onChange={(event) =>
+                                      updateRoutineExercise(
+                                        selectedRoutineDraft.id,
+                                        index,
+                                        { repRange: event.target.value },
+                                      )
+                                    }
+                                    className={`${routineEditorInputClassName} mt-1`}
+                                  />
+                                </label>
+
+                                <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                  Rest
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min="0"
+                                    max="600"
+                                    value={routineExercise.restSeconds ?? ""}
+                                    placeholder={`${DEFAULT_REST_SECONDS}`}
+                                    onChange={(event) =>
+                                      updateRoutineExercise(
+                                        selectedRoutineDraft.id,
+                                        index,
+                                        { restSeconds: event.target.value },
+                                      )
+                                    }
+                                    className={`${routineEditorInputClassName} mt-1`}
+                                  />
+                                </label>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeRoutineExercise(
+                                    selectedRoutineDraft.id,
+                                    index,
+                                  )
+                                }
+                                className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300 lg:mt-6"
+                              >
+                                Remove
+                              </button>
                             </div>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removeRoutineExercise(
-                                  selectedRoutineDraft.id,
-                                  index,
-                                )
-                              }
-                              className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300 lg:mt-6"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
+                          </li>
+                        );
+                      },
+                    )}
                   </ul>
 
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <button
                       type="button"
-                      onClick={() => addRoutineExercise(selectedRoutineDraft.id)}
-                      className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500"
+                      onClick={() =>
+                        addRoutineExercise(
+                          selectedRoutineDraft.id,
+                          addExerciseCandidate?.id,
+                        )
+                      }
+                      disabled={!addExerciseCandidate}
+                      className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Add Exercise
+                      {addExerciseCandidate
+                        ? `Add ${addExerciseCandidate.name}`
+                        : "Add Exercise"}
                     </button>
                     <button
                       type="button"
@@ -1832,7 +2041,10 @@ function App() {
           </section>
         ) : null}
 
-        {viewMode === "workout" && activeWorkoutSession && activeWorkoutDay && activeRoutineDay ? (
+        {viewMode === "workout" &&
+        activeWorkoutSession &&
+        activeWorkoutDay &&
+        activeRoutineDay ? (
           <section className="mt-4 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
             <button
               type="button"
@@ -1894,7 +2106,9 @@ function App() {
                       <p className="mt-1 text-sm text-slate-400">
                         Target: {sessionExercise.prescribedSets} x{" "}
                         {sessionExercise.repRange}
-                        {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
+                        {sessionExercise.note
+                          ? `, ${sessionExercise.note}`
+                          : ""}
                       </p>
                       {exerciseFeedback ? (
                         <p
@@ -1929,7 +2143,9 @@ function App() {
 
                     <div className="mt-4 min-w-0 space-y-2">
                       {sessionExercise.sets.map((set) => {
-                        const repRange = parseRepRange(sessionExercise.repRange);
+                        const repRange = parseRepRange(
+                          sessionExercise.repRange,
+                        );
                         const setFeedback = getSetFeedback(set, repRange);
 
                         return (
@@ -1971,7 +2187,9 @@ function App() {
                                 )
                               }
                               className={`${workoutNumberInputClassName} ${
-                                setFeedback ? setFeedbackStyles[setFeedback] : ""
+                                setFeedback
+                                  ? setFeedbackStyles[setFeedback]
+                                  : ""
                               }`}
                             />
                             {setFeedback ? (
@@ -2028,8 +2246,12 @@ function App() {
                 Rest Timer
               </p>
               <div className="mt-1 flex min-w-0 items-baseline gap-2">
-                <p className="text-3xl font-bold leading-none">{restTimerDisplay}</p>
-                <p className="truncate text-sm font-semibold">{restTimerStatusLabel}</p>
+                <p className="text-3xl font-bold leading-none">
+                  {restTimerDisplay}
+                </p>
+                <p className="truncate text-sm font-semibold">
+                  {restTimerStatusLabel}
+                </p>
               </div>
             </div>
 
@@ -2085,8 +2307,8 @@ function App() {
           <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
             <h2 className="text-xl font-bold">Active workout in progress</h2>
             <p className="mt-2 text-sm text-slate-300">
-              You have an active workout. Finish it, discard it, or cancel and keep
-              logging.
+              You have an active workout. Finish it, discard it, or cancel and
+              keep logging.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               <button

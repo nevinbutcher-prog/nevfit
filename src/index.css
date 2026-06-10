@@ -14,3 +14,22 @@ body {
   max-width: 100%;
   overflow-x: hidden;
 }
+
+.workout-footer {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.rest-timer-complete {
+  animation: rest-timer-pulse 900ms ease-out 2;
+}
+
+@keyframes rest-timer-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.16);
+  }
+}

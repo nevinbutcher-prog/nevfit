@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { exerciseCatalog } from "./data/exerciseCatalog";
 import { routineDays } from "./data/routineDays";
 import { weekSchedule } from "./data/weekSchedule";
@@ -194,15 +194,46 @@ function formatTimerSeconds(totalSeconds) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+let timerAudioContext = null;
+
+function getTimerAudioContext() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContext) {
+    return null;
+  }
+
+  if (!timerAudioContext || timerAudioContext.state === "closed") {
+    timerAudioContext = new AudioContext();
+  }
+
+  return timerAudioContext;
+}
+
+function prepareTimerCompleteSound() {
+  try {
+    const audioContext = getTimerAudioContext();
+
+    if (audioContext?.state === "suspended") {
+      void audioContext.resume();
+    }
+  } catch {
+    // Visual completion feedback is enough if the browser blocks audio.
+  }
+}
+
 function playTimerCompleteSound() {
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioContext = getTimerAudioContext();
 
-    if (!AudioContext) {
+    if (!audioContext) {
       return;
     }
 
-    const audioContext = new AudioContext();
+    if (audioContext.state === "suspended") {
+      void audioContext.resume();
+    }
+
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
@@ -229,6 +260,8 @@ function App() {
   const [viewMode, setViewMode] = useState("planner");
   const [saveMessage, setSaveMessage] = useState("");
   const [restTimer, setRestTimer] = useState(null);
+  const wakeLockRef = useRef(null);
+  const isWorkoutActive = viewMode === "workout" && Boolean(activeWorkoutSession);
 
   useEffect(() => {
     if (!saveMessage) {
@@ -261,8 +294,6 @@ function App() {
         }
 
         if (currentTimer.remainingSeconds <= 1) {
-          playTimerCompleteSound();
-
           return {
             ...currentTimer,
             remainingSeconds: 0,
@@ -286,10 +317,64 @@ function App() {
       return undefined;
     }
 
+    playTimerCompleteSound();
+
+    if ("vibrate" in navigator) {
+      navigator.vibrate([160, 80, 160]);
+    }
+
     const timeoutId = window.setTimeout(() => setRestTimer(null), 4000);
 
     return () => window.clearTimeout(timeoutId);
   }, [restTimer?.status]);
+
+  useEffect(() => {
+    if (!isWorkoutActive || !("wakeLock" in navigator)) {
+      return undefined;
+    }
+
+    let shouldKeepAwake = true;
+
+    async function requestWakeLock() {
+      if (
+        !shouldKeepAwake ||
+        wakeLockRef.current ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
+
+      try {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+        wakeLockRef.current.addEventListener("release", () => {
+          wakeLockRef.current = null;
+        });
+      } catch {
+        wakeLockRef.current = null;
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void requestWakeLock();
+      }
+    }
+
+    void requestWakeLock();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      shouldKeepAwake = false;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+
+      const wakeLock = wakeLockRef.current;
+      wakeLockRef.current = null;
+
+      if (wakeLock) {
+        void wakeLock.release().catch(() => {});
+      }
+    };
+  }, [isWorkoutActive]);
 
   function assignRoutineToDay(dayId, routineDayId) {
     setSchedule((currentSchedule) => {
@@ -362,6 +447,8 @@ function App() {
   function startRestTimer(sessionExercise) {
     const totalSeconds = sessionExercise.restSeconds ?? DEFAULT_REST_SECONDS;
 
+    prepareTimerCompleteSound();
+
     setRestTimer({
       exerciseId: sessionExercise.exerciseId,
       remainingSeconds: totalSeconds,
@@ -380,6 +467,8 @@ function App() {
   }
 
   function resumeRestTimer() {
+    prepareTimerCompleteSound();
+
     setRestTimer((currentTimer) =>
       currentTimer && currentTimer.status === "running"
         ? { ...currentTimer, paused: false }
@@ -388,6 +477,8 @@ function App() {
   }
 
   function restartRestTimer() {
+    prepareTimerCompleteSound();
+
     setRestTimer((currentTimer) =>
       currentTimer
         ? {
@@ -454,9 +545,23 @@ function App() {
       (total, exercise) => total + exercise.sets.length,
       0,
     ) ?? 0;
+  const restTimerStatusLabel = !restTimer
+    ? "Ready"
+    : restTimer.status === "complete"
+      ? "Rest Complete"
+      : restTimer.paused
+        ? "Paused"
+        : "Running";
+  const restTimerDisplay = restTimer
+    ? formatTimerSeconds(restTimer.remainingSeconds)
+    : "--:--";
 
   return (
-    <main className="min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-white sm:p-4">
+    <main
+      className={`min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-white sm:p-4 ${
+        isWorkoutActive ? "pb-52 sm:pb-36" : ""
+      }`}
+    >
       <div className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden">
         {viewMode === "planner" ? (
           <>
@@ -586,58 +691,6 @@ function App() {
               </div>
             </div>
 
-            {restTimer ? (
-              <div className="sticky top-4 z-10 mt-4 min-w-0 overflow-x-hidden rounded-xl border border-emerald-400/40 bg-slate-950/95 p-3 shadow-xl shadow-slate-950/40 backdrop-blur sm:p-4">
-                <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      Rest Timer
-                    </p>
-                    <p className="mt-1 text-3xl font-bold text-emerald-200">
-                      {restTimer.status === "complete"
-                        ? "Rest Complete"
-                        : `${formatTimerSeconds(restTimer.remainingSeconds)} remaining`}
-                    </p>
-                  </div>
-
-                  <div className="flex min-w-0 flex-wrap gap-2">
-                    {restTimer.paused ? (
-                      <button
-                        type="button"
-                        onClick={resumeRestTimer}
-                        className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-                      >
-                        Resume
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={pauseRestTimer}
-                        disabled={restTimer.status === "complete"}
-                        className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Pause
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={restartRestTimer}
-                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
-                    >
-                      Restart
-                    </button>
-                    <button
-                      type="button"
-                      onClick={skipRestTimer}
-                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
-                    >
-                      Skip
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
             <ul className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
               {activeWorkoutSession.exercises.map((sessionExercise) => {
                 const exercise = getExercise(sessionExercise.exerciseId);
@@ -733,6 +786,71 @@ function App() {
           </section>
         ) : null}
       </div>
+
+      {isWorkoutActive ? (
+        <div
+          className={`workout-footer fixed inset-x-0 bottom-0 z-30 border-t px-3 pt-3 shadow-2xl backdrop-blur sm:px-4 ${
+            restTimer?.status === "complete"
+              ? "rest-timer-complete border-emerald-300/70 bg-emerald-500/95 text-slate-950"
+              : "border-slate-700 bg-slate-950/95 text-white"
+          }`}
+        >
+          <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p
+                className={`text-xs font-semibold uppercase tracking-wide ${
+                  restTimer?.status === "complete"
+                    ? "text-emerald-950/80"
+                    : "text-slate-400"
+                }`}
+              >
+                Rest Timer
+              </p>
+              <div className="mt-1 flex min-w-0 items-baseline gap-2">
+                <p className="text-3xl font-bold leading-none">{restTimerDisplay}</p>
+                <p className="truncate text-sm font-semibold">{restTimerStatusLabel}</p>
+              </div>
+            </div>
+
+            <div className="grid w-full shrink-0 grid-cols-3 gap-2 sm:w-auto">
+              {restTimer?.paused ? (
+                <button
+                  type="button"
+                  onClick={resumeRestTimer}
+                  className="w-full rounded-lg bg-emerald-300 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+                >
+                  Resume
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={pauseRestTimer}
+                  disabled={!restTimer || restTimer.status === "complete"}
+                  className="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Pause
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={restartRestTimer}
+                disabled={!restTimer}
+                className="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={skipRestTimer}
+                disabled={!restTimer}
+                className="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

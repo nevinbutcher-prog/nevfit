@@ -15,21 +15,13 @@ const routineEditorInputClassName =
 const routineEditorSelectClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition focus:border-emerald-400";
 
-const routineOptions = [
-  { id: "day-a", label: "Day A" },
-  { id: "day-b", label: "Day B" },
-  { id: "day-c", label: "Day C" },
-  { id: "day-d", label: "Day D" },
-  { id: null, label: "Rest" },
-];
-
 const getRoutineDay = (routineDayId, routineDefinitions) =>
   routineDefinitions.find((day) => day.id === routineDayId);
 
 const getExercise = (exerciseId) =>
   exerciseCatalog.find((exercise) => exercise.id === exerciseId);
 
-const validRoutineDayIds = new Set(routineDays.map((day) => day.id));
+const builtInRoutineDayIds = new Set(routineDays.map((day) => day.id));
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const setFeedbackStyles = {
@@ -65,7 +57,7 @@ function isValidSchedule(value) {
         day &&
         day.id === defaultDay.id &&
         day.label === defaultDay.label &&
-        (day.routineDayId === null || validRoutineDayIds.has(day.routineDayId)) &&
+        (day.routineDayId === null || typeof day.routineDayId === "string") &&
         typeof day.note === "string"
       );
     })
@@ -139,8 +131,16 @@ function normalizeRoutineExercise(value) {
   };
 }
 
-function normalizeRoutineDay(value, defaultDay) {
-  if (!(value && value.id === defaultDay.id && value.name === defaultDay.name)) {
+function normalizeRoutineDay(value, fallbackDay = null) {
+  if (
+    !(
+      value &&
+      typeof value.id === "string" &&
+      value.id.trim() &&
+      typeof value.name === "string" &&
+      value.name.trim()
+    )
+  ) {
     return null;
   }
 
@@ -151,8 +151,8 @@ function normalizeRoutineDay(value, defaultDay) {
   const exercises = value.exercises.map(normalizeRoutineExercise).filter(Boolean);
 
   return {
-    id: defaultDay.id,
-    name: defaultDay.name,
+    id: fallbackDay?.id ?? value.id.trim(),
+    name: fallbackDay?.name ?? value.name.trim(),
     exercises,
   };
 }
@@ -162,7 +162,7 @@ function normalizeRoutineDefinitions(value) {
     return null;
   }
 
-  const normalizedDays = routineDays.map((defaultDay) => {
+  const normalizedBuiltInDays = routineDays.map((defaultDay) => {
     const storedDay = value.find((day) => day?.id === defaultDay.id);
     const normalizedDay = storedDay
       ? normalizeRoutineDay(storedDay, defaultDay)
@@ -170,6 +170,22 @@ function normalizeRoutineDefinitions(value) {
 
     return normalizedDay ?? normalizeRoutineDay(defaultDay, defaultDay);
   });
+  const normalizedCustomDays = value
+    .filter(
+      (day) =>
+        day &&
+        typeof day.id === "string" &&
+        !builtInRoutineDayIds.has(day.id),
+    )
+    .map((day) => normalizeRoutineDay(day))
+    .filter(Boolean);
+  const customDaysById = new Map(
+    normalizedCustomDays.map((day) => [day.id, day]),
+  );
+  const normalizedDays = [
+    ...normalizedBuiltInDays,
+    ...Array.from(customDaysById.values()),
+  ];
 
   return normalizedDays.every(Boolean) ? normalizedDays : null;
 }
@@ -195,6 +211,29 @@ function persistRoutineDefinitions(routineDefinitions) {
     ROUTINES_STORAGE_KEY,
     JSON.stringify(routineDefinitions),
   );
+}
+
+function createRoutineId(routineName, existingRoutines) {
+  const slug = routineName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+  const suffix =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID().slice(0, 8)
+      : Date.now().toString(36);
+  const baseId = `custom-${slug || "routine"}`;
+  let nextId = `${baseId}-${suffix}`;
+  let index = 2;
+
+  while (existingRoutines.some((routine) => routine.id === nextId)) {
+    nextId = `${baseId}-${suffix}-${index}`;
+    index += 1;
+  }
+
+  return nextId;
 }
 
 function areRoutineDaysEqual(firstRoutineDay, secondRoutineDay) {
@@ -346,7 +385,6 @@ function isValidWorkoutSession(value) {
     value &&
     typeof value.scheduleDayId === "string" &&
     typeof value.routineDayId === "string" &&
-    validRoutineDayIds.has(value.routineDayId) &&
     Array.isArray(value.exercises) &&
     value.exercises.every(
       (exercise) =>
@@ -622,6 +660,7 @@ function App() {
   const [selectedRoutineDayId, setSelectedRoutineDayId] = useState(
     routineDays[0]?.id ?? null,
   );
+  const [newRoutineName, setNewRoutineName] = useState("");
   const [completedWorkouts, setCompletedWorkouts] = useState(loadCompletedWorkouts);
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
@@ -900,10 +939,10 @@ function App() {
   }
 
   function saveRoutineDay(dayId) {
-    const defaultDay = routineDays.find((day) => day.id === dayId);
+    const defaultDay = routineDays.find((day) => day.id === dayId) ?? null;
     const draftDay = routineDrafts.find((day) => day.id === dayId);
 
-    if (!defaultDay || !draftDay) {
+    if (!draftDay) {
       return;
     }
 
@@ -938,6 +977,45 @@ function App() {
         dayId,
         type: "error",
         message: "Routine could not be saved. Your edits are still on screen.",
+      });
+    }
+  }
+
+  function createCustomRoutine() {
+    const routineName = newRoutineName.trim();
+
+    if (!routineName) {
+      setRoutineSaveStatus({
+        dayId: selectedRoutineDayId,
+        type: "error",
+        message: "Enter a routine name first.",
+      });
+      return;
+    }
+
+    const customRoutine = {
+      id: createRoutineId(routineName, routineDefinitions),
+      name: routineName,
+      exercises: [],
+    };
+    const nextRoutineDefinitions = [...routineDefinitions, customRoutine];
+
+    try {
+      persistRoutineDefinitions(nextRoutineDefinitions);
+      setRoutineDefinitions(nextRoutineDefinitions);
+      setRoutineDrafts((currentDrafts) => [...currentDrafts, customRoutine]);
+      setSelectedRoutineDayId(customRoutine.id);
+      setNewRoutineName("");
+      setRoutineSaveStatus({
+        dayId: customRoutine.id,
+        type: "success",
+        message: "Routine created.",
+      });
+    } catch {
+      setRoutineSaveStatus({
+        dayId: selectedRoutineDayId,
+        type: "error",
+        message: "Routine could not be created. Try again.",
       });
     }
   }
@@ -1302,21 +1380,21 @@ function App() {
                     {isSelected ? (
                       <div className="mt-4 border-t border-slate-700 pt-4">
                         <div className="flex flex-wrap gap-2">
-                          {routineOptions.map((option) => {
+                          {[...routineDefinitions, { id: null, name: "Rest" }].map((option) => {
                             const isAssigned = day.routineDayId === option.id;
 
                             return (
                               <button
-                                key={option.label}
+                                key={option.id ?? "rest"}
                                 type="button"
                                 onClick={() => assignRoutineToDay(day.id, option.id)}
                                 className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
                                   isAssigned
                                     ? "border-emerald-400 bg-emerald-400 text-slate-950"
                                     : "border-slate-700 bg-slate-950 text-slate-200 hover:border-slate-500"
-                                }`}
+                                  }`}
                               >
-                                {option.label}
+                                {option.name}
                               </button>
                             );
                           })}
@@ -1356,6 +1434,31 @@ function App() {
 
             <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
               <nav className="grid gap-2 self-start rounded-2xl border border-slate-800 bg-slate-900 p-3">
+                <form
+                  className="grid gap-2 border-b border-slate-800 pb-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    createCustomRoutine();
+                  }}
+                >
+                  <label className="text-sm font-semibold text-slate-300">
+                    New Routine
+                    <input
+                      type="text"
+                      value={newRoutineName}
+                      onChange={(event) => setNewRoutineName(event.target.value)}
+                      placeholder="Push"
+                      className={`${routineEditorInputClassName} mt-1`}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                  >
+                    Create Routine
+                  </button>
+                </form>
+
                 {routineDrafts.map((routineDay) => {
                   const isSelected = routineDay.id === selectedRoutineDayId;
 

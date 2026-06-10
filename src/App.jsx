@@ -5,6 +5,7 @@ import { weekSchedule } from "./data/weekSchedule";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
+const ACTIVE_WORKOUT_STORAGE_KEY = "nevfit_active_workout";
 const DEFAULT_REST_SECONDS = 120;
 const workoutNumberInputClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
@@ -160,6 +161,63 @@ function createWorkoutSession(scheduleDay, routineDay) {
   };
 }
 
+function isValidWorkoutSession(value) {
+  return (
+    value &&
+    typeof value.scheduleDayId === "string" &&
+    typeof value.routineDayId === "string" &&
+    validRoutineDayIds.has(value.routineDayId) &&
+    Array.isArray(value.exercises) &&
+    value.exercises.every(
+      (exercise) =>
+        exercise &&
+        typeof exercise.exerciseId === "string" &&
+        typeof exercise.prescribedSets === "number" &&
+        typeof exercise.repRange === "string" &&
+        (typeof exercise.note === "string" ||
+          typeof exercise.note === "undefined") &&
+        (typeof exercise.restSeconds === "number" ||
+          typeof exercise.restSeconds === "undefined") &&
+        Array.isArray(exercise.sets) &&
+        exercise.sets.every(
+          (set) =>
+            set &&
+            typeof set.setNumber === "number" &&
+            typeof set.weight === "string" &&
+            typeof set.reps === "string",
+        ),
+    )
+  );
+}
+
+function loadStoredActiveWorkoutSession() {
+  try {
+    const storedSession = window.localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
+
+    if (!storedSession) {
+      return null;
+    }
+
+    const parsedSession = JSON.parse(storedSession);
+
+    return isValidWorkoutSession(parsedSession) ? parsedSession : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistActiveWorkoutSession(workoutSession) {
+  if (!workoutSession) {
+    window.localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(
+    ACTIVE_WORKOUT_STORAGE_KEY,
+    JSON.stringify(workoutSession),
+  );
+}
+
 function createCompletedWorkoutRecord(workoutSession, routineDay) {
   return {
     id: `workout-${Date.now()}`,
@@ -301,6 +359,13 @@ function formatTimerSeconds(totalSeconds) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatFinishedTime(date) {
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 let timerAudioContext = null;
 
 function getTimerAudioContext() {
@@ -363,10 +428,15 @@ function App() {
   const [schedule, setSchedule] = useState(loadStoredSchedule);
   const [completedWorkouts, setCompletedWorkouts] = useState(loadCompletedWorkouts);
   const [selectedDayId, setSelectedDayId] = useState(weekSchedule[0]?.id ?? null);
-  const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
-  const [viewMode, setViewMode] = useState("planner");
+  const [activeWorkoutSession, setActiveWorkoutSession] = useState(
+    loadStoredActiveWorkoutSession,
+  );
+  const [viewMode, setViewMode] = useState(() =>
+    loadStoredActiveWorkoutSession() ? "workout" : "planner",
+  );
   const [saveMessage, setSaveMessage] = useState("");
   const [restTimer, setRestTimer] = useState(null);
+  const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
   const wakeLockRef = useRef(null);
   const isWorkoutActive = viewMode === "workout" && Boolean(activeWorkoutSession);
 
@@ -379,6 +449,25 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [saveMessage]);
+
+  useEffect(() => {
+    persistActiveWorkoutSession(activeWorkoutSession);
+  }, [activeWorkoutSession]);
+
+  useEffect(() => {
+    if (!activeWorkoutSession) {
+      return undefined;
+    }
+
+    function handleBeforeUnload(event) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [activeWorkoutSession]);
 
   useEffect(() => {
     if (
@@ -483,7 +572,7 @@ function App() {
     };
   }, [isWorkoutActive]);
 
-  function assignRoutineToDay(dayId, routineDayId) {
+  function applyRoutineAssignment(dayId, routineDayId) {
     setSchedule((currentSchedule) => {
       const nextSchedule = currentSchedule.map((day) =>
         day.id === dayId
@@ -499,15 +588,38 @@ function App() {
 
       return nextSchedule;
     });
+  }
 
-    if (!routineDayId && activeWorkoutSession?.scheduleDayId === dayId) {
-      setActiveWorkoutSession(null);
-      setRestTimer(null);
-      setViewMode("planner");
+  function assignRoutineToDay(dayId, routineDayId) {
+    if (
+      activeWorkoutSession?.scheduleDayId === dayId &&
+      activeWorkoutSession.routineDayId !== routineDayId
+    ) {
+      setPendingWorkoutAction({
+        type: "change-assignment",
+        dayId,
+        routineDayId,
+      });
+      return;
     }
+
+    applyRoutineAssignment(dayId, routineDayId);
   }
 
   function openWorkout(scheduleDay, routineDay) {
+    if (
+      activeWorkoutSession &&
+      (activeWorkoutSession.scheduleDayId !== scheduleDay.id ||
+        activeWorkoutSession.routineDayId !== routineDay.id)
+    ) {
+      setPendingWorkoutAction({
+        type: "open-workout",
+        scheduleDay,
+        routineDay,
+      });
+      return;
+    }
+
     setActiveWorkoutSession((currentSession) => {
       if (
         currentSession?.scheduleDayId === scheduleDay.id &&
@@ -522,17 +634,26 @@ function App() {
     setViewMode("workout");
   }
 
-  function closeWorkout() {
+  function discardWorkout() {
     setActiveWorkoutSession(null);
     setRestTimer(null);
     setViewMode("planner");
   }
 
-  function saveWorkout() {
+  function requestCloseWorkout() {
+    setPendingWorkoutAction({ type: "close-workout" });
+  }
+
+  function requestFooterFinishWorkout() {
+    setPendingWorkoutAction({ type: "finish-workout" });
+  }
+
+  function finishWorkout() {
     if (!activeWorkoutSession || !activeRoutineDay) {
       return;
     }
 
+    const finishedAt = new Date();
     const completedWorkout = createCompletedWorkoutRecord(
       activeWorkoutSession,
       activeRoutineDay,
@@ -545,10 +666,53 @@ function App() {
 
       return nextWorkouts;
     });
-    setSaveMessage("Workout saved.");
+    setSaveMessage(`Workout finished at ${formatFinishedTime(finishedAt)}. All logged sets saved.`);
     setActiveWorkoutSession(null);
     setRestTimer(null);
     setViewMode("planner");
+  }
+
+  function completePendingWorkoutAction(action) {
+    if (!action) {
+      return;
+    }
+
+    if (action.type === "change-assignment") {
+      applyRoutineAssignment(action.dayId, action.routineDayId);
+      setViewMode("planner");
+      return;
+    }
+
+    if (action.type === "open-workout") {
+      setActiveWorkoutSession(createWorkoutSession(action.scheduleDay, action.routineDay));
+      setRestTimer(null);
+      setViewMode("workout");
+      return;
+    }
+
+    if (action.type === "close-workout" || action.type === "finish-workout") {
+      setViewMode("planner");
+    }
+  }
+
+  function finishPendingWorkoutAction() {
+    const action = pendingWorkoutAction;
+
+    finishWorkout();
+    setPendingWorkoutAction(null);
+    window.setTimeout(() => completePendingWorkoutAction(action), 0);
+  }
+
+  function discardPendingWorkoutAction() {
+    const action = pendingWorkoutAction;
+
+    discardWorkout();
+    setPendingWorkoutAction(null);
+    window.setTimeout(() => completePendingWorkoutAction(action), 0);
+  }
+
+  function cancelPendingWorkoutAction() {
+    setPendingWorkoutAction(null);
   }
 
   function startRestTimer(sessionExercise) {
@@ -765,7 +929,7 @@ function App() {
               onClick={() => setViewMode("planner")}
               className="mb-4 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
             >
-              ← Back To Planner
+              Back To Planner
             </button>
 
             <div className="flex min-w-0 flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-start md:justify-between">
@@ -783,14 +947,14 @@ function App() {
               <div className="flex min-w-0 flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={saveWorkout}
+                  onClick={finishWorkout}
                   className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
                 >
-                  Save Workout
+                  Finish Workout
                 </button>
                 <button
                   type="button"
-                  onClick={closeWorkout}
+                  onClick={requestCloseWorkout}
                   className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
                 >
                   Close Workout
@@ -916,6 +1080,19 @@ function App() {
                 );
               })}
             </ul>
+
+            <div className="mt-5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-4 text-center">
+              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
+                End of workout
+              </p>
+              <button
+                type="button"
+                onClick={finishWorkout}
+                className="mt-3 w-full rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 sm:w-auto sm:min-w-56"
+              >
+                Finish Workout
+              </button>
+            </div>
           </section>
         ) : null}
       </div>
@@ -945,7 +1122,7 @@ function App() {
               </div>
             </div>
 
-            <div className="grid w-full shrink-0 grid-cols-3 gap-2 sm:w-auto">
+            <div className="grid w-full shrink-0 grid-cols-4 gap-2 sm:w-auto">
               {restTimer?.paused ? (
                 <button
                   type="button"
@@ -979,6 +1156,48 @@ function App() {
                 className="w-full rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Skip
+              </button>
+              <button
+                type="button"
+                onClick={requestFooterFinishWorkout}
+                className="w-full rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+              >
+                Finish
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingWorkoutAction ? (
+        <div className="fixed inset-0 z-40 flex items-end bg-slate-950/80 p-3 sm:items-center sm:justify-center sm:p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl">
+            <h2 className="text-xl font-bold">Active workout in progress</h2>
+            <p className="mt-2 text-sm text-slate-300">
+              You have an active workout. Finish it, discard it, or cancel and keep
+              logging.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={finishPendingWorkoutAction}
+                className="rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+              >
+                Finish Workout
+              </button>
+              <button
+                type="button"
+                onClick={discardPendingWorkoutAction}
+                className="rounded-lg border border-red-400/60 px-4 py-3 font-semibold text-red-200 transition hover:border-red-300"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={cancelPendingWorkoutAction}
+                className="rounded-lg border border-slate-600 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-400"
+              >
+                Cancel
               </button>
             </div>
           </div>

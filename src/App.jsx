@@ -381,6 +381,15 @@ function createWorkoutSession(scheduleDay, routineDay) {
   };
 }
 
+function createRoutineExerciseFromCatalog(exercise) {
+  return {
+    exerciseId: exercise.id,
+    sets: exercise.defaultSets ?? 3,
+    repRange: exercise.defaultRepRange ?? "8-12",
+    restSeconds: exercise.defaultRestSeconds ?? DEFAULT_REST_SECONDS,
+  };
+}
+
 function isValidWorkoutSession(value) {
   return (
     value &&
@@ -937,12 +946,7 @@ function App() {
               ...day,
               exercises: [
                 ...day.exercises,
-                {
-                  exerciseId: defaultExercise.id,
-                  sets: 3,
-                  repRange: "8-12",
-                  restSeconds: DEFAULT_REST_SECONDS,
-                },
+                createRoutineExerciseFromCatalog(defaultExercise),
               ],
             }
           : day,

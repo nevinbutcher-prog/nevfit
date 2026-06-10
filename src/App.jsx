@@ -4,11 +4,16 @@ import { routineDays } from "./data/routineDays";
 import { weekSchedule } from "./data/weekSchedule";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
+const ROUTINES_STORAGE_KEY = "nevfit_routines";
 const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
 const ACTIVE_WORKOUT_STORAGE_KEY = "nevfit_active_workout";
 const DEFAULT_REST_SECONDS = 120;
 const workoutNumberInputClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
+const routineEditorInputClassName =
+  "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
+const routineEditorSelectClassName =
+  "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition focus:border-emerald-400";
 
 const routineOptions = [
   { id: "day-a", label: "Day A" },
@@ -18,8 +23,8 @@ const routineOptions = [
   { id: null, label: "Rest" },
 ];
 
-const getRoutineDay = (routineDayId) =>
-  routineDays.find((day) => day.id === routineDayId);
+const getRoutineDay = (routineDayId, routineDefinitions) =>
+  routineDefinitions.find((day) => day.id === routineDayId);
 
 const getExercise = (exerciseId) =>
   exerciseCatalog.find((exercise) => exercise.id === exerciseId);
@@ -85,6 +90,111 @@ function loadStoredSchedule() {
 
 function persistSchedule(schedule) {
   window.localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
+}
+
+function normalizeRoutineExercise(value) {
+  if (
+    !(
+      value &&
+      typeof value.exerciseId === "string" &&
+      exerciseCatalog.some((exercise) => exercise.id === value.exerciseId)
+    )
+  ) {
+    return null;
+  }
+
+  const sets = Number(value.sets);
+  const restSeconds =
+    value.restSeconds === null ||
+    value.restSeconds === "" ||
+    typeof value.restSeconds === "undefined"
+      ? null
+      : Number(value.restSeconds);
+
+  if (!Number.isInteger(sets) || sets < 1 || sets > 12) {
+    return null;
+  }
+
+  if (
+    restSeconds !== null &&
+    (!Number.isInteger(restSeconds) || restSeconds < 0 || restSeconds > 600)
+  ) {
+    return null;
+  }
+
+  return {
+    exerciseId: value.exerciseId,
+    sets,
+    repRange:
+      typeof value.repRange === "string" && value.repRange.trim()
+        ? value.repRange.trim()
+        : "8-12",
+    restSeconds,
+    ...(typeof value.note === "string" && value.note.trim()
+      ? { note: value.note.trim() }
+      : {}),
+    ...(typeof value.groupId === "string" && value.groupId.trim()
+      ? { groupId: value.groupId.trim() }
+      : {}),
+  };
+}
+
+function normalizeRoutineDay(value, defaultDay) {
+  if (!(value && value.id === defaultDay.id && value.name === defaultDay.name)) {
+    return null;
+  }
+
+  if (!Array.isArray(value.exercises)) {
+    return null;
+  }
+
+  const exercises = value.exercises.map(normalizeRoutineExercise).filter(Boolean);
+
+  return {
+    id: defaultDay.id,
+    name: defaultDay.name,
+    exercises,
+  };
+}
+
+function normalizeRoutineDefinitions(value) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const normalizedDays = routineDays.map((defaultDay) => {
+    const storedDay = value.find((day) => day?.id === defaultDay.id);
+    const normalizedDay = storedDay
+      ? normalizeRoutineDay(storedDay, defaultDay)
+      : null;
+
+    return normalizedDay ?? normalizeRoutineDay(defaultDay, defaultDay);
+  });
+
+  return normalizedDays.every(Boolean) ? normalizedDays : null;
+}
+
+function loadStoredRoutineDefinitions() {
+  try {
+    const storedRoutines = window.localStorage.getItem(ROUTINES_STORAGE_KEY);
+
+    if (!storedRoutines) {
+      return normalizeRoutineDefinitions(routineDays) ?? routineDays;
+    }
+
+    const parsedRoutines = JSON.parse(storedRoutines);
+
+    return normalizeRoutineDefinitions(parsedRoutines) ?? routineDays;
+  } catch {
+    return routineDays;
+  }
+}
+
+function persistRoutineDefinitions(routineDefinitions) {
+  window.localStorage.setItem(
+    ROUTINES_STORAGE_KEY,
+    JSON.stringify(routineDefinitions),
+  );
 }
 
 function getCurrentWeekdayId() {
@@ -501,6 +611,13 @@ function playTimerCompleteSound() {
 
 function App() {
   const [schedule, setSchedule] = useState(loadStoredSchedule);
+  const [routineDefinitions, setRoutineDefinitions] = useState(
+    loadStoredRoutineDefinitions,
+  );
+  const [routineDrafts, setRoutineDrafts] = useState(loadStoredRoutineDefinitions);
+  const [selectedRoutineDayId, setSelectedRoutineDayId] = useState(
+    routineDays[0]?.id ?? null,
+  );
   const [completedWorkouts, setCompletedWorkouts] = useState(loadCompletedWorkouts);
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
@@ -510,6 +627,7 @@ function App() {
     loadStoredActiveWorkoutSession() ? "workout" : "planner",
   );
   const [saveMessage, setSaveMessage] = useState("");
+  const [routineSaveMessage, setRoutineSaveMessage] = useState("");
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
   const wakeLockRef = useRef(null);
@@ -526,6 +644,16 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [saveMessage]);
+
+  useEffect(() => {
+    if (!routineSaveMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setRoutineSaveMessage(""), 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [routineSaveMessage]);
 
   useEffect(() => {
     persistActiveWorkoutSession(activeWorkoutSession);
@@ -681,6 +809,113 @@ function App() {
 
       return nextSchedule;
     });
+  }
+
+  function updateRoutineExercise(dayId, exerciseIndex, patch) {
+    setRoutineDrafts((currentDrafts) =>
+      currentDrafts.map((day) =>
+        day.id === dayId
+          ? {
+              ...day,
+              exercises: day.exercises.map((exercise, index) =>
+                index === exerciseIndex ? { ...exercise, ...patch } : exercise,
+              ),
+            }
+          : day,
+      ),
+    );
+  }
+
+  function moveRoutineExercise(dayId, exerciseIndex, direction) {
+    setRoutineDrafts((currentDrafts) =>
+      currentDrafts.map((day) => {
+        if (day.id !== dayId) {
+          return day;
+        }
+
+        const nextIndex = exerciseIndex + direction;
+
+        if (nextIndex < 0 || nextIndex >= day.exercises.length) {
+          return day;
+        }
+
+        const nextExercises = [...day.exercises];
+        const [movedExercise] = nextExercises.splice(exerciseIndex, 1);
+        nextExercises.splice(nextIndex, 0, movedExercise);
+
+        return {
+          ...day,
+          exercises: nextExercises,
+        };
+      }),
+    );
+  }
+
+  function removeRoutineExercise(dayId, exerciseIndex) {
+    setRoutineDrafts((currentDrafts) =>
+      currentDrafts.map((day) =>
+        day.id === dayId
+          ? {
+              ...day,
+              exercises: day.exercises.filter((_, index) => index !== exerciseIndex),
+            }
+          : day,
+      ),
+    );
+  }
+
+  function addRoutineExercise(dayId) {
+    const defaultExercise = exerciseCatalog[0];
+
+    if (!defaultExercise) {
+      return;
+    }
+
+    setRoutineDrafts((currentDrafts) =>
+      currentDrafts.map((day) =>
+        day.id === dayId
+          ? {
+              ...day,
+              exercises: [
+                ...day.exercises,
+                {
+                  exerciseId: defaultExercise.id,
+                  sets: 3,
+                  repRange: "8-12",
+                  restSeconds: DEFAULT_REST_SECONDS,
+                },
+              ],
+            }
+          : day,
+      ),
+    );
+  }
+
+  function saveRoutineDay(dayId) {
+    const defaultDay = routineDays.find((day) => day.id === dayId);
+    const draftDay = routineDrafts.find((day) => day.id === dayId);
+
+    if (!defaultDay || !draftDay) {
+      return;
+    }
+
+    const normalizedDay = normalizeRoutineDay(draftDay, defaultDay);
+
+    if (!normalizedDay) {
+      setRoutineSaveMessage("Routine could not be saved. Check sets, reps, and rest.");
+      return;
+    }
+
+    const nextRoutineDefinitions = routineDefinitions.map((day) =>
+      day.id === dayId ? normalizedDay : day,
+    );
+
+    persistRoutineDefinitions(nextRoutineDefinitions);
+    setRoutineDefinitions(nextRoutineDefinitions);
+    setRoutineDrafts((currentDrafts) =>
+      currentDrafts.map((day) => (day.id === dayId ? normalizedDay : day)),
+    );
+    setRoutineSaveMessage(`${normalizedDay.name} saved.`);
   }
 
   function assignRoutineToDay(dayId, routineDayId) {
@@ -913,7 +1148,10 @@ function App() {
   const activeWorkoutDay = schedule.find(
     (day) => day.id === activeWorkoutSession?.scheduleDayId,
   );
-  const activeRoutineDay = getRoutineDay(activeWorkoutSession?.routineDayId);
+  const activeRoutineDay = getRoutineDay(
+    activeWorkoutSession?.routineDayId,
+    routineDefinitions,
+  );
   const activeWorkoutSetCount =
     activeWorkoutSession?.exercises.reduce(
       (total, exercise) => total + exercise.sets.length,
@@ -929,6 +1167,9 @@ function App() {
   const restTimerDisplay = restTimer
     ? formatTimerSeconds(restTimer.remainingSeconds)
     : "--:--";
+  const selectedRoutineDraft = routineDrafts.find(
+    (day) => day.id === selectedRoutineDayId,
+  );
 
   return (
     <main
@@ -937,13 +1178,38 @@ function App() {
       }`}
     >
       <div className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden">
+        {viewMode !== "workout" ? (
+          <header className="mb-6">
+            <h1 className="text-4xl font-bold">NevFit</h1>
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-80">
+              <button
+                type="button"
+                onClick={() => setViewMode("planner")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  viewMode === "planner"
+                    ? "bg-emerald-400 text-slate-950"
+                    : "text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                Week
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("routines")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  viewMode === "routines"
+                    ? "bg-emerald-400 text-slate-950"
+                    : "text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                Routines
+              </button>
+            </div>
+          </header>
+        ) : null}
+
         {viewMode === "planner" ? (
           <>
-            <header className="mb-6">
-              <h1 className="text-4xl font-bold">NevFit</h1>
-              <p className="mt-1 text-slate-400">This week&apos;s training plan</p>
-            </header>
-
             {saveMessage ? (
               <p className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">
                 {saveMessage}
@@ -952,7 +1218,10 @@ function App() {
 
             <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
               {schedule.map((day) => {
-                const routineDay = getRoutineDay(day.routineDayId);
+                const routineDay = getRoutineDay(
+                  day.routineDayId,
+                  routineDefinitions,
+                );
                 const isSelected = day.id === selectedDayId;
 
                 return (
@@ -1024,6 +1293,225 @@ function App() {
               })}
             </section>
           </>
+        ) : null}
+
+        {viewMode === "routines" ? (
+          <section className="min-w-0">
+            {routineSaveMessage ? (
+              <p className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">
+                {routineSaveMessage}
+              </p>
+            ) : null}
+
+            <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+              <nav className="grid gap-2 self-start rounded-2xl border border-slate-800 bg-slate-900 p-3">
+                {routineDrafts.map((routineDay) => {
+                  const isSelected = routineDay.id === selectedRoutineDayId;
+
+                  return (
+                    <button
+                      key={routineDay.id}
+                      type="button"
+                      onClick={() => setSelectedRoutineDayId(routineDay.id)}
+                      className={`rounded-lg border px-4 py-3 text-left transition ${
+                        isSelected
+                          ? "border-emerald-400 bg-slate-800 text-white"
+                          : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-600"
+                      }`}
+                    >
+                      <span className="block font-semibold">{routineDay.name}</span>
+                      <span className="mt-1 block text-sm text-slate-400">
+                        {routineDay.exercises.length} exercises
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {selectedRoutineDraft ? (
+                <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
+                  <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {selectedRoutineDraft.name}
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {selectedRoutineDraft.exercises.length} exercises
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
+                      className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                    >
+                      Save Routine
+                    </button>
+                  </div>
+
+                  <ul className="mt-4 space-y-3">
+                    {selectedRoutineDraft.exercises.map((routineExercise, index) => {
+                      const exercise = getExercise(routineExercise.exerciseId);
+
+                      return (
+                        <li
+                          key={`${selectedRoutineDraft.id}-${index}`}
+                          className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                        >
+                          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start">
+                            <div className="flex shrink-0 gap-2 lg:w-28">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  moveRoutineExercise(
+                                    selectedRoutineDraft.id,
+                                    index,
+                                    -1,
+                                  )
+                                }
+                                disabled={index === 0}
+                                className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label={`Move ${exercise?.name ?? "exercise"} up`}
+                              >
+                                Up
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  moveRoutineExercise(
+                                    selectedRoutineDraft.id,
+                                    index,
+                                    1,
+                                  )
+                                }
+                                disabled={
+                                  index === selectedRoutineDraft.exercises.length - 1
+                                }
+                                className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label={`Move ${exercise?.name ?? "exercise"} down`}
+                              >
+                                Down
+                              </button>
+                            </div>
+
+                            <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
+                              <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                Exercise
+                                <select
+                                  value={routineExercise.exerciseId}
+                                  onChange={(event) =>
+                                    updateRoutineExercise(
+                                      selectedRoutineDraft.id,
+                                      index,
+                                      { exerciseId: event.target.value },
+                                    )
+                                  }
+                                  className={`${routineEditorSelectClassName} mt-1`}
+                                >
+                                  {exerciseCatalog.map((catalogExercise) => (
+                                    <option
+                                      key={catalogExercise.id}
+                                      value={catalogExercise.id}
+                                    >
+                                      {catalogExercise.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+
+                              <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                Sets
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min="1"
+                                  max="12"
+                                  value={routineExercise.sets}
+                                  onChange={(event) =>
+                                    updateRoutineExercise(
+                                      selectedRoutineDraft.id,
+                                      index,
+                                      { sets: event.target.value },
+                                    )
+                                  }
+                                  className={`${routineEditorInputClassName} mt-1`}
+                                />
+                              </label>
+
+                              <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                Reps
+                                <input
+                                  type="text"
+                                  value={routineExercise.repRange}
+                                  onChange={(event) =>
+                                    updateRoutineExercise(
+                                      selectedRoutineDraft.id,
+                                      index,
+                                      { repRange: event.target.value },
+                                    )
+                                  }
+                                  className={`${routineEditorInputClassName} mt-1`}
+                                />
+                              </label>
+
+                              <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                Rest
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min="0"
+                                  max="600"
+                                  value={routineExercise.restSeconds ?? ""}
+                                  placeholder={`${DEFAULT_REST_SECONDS}`}
+                                  onChange={(event) =>
+                                    updateRoutineExercise(
+                                      selectedRoutineDraft.id,
+                                      index,
+                                      { restSeconds: event.target.value },
+                                    )
+                                  }
+                                  className={`${routineEditorInputClassName} mt-1`}
+                                />
+                              </label>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeRoutineExercise(
+                                  selectedRoutineDraft.id,
+                                  index,
+                                )
+                              }
+                              className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300 lg:mt-6"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => addRoutineExercise(selectedRoutineDraft.id)}
+                      className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500"
+                    >
+                      Add Exercise
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
+                      className="rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                    >
+                      Save Routine
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </section>
         ) : null}
 
         {viewMode === "workout" && activeWorkoutSession && activeWorkoutDay && activeRoutineDay ? (

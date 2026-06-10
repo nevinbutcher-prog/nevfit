@@ -16,7 +16,7 @@ const routineEditorSelectClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition focus:border-emerald-400";
 
 const getRoutineDay = (routineDayId, routineDefinitions) =>
-  routineDefinitions.find((day) => day.id === routineDayId);
+  routineDefinitions.find((day) => day.id === routineDayId && !day.archived);
 
 const getExercise = (exerciseId) =>
   exerciseCatalog.find((exercise) => exercise.id === exerciseId);
@@ -154,6 +154,7 @@ function normalizeRoutineDay(value, fallbackDay = null) {
     id: fallbackDay?.id ?? value.id.trim(),
     name: fallbackDay?.name ?? value.name.trim(),
     exercises,
+    ...(fallbackDay ? {} : { archived: value.archived === true }),
   };
 }
 
@@ -870,6 +871,17 @@ function App() {
     );
   }
 
+  function updateRoutineName(dayId, name) {
+    if (builtInRoutineDayIds.has(dayId)) {
+      return;
+    }
+
+    setRoutineSaveStatus(null);
+    setRoutineDrafts((currentDrafts) =>
+      currentDrafts.map((day) => (day.id === dayId ? { ...day, name } : day)),
+    );
+  }
+
   function moveRoutineExercise(dayId, exerciseIndex, direction) {
     setRoutineSaveStatus(null);
     setRoutineDrafts((currentDrafts) =>
@@ -977,6 +989,97 @@ function App() {
         dayId,
         type: "error",
         message: "Routine could not be saved. Your edits are still on screen.",
+      });
+    }
+  }
+
+  function duplicateRoutine(dayId) {
+    const sourceRoutine = routineDrafts.find((day) => day.id === dayId);
+
+    if (!sourceRoutine) {
+      return;
+    }
+
+    const duplicateName = `${sourceRoutine.name} Copy`;
+    const duplicateRoutine = {
+      id: createRoutineId(duplicateName, routineDefinitions),
+      name: duplicateName,
+      exercises: sourceRoutine.exercises.map((exercise) => ({ ...exercise })),
+      archived: false,
+    };
+    const nextRoutineDefinitions = [...routineDefinitions, duplicateRoutine];
+
+    try {
+      persistRoutineDefinitions(nextRoutineDefinitions);
+      setRoutineDefinitions(nextRoutineDefinitions);
+      setRoutineDrafts((currentDrafts) => [...currentDrafts, duplicateRoutine]);
+      setSelectedRoutineDayId(duplicateRoutine.id);
+      setRoutineSaveStatus({
+        dayId: duplicateRoutine.id,
+        type: "success",
+        message: "Routine duplicated.",
+      });
+    } catch {
+      setRoutineSaveStatus({
+        dayId,
+        type: "error",
+        message: "Routine could not be duplicated.",
+      });
+    }
+  }
+
+  function archiveCustomRoutine(dayId) {
+    if (builtInRoutineDayIds.has(dayId)) {
+      setRoutineSaveStatus({
+        dayId,
+        type: "error",
+        message: "Default routines cannot be archived.",
+      });
+      return;
+    }
+
+    const routineToArchive = routineDefinitions.find((day) => day.id === dayId);
+
+    if (!routineToArchive) {
+      return;
+    }
+
+    const nextRoutineDefinitions = routineDefinitions.map((day) =>
+      day.id === dayId ? { ...day, archived: true } : day,
+    );
+    const nextSchedule = schedule.map((day) =>
+      day.routineDayId === dayId
+        ? {
+            ...day,
+            routineDayId: null,
+            note: "Rest",
+          }
+        : day,
+    );
+    const nextSelectedRoutineId =
+      nextRoutineDefinitions.find((day) => !day.archived)?.id ?? null;
+
+    try {
+      persistRoutineDefinitions(nextRoutineDefinitions);
+      persistSchedule(nextSchedule);
+      setRoutineDefinitions(nextRoutineDefinitions);
+      setRoutineDrafts((currentDrafts) =>
+        currentDrafts.map((day) =>
+          day.id === dayId ? { ...day, archived: true } : day,
+        ),
+      );
+      setSchedule(nextSchedule);
+      setSelectedRoutineDayId(nextSelectedRoutineId);
+      setRoutineSaveStatus({
+        dayId: nextSelectedRoutineId,
+        type: "success",
+        message: `${routineToArchive.name} archived. Assigned weekdays reset to Rest.`,
+      });
+    } catch {
+      setRoutineSaveStatus({
+        dayId,
+        type: "error",
+        message: "Routine could not be archived.",
       });
     }
   }
@@ -1269,6 +1372,10 @@ function App() {
   const restTimerDisplay = restTimer
     ? formatTimerSeconds(restTimer.remainingSeconds)
     : "--:--";
+  const activeRoutineDefinitions = routineDefinitions.filter(
+    (routine) => !routine.archived,
+  );
+  const activeRoutineDrafts = routineDrafts.filter((routine) => !routine.archived);
   const selectedRoutineDraft = routineDrafts.find(
     (day) => day.id === selectedRoutineDayId,
   );
@@ -1288,6 +1395,9 @@ function App() {
       !areRoutineDaysEqual(normalizedSelectedRoutineDraft, selectedSavedRoutine));
   const selectedRoutineSaveStatus =
     routineSaveStatus?.dayId === selectedRoutineDayId ? routineSaveStatus : null;
+  const selectedRoutineIsBuiltIn = builtInRoutineDayIds.has(
+    selectedRoutineDayId,
+  );
   const selectedRoutineSaveButtonLabel =
     selectedRoutineSaveStatus?.type === "success" &&
     !selectedRoutineHasUnsavedChanges
@@ -1380,7 +1490,7 @@ function App() {
                     {isSelected ? (
                       <div className="mt-4 border-t border-slate-700 pt-4">
                         <div className="flex flex-wrap gap-2">
-                          {[...routineDefinitions, { id: null, name: "Rest" }].map((option) => {
+                          {[...activeRoutineDefinitions, { id: null, name: "Rest" }].map((option) => {
                             const isAssigned = day.routineDayId === option.id;
 
                             return (
@@ -1459,7 +1569,7 @@ function App() {
                   </button>
                 </form>
 
-                {routineDrafts.map((routineDay) => {
+                {activeRoutineDrafts.map((routineDay) => {
                   const isSelected = routineDay.id === selectedRoutineDayId;
 
                   return (
@@ -1486,11 +1596,26 @@ function App() {
                 <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
                   <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h2 className="text-2xl font-bold">
-                        {selectedRoutineDraft.name}
-                      </h2>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <label className="block text-sm font-semibold text-slate-300">
+                        Routine Name
+                        <input
+                          type="text"
+                          value={selectedRoutineDraft.name}
+                          onChange={(event) =>
+                            updateRoutineName(
+                              selectedRoutineDraft.id,
+                              event.target.value,
+                            )
+                          }
+                          disabled={selectedRoutineIsBuiltIn}
+                          className={`${routineEditorInputClassName} mt-1 text-2xl font-bold disabled:cursor-not-allowed disabled:opacity-70`}
+                        />
+                      </label>
+                      <p className="mt-2 text-sm text-slate-400">
                         {selectedRoutineDraft.exercises.length} exercises
+                        {selectedRoutineIsBuiltIn
+                          ? " · default routine"
+                          : " · custom routine"}
                       </p>
                       {selectedRoutineHasUnsavedChanges ? (
                         <p className="mt-2 text-sm font-semibold text-amber-200">
@@ -1498,18 +1623,38 @@ function App() {
                         </p>
                       ) : null}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
-                      className={`rounded-lg px-4 py-2 font-semibold transition ${
-                        selectedRoutineSaveStatus?.type === "success" &&
-                        !selectedRoutineHasUnsavedChanges
-                          ? "bg-emerald-300 text-slate-950"
-                          : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
-                      }`}
-                    >
-                      {selectedRoutineSaveButtonLabel}
-                    </button>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                      <button
+                        type="button"
+                        onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
+                        className={`rounded-lg px-4 py-2 font-semibold transition ${
+                          selectedRoutineSaveStatus?.type === "success" &&
+                          !selectedRoutineHasUnsavedChanges
+                            ? "bg-emerald-300 text-slate-950"
+                            : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
+                        }`}
+                      >
+                        {selectedRoutineSaveButtonLabel}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => duplicateRoutine(selectedRoutineDraft.id)}
+                        className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                      >
+                        Duplicate
+                      </button>
+                      {!selectedRoutineIsBuiltIn ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            archiveCustomRoutine(selectedRoutineDraft.id)
+                          }
+                          className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300"
+                        >
+                          Archive
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
 
                   <ul className="mt-4 space-y-3">

@@ -25,6 +25,28 @@ const getExercise = (exerciseId) =>
 
 const validRoutineDayIds = new Set(routineDays.map((day) => day.id));
 
+const setFeedbackStyles = {
+  below:
+    "border-red-500/70 bg-red-500/10 text-red-200 focus:border-red-400",
+  within:
+    "border-amber-400/70 bg-amber-400/10 text-amber-100 focus:border-amber-300",
+  top:
+    "border-emerald-400/80 bg-emerald-400/10 text-emerald-100 focus:border-emerald-300",
+};
+
+const setFeedbackLabels = {
+  below: "Below target",
+  within: "Target hit",
+  top: "Top range",
+};
+
+const exerciseFeedbackStyles = {
+  incomplete: "border-slate-700 bg-slate-900/80 text-slate-300",
+  below: "border-red-500/60 bg-red-500/10 text-red-200",
+  target: "border-amber-400/60 bg-amber-400/10 text-amber-100",
+  progress: "border-emerald-400/70 bg-emerald-400/10 text-emerald-100",
+};
+
 function isValidSchedule(value) {
   return (
     Array.isArray(value) &&
@@ -185,6 +207,91 @@ function getPreviousExercisePerformance(exerciseId, completedWorkouts) {
 
     return latestPerformance;
   }, null);
+}
+
+function parseRepRange(repRange) {
+  const rangeMatch = /^(\d+)\s*-\s*(\d+)$/.exec(repRange);
+
+  if (!rangeMatch) {
+    return null;
+  }
+
+  const min = Number(rangeMatch[1]);
+  const max = Number(rangeMatch[2]);
+
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) {
+    return null;
+  }
+
+  return { min, max };
+}
+
+function getSetReps(set) {
+  if (set.reps === "") {
+    return null;
+  }
+
+  const reps = Number(set.reps);
+
+  return Number.isFinite(reps) ? reps : null;
+}
+
+function getSetFeedback(set, repRange) {
+  const reps = getSetReps(set);
+
+  if (reps === null || !repRange) {
+    return null;
+  }
+
+  if (reps < repRange.min) {
+    return "below";
+  }
+
+  if (reps >= repRange.max) {
+    return "top";
+  }
+
+  return "within";
+}
+
+function getExerciseFeedback(sessionExercise) {
+  const repRange = parseRepRange(sessionExercise.repRange);
+
+  if (!repRange) {
+    return null;
+  }
+
+  const enteredReps = sessionExercise.sets.map(getSetReps);
+  const enteredCount = enteredReps.filter((reps) => reps !== null).length;
+
+  if (enteredCount < sessionExercise.sets.length) {
+    return {
+      status: "incomplete",
+      label:
+        enteredCount === 0
+          ? "Enter reps for feedback"
+          : `${enteredCount}/${sessionExercise.sets.length} sets entered`,
+    };
+  }
+
+  if (enteredReps.some((reps) => reps < repRange.min)) {
+    return {
+      status: "below",
+      label: "Below Target Range",
+    };
+  }
+
+  if (enteredReps.every((reps) => reps >= repRange.max)) {
+    return {
+      status: "progress",
+      label: "Increase Weight Next Time",
+    };
+  }
+
+  return {
+    status: "target",
+    label: "Target Achieved",
+  };
 }
 
 function formatTimerSeconds(totalSeconds) {
@@ -698,6 +805,7 @@ function App() {
                   sessionExercise.exerciseId,
                   completedWorkouts,
                 );
+                const exerciseFeedback = getExerciseFeedback(sessionExercise);
 
                 return (
                   <li
@@ -713,6 +821,15 @@ function App() {
                         {sessionExercise.repRange}
                         {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
                       </p>
+                      {exerciseFeedback ? (
+                        <p
+                          className={`mt-3 inline-flex max-w-full items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${
+                            exerciseFeedbackStyles[exerciseFeedback.status]
+                          }`}
+                        >
+                          {exerciseFeedback.label}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="mt-4 min-w-0 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
@@ -736,48 +853,64 @@ function App() {
                     </div>
 
                     <div className="mt-4 min-w-0 space-y-2">
-                      {sessionExercise.sets.map((set) => (
-                        <div
-                          key={set.setNumber}
-                          className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2"
-                        >
-                          <span className="text-sm font-medium text-slate-300">
-                            Set {set.setNumber}
-                          </span>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            min="0"
-                            placeholder="Weight"
-                            value={set.weight}
-                            onChange={(event) =>
-                              updateSetValue(
-                                sessionExercise.exerciseId,
-                                set.setNumber,
-                                "weight",
-                                event.target.value,
-                              )
-                            }
-                            className={workoutNumberInputClassName}
-                          />
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min="0"
-                            placeholder="Reps"
-                            value={set.reps}
-                            onChange={(event) =>
-                              updateSetValue(
-                                sessionExercise.exerciseId,
-                                set.setNumber,
-                                "reps",
-                                event.target.value,
-                              )
-                            }
-                            className={workoutNumberInputClassName}
-                          />
-                        </div>
-                      ))}
+                      {sessionExercise.sets.map((set) => {
+                        const repRange = parseRepRange(sessionExercise.repRange);
+                        const setFeedback = getSetFeedback(set, repRange);
+
+                        return (
+                          <div
+                            key={set.setNumber}
+                            className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2"
+                          >
+                            <span className="text-sm font-medium text-slate-300">
+                              Set {set.setNumber}
+                            </span>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              placeholder="Weight"
+                              value={set.weight}
+                              onChange={(event) =>
+                                updateSetValue(
+                                  sessionExercise.exerciseId,
+                                  set.setNumber,
+                                  "weight",
+                                  event.target.value,
+                                )
+                              }
+                              className={workoutNumberInputClassName}
+                            />
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min="0"
+                              placeholder="Reps"
+                              value={set.reps}
+                              onChange={(event) =>
+                                updateSetValue(
+                                  sessionExercise.exerciseId,
+                                  set.setNumber,
+                                  "reps",
+                                  event.target.value,
+                                )
+                              }
+                              className={`${workoutNumberInputClassName} ${
+                                setFeedback ? setFeedbackStyles[setFeedback] : ""
+                              }`}
+                            />
+                            {setFeedback ? (
+                              <span
+                                className={`col-span-3 rounded-md border px-2.5 py-1 text-xs font-semibold ${
+                                  setFeedbackStyles[setFeedback]
+                                }`}
+                              >
+                                {setFeedbackLabels[setFeedback]}
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
                   </li>
                 );

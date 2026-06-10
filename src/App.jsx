@@ -25,6 +25,7 @@ const getExercise = (exerciseId) =>
   exerciseCatalog.find((exercise) => exercise.id === exerciseId);
 
 const validRoutineDayIds = new Set(routineDays.map((day) => day.id));
+const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const setFeedbackStyles = {
   below:
@@ -86,36 +87,89 @@ function persistSchedule(schedule) {
   window.localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
 }
 
-function isValidCompletedWorkout(value) {
-  return (
-    value &&
-    typeof value.id === "string" &&
-    typeof value.completedAt === "string" &&
-    !Number.isNaN(Date.parse(value.completedAt)) &&
-    typeof value.scheduleDayId === "string" &&
-    typeof value.routineDayId === "string" &&
-    typeof value.routineDayName === "string" &&
-    Array.isArray(value.exercises) &&
-    value.exercises.every(
-      (exercise) =>
+function getCurrentWeekdayId() {
+  const currentWeekdayId = dayIdsByDateIndex[new Date().getDay()];
+
+  return weekSchedule.some((day) => day.id === currentWeekdayId)
+    ? currentWeekdayId
+    : (weekSchedule[0]?.id ?? null);
+}
+
+function normalizeCompletedWorkout(value) {
+  if (
+    !(
+      value &&
+      typeof value.id === "string" &&
+      typeof value.completedAt === "string" &&
+      !Number.isNaN(Date.parse(value.completedAt)) &&
+      typeof value.scheduleDayId === "string" &&
+      typeof value.routineDayId === "string" &&
+      typeof value.routineDayName === "string" &&
+      Array.isArray(value.exercises)
+    )
+  ) {
+    return null;
+  }
+
+  const exercises = value.exercises.map((exercise) => {
+    if (
+      !(
         exercise &&
         typeof exercise.exerciseId === "string" &&
         typeof exercise.exerciseName === "string" &&
-        (typeof exercise.restSeconds === "number" ||
-          exercise.restSeconds === null) &&
-        Array.isArray(exercise.sets) &&
-        exercise.sets.every(
-          (set) =>
-            set &&
-            typeof set.setNumber === "number" &&
-            typeof set.weight === "string" &&
-            typeof set.reps === "string",
-        ),
-    )
-  );
+        Array.isArray(exercise.sets)
+      )
+    ) {
+      return null;
+    }
+
+    const sets = exercise.sets.map((set) => {
+      if (
+        !(
+          set &&
+          typeof set.setNumber === "number" &&
+          typeof set.weight === "string" &&
+          typeof set.reps === "string"
+        )
+      ) {
+        return null;
+      }
+
+      return {
+        setNumber: set.setNumber,
+        weight: set.weight,
+        reps: set.reps,
+      };
+    });
+
+    if (sets.some((set) => !set)) {
+      return null;
+    }
+
+    return {
+      exerciseId: exercise.exerciseId,
+      exerciseName: exercise.exerciseName,
+      restSeconds:
+        typeof exercise.restSeconds === "number" ? exercise.restSeconds : null,
+      sets,
+    };
+  });
+
+  if (exercises.some((exercise) => !exercise)) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    completedAt: value.completedAt,
+    scheduleDayId: value.scheduleDayId,
+    routineDayId: value.routineDayId,
+    routineDayName: value.routineDayName,
+    exercises,
+  };
 }
 
-function loadCompletedWorkouts() {
+function parseStoredCompletedWorkouts({ throwOnError = false } = {}) {
   try {
     const storedWorkouts = window.localStorage.getItem(
       COMPLETED_WORKOUTS_STORAGE_KEY,
@@ -128,11 +182,23 @@ function loadCompletedWorkouts() {
     const parsedWorkouts = JSON.parse(storedWorkouts);
 
     return Array.isArray(parsedWorkouts)
-      ? parsedWorkouts.filter(isValidCompletedWorkout)
+      ? parsedWorkouts.map(normalizeCompletedWorkout).filter(Boolean)
       : [];
-  } catch {
+  } catch (error) {
+    if (throwOnError) {
+      throw error;
+    }
+
     return [];
   }
+}
+
+function loadCompletedWorkouts() {
+  return parseStoredCompletedWorkouts();
+}
+
+function readPersistedCompletedWorkoutsForSave() {
+  return parseStoredCompletedWorkouts({ throwOnError: true });
 }
 
 function persistCompletedWorkouts(completedWorkouts) {
@@ -218,10 +284,15 @@ function persistActiveWorkoutSession(workoutSession) {
   );
 }
 
-function createCompletedWorkoutRecord(workoutSession, routineDay) {
+function createCompletedWorkoutRecord(workoutSession, routineDay, completedAt) {
+  const workoutId =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `workout-${completedAt.getTime()}`;
+
   return {
-    id: `workout-${Date.now()}`,
-    completedAt: new Date().toISOString(),
+    id: workoutId,
+    completedAt: completedAt.toISOString(),
     scheduleDayId: workoutSession.scheduleDayId,
     routineDayId: workoutSession.routineDayId,
     routineDayName: routineDay.name,
@@ -242,8 +313,12 @@ function createCompletedWorkoutRecord(workoutSession, routineDay) {
   };
 }
 
-function getPreviousExercisePerformance(exerciseId, completedWorkouts) {
+function getPreviousExercisePerformance(exerciseId, routineDayId, completedWorkouts) {
   return completedWorkouts.reduce((latestPerformance, completedWorkout) => {
+    if (completedWorkout.routineDayId !== routineDayId) {
+      return latestPerformance;
+    }
+
     const exercisePerformance = completedWorkout.exercises.find(
       (exercise) => exercise.exerciseId === exerciseId,
     );
@@ -427,7 +502,7 @@ function playTimerCompleteSound() {
 function App() {
   const [schedule, setSchedule] = useState(loadStoredSchedule);
   const [completedWorkouts, setCompletedWorkouts] = useState(loadCompletedWorkouts);
-  const [selectedDayId, setSelectedDayId] = useState(weekSchedule[0]?.id ?? null);
+  const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
   );
@@ -438,6 +513,8 @@ function App() {
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
   const wakeLockRef = useRef(null);
+  const initialSelectedDayScrollDoneRef = useRef(false);
+  const selectedDayCardRef = useRef(null);
   const isWorkoutActive = viewMode === "workout" && Boolean(activeWorkoutSession);
 
   useEffect(() => {
@@ -453,6 +530,22 @@ function App() {
   useEffect(() => {
     persistActiveWorkoutSession(activeWorkoutSession);
   }, [activeWorkoutSession]);
+
+  useEffect(() => {
+    if (
+      viewMode !== "planner" ||
+      initialSelectedDayScrollDoneRef.current ||
+      !selectedDayCardRef.current
+    ) {
+      return;
+    }
+
+    initialSelectedDayScrollDoneRef.current = true;
+    selectedDayCardRef.current.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+    });
+  }, [viewMode, selectedDayId]);
 
   useEffect(() => {
     if (!activeWorkoutSession) {
@@ -657,19 +750,29 @@ function App() {
     const completedWorkout = createCompletedWorkoutRecord(
       activeWorkoutSession,
       activeRoutineDay,
+      finishedAt,
     );
 
-    setCompletedWorkouts((currentWorkouts) => {
-      const nextWorkouts = [completedWorkout, ...currentWorkouts];
+    try {
+      const storedWorkouts = readPersistedCompletedWorkoutsForSave();
+      const nextWorkouts = [
+        completedWorkout,
+        ...storedWorkouts.filter((workout) => workout.id !== completedWorkout.id),
+      ];
 
       persistCompletedWorkouts(nextWorkouts);
-
-      return nextWorkouts;
-    });
-    setSaveMessage(`Workout finished at ${formatFinishedTime(finishedAt)}. All logged sets saved.`);
-    setActiveWorkoutSession(null);
-    setRestTimer(null);
-    setViewMode("planner");
+      setCompletedWorkouts(nextWorkouts);
+      setSaveMessage(
+        `Workout finished at ${formatFinishedTime(finishedAt)}. All logged sets saved.`,
+      );
+      setActiveWorkoutSession(null);
+      setRestTimer(null);
+      setViewMode("planner");
+    } catch {
+      setSaveMessage(
+        "Workout could not be saved. Your active workout is still open.",
+      );
+    }
   }
 
   function completePendingWorkoutAction(action) {
@@ -855,6 +958,7 @@ function App() {
                 return (
                   <article
                     key={day.id}
+                    ref={isSelected ? selectedDayCardRef : null}
                     className={`min-h-32 rounded-2xl border p-4 text-left transition ${
                       isSelected
                         ? "border-emerald-400 bg-slate-800 ring-2 ring-emerald-400/30"
@@ -967,6 +1071,7 @@ function App() {
                 const exercise = getExercise(sessionExercise.exerciseId);
                 const previousPerformance = getPreviousExercisePerformance(
                   sessionExercise.exerciseId,
+                  activeRoutineDay.id,
                   completedWorkouts,
                 );
                 const exerciseFeedback = getExerciseFeedback(sessionExercise);

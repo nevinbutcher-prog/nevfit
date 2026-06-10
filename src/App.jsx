@@ -197,6 +197,10 @@ function persistRoutineDefinitions(routineDefinitions) {
   );
 }
 
+function areRoutineDaysEqual(firstRoutineDay, secondRoutineDay) {
+  return JSON.stringify(firstRoutineDay) === JSON.stringify(secondRoutineDay);
+}
+
 function getCurrentWeekdayId() {
   const currentWeekdayId = dayIdsByDateIndex[new Date().getDay()];
 
@@ -627,7 +631,7 @@ function App() {
     loadStoredActiveWorkoutSession() ? "workout" : "planner",
   );
   const [saveMessage, setSaveMessage] = useState("");
-  const [routineSaveMessage, setRoutineSaveMessage] = useState("");
+  const [routineSaveStatus, setRoutineSaveStatus] = useState(null);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
   const wakeLockRef = useRef(null);
@@ -646,14 +650,14 @@ function App() {
   }, [saveMessage]);
 
   useEffect(() => {
-    if (!routineSaveMessage) {
+    if (!routineSaveStatus) {
       return undefined;
     }
 
-    const timeoutId = window.setTimeout(() => setRoutineSaveMessage(""), 3000);
+    const timeoutId = window.setTimeout(() => setRoutineSaveStatus(null), 3000);
 
     return () => window.clearTimeout(timeoutId);
-  }, [routineSaveMessage]);
+  }, [routineSaveStatus]);
 
   useEffect(() => {
     persistActiveWorkoutSession(activeWorkoutSession);
@@ -812,6 +816,7 @@ function App() {
   }
 
   function updateRoutineExercise(dayId, exerciseIndex, patch) {
+    setRoutineSaveStatus(null);
     setRoutineDrafts((currentDrafts) =>
       currentDrafts.map((day) =>
         day.id === dayId
@@ -827,6 +832,7 @@ function App() {
   }
 
   function moveRoutineExercise(dayId, exerciseIndex, direction) {
+    setRoutineSaveStatus(null);
     setRoutineDrafts((currentDrafts) =>
       currentDrafts.map((day) => {
         if (day.id !== dayId) {
@@ -852,6 +858,7 @@ function App() {
   }
 
   function removeRoutineExercise(dayId, exerciseIndex) {
+    setRoutineSaveStatus(null);
     setRoutineDrafts((currentDrafts) =>
       currentDrafts.map((day) =>
         day.id === dayId
@@ -871,6 +878,7 @@ function App() {
       return;
     }
 
+    setRoutineSaveStatus(null);
     setRoutineDrafts((currentDrafts) =>
       currentDrafts.map((day) =>
         day.id === dayId
@@ -902,7 +910,11 @@ function App() {
     const normalizedDay = normalizeRoutineDay(draftDay, defaultDay);
 
     if (!normalizedDay) {
-      setRoutineSaveMessage("Routine could not be saved. Check sets, reps, and rest.");
+      setRoutineSaveStatus({
+        dayId,
+        type: "error",
+        message: "Routine could not be saved. Check sets, reps, and rest.",
+      });
       return;
     }
 
@@ -910,12 +922,24 @@ function App() {
       day.id === dayId ? normalizedDay : day,
     );
 
-    persistRoutineDefinitions(nextRoutineDefinitions);
-    setRoutineDefinitions(nextRoutineDefinitions);
-    setRoutineDrafts((currentDrafts) =>
-      currentDrafts.map((day) => (day.id === dayId ? normalizedDay : day)),
-    );
-    setRoutineSaveMessage(`${normalizedDay.name} saved.`);
+    try {
+      persistRoutineDefinitions(nextRoutineDefinitions);
+      setRoutineDefinitions(nextRoutineDefinitions);
+      setRoutineDrafts((currentDrafts) =>
+        currentDrafts.map((day) => (day.id === dayId ? normalizedDay : day)),
+      );
+      setRoutineSaveStatus({
+        dayId,
+        type: "success",
+        message: "Routine saved.",
+      });
+    } catch {
+      setRoutineSaveStatus({
+        dayId,
+        type: "error",
+        message: "Routine could not be saved. Your edits are still on screen.",
+      });
+    }
   }
 
   function assignRoutineToDay(dayId, routineDayId) {
@@ -1170,6 +1194,27 @@ function App() {
   const selectedRoutineDraft = routineDrafts.find(
     (day) => day.id === selectedRoutineDayId,
   );
+  const selectedSavedRoutine = routineDefinitions.find(
+    (day) => day.id === selectedRoutineDayId,
+  );
+  const selectedDefaultRoutine = routineDays.find(
+    (day) => day.id === selectedRoutineDayId,
+  );
+  const normalizedSelectedRoutineDraft =
+    selectedRoutineDraft && selectedDefaultRoutine
+      ? normalizeRoutineDay(selectedRoutineDraft, selectedDefaultRoutine)
+      : null;
+  const selectedRoutineHasUnsavedChanges =
+    Boolean(selectedRoutineDraft && selectedSavedRoutine) &&
+    (!normalizedSelectedRoutineDraft ||
+      !areRoutineDaysEqual(normalizedSelectedRoutineDraft, selectedSavedRoutine));
+  const selectedRoutineSaveStatus =
+    routineSaveStatus?.dayId === selectedRoutineDayId ? routineSaveStatus : null;
+  const selectedRoutineSaveButtonLabel =
+    selectedRoutineSaveStatus?.type === "success" &&
+    !selectedRoutineHasUnsavedChanges
+      ? "✓ Saved"
+      : "Save Routine";
 
   return (
     <main
@@ -1297,9 +1342,15 @@ function App() {
 
         {viewMode === "routines" ? (
           <section className="min-w-0">
-            {routineSaveMessage ? (
-              <p className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">
-                {routineSaveMessage}
+            {selectedRoutineSaveStatus ? (
+              <p
+                className={`mb-4 rounded-lg border px-4 py-3 text-sm font-semibold ${
+                  selectedRoutineSaveStatus.type === "success"
+                    ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                    : "border-red-400/50 bg-red-500/10 text-red-200"
+                }`}
+              >
+                {selectedRoutineSaveStatus.message}
               </p>
             ) : null}
 
@@ -1338,13 +1389,23 @@ function App() {
                       <p className="mt-1 text-sm text-slate-400">
                         {selectedRoutineDraft.exercises.length} exercises
                       </p>
+                      {selectedRoutineHasUnsavedChanges ? (
+                        <p className="mt-2 text-sm font-semibold text-amber-200">
+                          Unsaved changes
+                        </p>
+                      ) : null}
                     </div>
                     <button
                       type="button"
                       onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
-                      className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                      className={`rounded-lg px-4 py-2 font-semibold transition ${
+                        selectedRoutineSaveStatus?.type === "success" &&
+                        !selectedRoutineHasUnsavedChanges
+                          ? "bg-emerald-300 text-slate-950"
+                          : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
+                      }`}
                     >
-                      Save Routine
+                      {selectedRoutineSaveButtonLabel}
                     </button>
                   </div>
 
@@ -1503,9 +1564,14 @@ function App() {
                     <button
                       type="button"
                       onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
-                      className="rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                      className={`rounded-lg px-4 py-3 font-semibold transition ${
+                        selectedRoutineSaveStatus?.type === "success" &&
+                        !selectedRoutineHasUnsavedChanges
+                          ? "bg-emerald-300 text-slate-950"
+                          : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
+                      }`}
                     >
-                      Save Routine
+                      {selectedRoutineSaveButtonLabel}
                     </button>
                   </div>
                 </div>

@@ -1,4 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  signInWithGoogle,
+  signOutUser,
+  subscribeToAuthChanges,
+} from "./services/auth";
 import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
@@ -962,6 +967,8 @@ function App() {
   const [cycleLengthWeeks, setCycleLengthWeeks] = useState(
     loadStoredCycleLengthWeeks,
   );
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
@@ -984,6 +991,15 @@ function App() {
       console.error("Firebase smoke test failed:", error);
     });
   }, []);
+
+  useEffect(
+    () =>
+      subscribeToAuthChanges((user) => {
+        setCurrentUser(user);
+        setAuthLoading(false);
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (!saveMessage) {
@@ -1332,6 +1348,22 @@ function App() {
 
       return nextSchedule;
     });
+  }
+
+  async function handleSignInWithGoogle() {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("Google sign-in failed:", error);
+    }
+  }
+
+  async function handleSignOut() {
+    try {
+      await signOutUser();
+    } catch (error) {
+      console.error("Google sign-out failed:", error);
+    }
   }
 
   function updateProgramDay(programId, dayId, patch) {
@@ -2104,7 +2136,38 @@ function App() {
       <div className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden">
         {viewMode !== "workout" ? (
           <header className="mb-6">
-            <h1 className="text-4xl font-bold">NevFit</h1>
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <h1 className="text-4xl font-bold">NevFit</h1>
+              <div className="flex min-w-0 flex-col items-start gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-3 sm:items-end">
+                {authLoading ? (
+                  <p className="text-sm font-semibold text-slate-400">
+                    Checking sign-in...
+                  </p>
+                ) : currentUser ? (
+                  <>
+                    <p className="max-w-full truncate text-sm font-semibold text-slate-200">
+                      Welcome,{" "}
+                      {currentUser.displayName ?? currentUser.email ?? "Athlete"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSignInWithGoogle}
+                    className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                  >
+                    Sign in with Google
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[28rem]">
               <button
                 type="button"

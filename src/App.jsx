@@ -360,6 +360,22 @@ function persistCompletedWorkouts(completedWorkouts) {
   );
 }
 
+function hasMeaningfulLoggedEffort(set) {
+  const reps = Number(set?.reps);
+  const weight = Number(set?.weight);
+
+  return (
+    (Number.isFinite(reps) && reps > 0) ||
+    (Number.isFinite(weight) && weight > 0)
+  );
+}
+
+function hasWorkoutLoggedEffort(workoutSession) {
+  return workoutSession.exercises.some((exercise) =>
+    exercise.sets.some(hasMeaningfulLoggedEffort),
+  );
+}
+
 function createWorkoutSession(scheduleDay, routineDay) {
   return {
     scheduleDayId: scheduleDay.id,
@@ -530,7 +546,10 @@ function getPreviousExercisePerformance(
       (exercise) => exercise.exerciseId === exerciseId,
     );
 
-    if (!exercisePerformance) {
+    if (
+      !exercisePerformance ||
+      !exercisePerformance.sets.some(hasMeaningfulLoggedEffort)
+    ) {
       return latestPerformance;
     }
 
@@ -1248,6 +1267,14 @@ function App() {
 
   function finishWorkout() {
     if (!activeWorkoutSession || !activeRoutineDay) {
+      return;
+    }
+
+    if (!hasWorkoutLoggedEffort(activeWorkoutSession)) {
+      setSaveMessage("Blank workout closed. No workout history was changed.");
+      setActiveWorkoutSession(null);
+      setRestTimer(null);
+      setViewMode("planner");
       return;
     }
 

@@ -1,40 +1,52 @@
-Implemented
+# Current State
 
-✓ Schedule persistence
-✓ Workout mode
-✓ Workout save/load
-✓ Previous performance
-✓ Rest timer
-✓ Workout history persistence
-✓ Historical session storage
-✓ Previous performance lookup
-✓ Dedicated Routine Editor
-✓ Custom routines
-✓ Routine management (rename, duplicate, archive)
-✓ Exercise search
-✓ Exercise filtering
-✓ Routine save feedback
+## Implemented
 
+- Dashboard default landing screen
+- Today workout summary with Start/Resume action
+- Current Program dashboard summary
+- Configurable Current Cycle MVP
+- Weekly completion count
+- Latest Workout dashboard highlight
+- Future placeholder dashboard cards for runs, steps, and progress highlights
+- Schedule persistence
+- Program editor
+- Custom programs and routines
+- Routine management: rename, duplicate, archive, add routine
+- Exercise search and filtering
+- wger-backed selectable exercise results
+- Local exercise catalog fallback
+- Add and Swap exercise picker flows
+- Workout mode
+- Active workout save/load
+- Non-destructive blank workout close
+- Append-only workout history persistence
+- Historical session storage
+- Previous performance lookup from completed history
+- Rest timer
 - Sticky workout footer
-- Timer completion notification improvements
 - Wake lock during active workouts
 - Rep-range feedback and progression indicators
 - Workout completion workflow improvements
 
-Known Issues
+## Current Known Limitations
 
-- Minor mobile viewport movement still reported on some devices when editing inputs
-- Timer completion notification requires validation across devices
+- Exercise search depends on the public wger API when online and falls back to the local catalog when unavailable.
+- wger taxonomy is broader than the local catalog, so filter matching is normalized/fuzzy rather than exact.
+- wger-selected exercise metadata is cached in memory for the current app session; saved routines retain stable wger IDs and can rehydrate metadata with `getExerciseById`.
+- Timer completion notification still needs validation across devices.
+- Minor mobile viewport movement has been reported on some devices when editing inputs.
 
-Next Likely Work
+## Next Likely Work
 
 - Workout history screen
-- Exercise database integration (wger evaluation)
+- Persist selected external exercise metadata more durably if offline reload behavior becomes important
 - Custom exercise support
 - PR tracking
 - Historical progression analysis
+- Runs and steps integrations
 
-Recent User Testing Findings
+## Recent User Testing Findings
 
 First live workout session identified:
 

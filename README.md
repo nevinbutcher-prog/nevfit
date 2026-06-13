@@ -1,16 +1,42 @@
-# React + Vite
+# NevFit
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+NevFit is a personal workout logging and program management app built with
+Vite, React, and Tailwind CSS.
 
-Currently, two official plugins are available:
+The current app supports:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Dashboard-first landing screen
+- Weekly workout scheduling
+- Program and routine editing
+- Workout session logging
+- Append-only completed workout history
+- Previous performance lookup from completed history
+- Rest timer and workout-mode feedback
+- wger-backed exercise search with local catalog fallback
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Install dependencies, then run:
 
-## Expanding the ESLint configuration
+```bash
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Validate changes with:
+
+```bash
+npm run lint
+npm run build
+```
+
+## Data
+
+NevFit currently stores app state in `localStorage`. There is no backend,
+authentication, or Firestore integration yet.
+
+Key docs:
+
+- [Product notes](docs/01-product.md)
+- [Technical notes](docs/02-technical.md)
+- [Current state](docs/03-current-state.md)
+- [User profile](docs/04-user-profile.md)

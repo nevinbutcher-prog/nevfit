@@ -1,51 +1,64 @@
-What is NevFit?
+# Product Notes
 
-NevFit is a personal training and health platform
-that begins as a workout logger and may expand into
-programming, family coaching, endurance tracking,
-nutrition and broader health management.
+## What Is NevFit?
 
-Current MVP Goal
+NevFit is a personal training and health platform that begins as a workout
+logger and program manager. It may later expand into progression tracking,
+family coaching, endurance tracking, nutrition, and broader health management.
 
-Replace the user's Built With Science workout logging workflow.
+## Current MVP Goal
 
-Core Principles
+Replace the user's Built With Science workout logging workflow with a faster,
+mobile-first app for planning, starting, logging, and reviewing workouts.
+
+## Core Principles
 
 - Fast logging
 - Mobile first
 - User-focused
 - No unnecessary complexity
 - Features must solve real workflow problems
+- Opening a workout must never destroy previous effort data
 
-Implemented Features
+## Implemented Features
 
-✓ Persistent workout history
-✓ Previous performance derived from workout history
-✓ Dedicated Routine Editor
-✓ Custom routines
-✓ Routine duplication
-✓ Routine rename
-✓ Routine archive/delete
-✓ Exercise search
-✓ Exercise filtering
-✓ Routine save feedback
+- Dashboard default landing screen
+- Today-focused workout card with Start/Resume action
+- Current Program, Current Cycle, This Week, and Latest Workout dashboard cards
+- Weekly schedule persistence
+- Program editor
+- Custom programs and routines
+- Routine duplication, rename, archive, and save feedback
+- Workout mode with active workout persistence
+- Rest timer
+- Append-only completed workout history
+- Previous performance derived from completed workout history
+- Blank workout sessions are non-destructive and are not saved as completed workouts
+- wger exercise search with local catalog fallback
+- Selectable exercise result cards for Add and Swap flows
+- Exercise metadata display for source, muscle, equipment, and instructions where available
 
-Current Product Direction
+## Current Product Direction
 
-NevFit is evolving from a workout logger into a workout management platform.
+NevFit is evolving from a workout logger into a compact workout management
+platform.
 
 Users can:
 
+- See what they are doing today
 - Schedule workouts
-- Create and manage routines
+- Create and manage programs and routines
 - Build custom training splits
+- Search wger and local exercises while editing routines
 - Track workout history
 - Review previous performance
 
 Future expansion:
 
-- Exercise database integration
+- Workout history screen
 - Progression tracking
 - PR tracking
+- Custom exercise creation
+- Runs and steps integrations
 - Family coaching
 - Nutrition and health tracking

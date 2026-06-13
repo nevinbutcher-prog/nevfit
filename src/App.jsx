@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { exerciseCatalog } from "./data/exerciseCatalog";
-import { routineDays } from "./data/routineDays";
+import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
-const ROUTINES_STORAGE_KEY = "nevfit_routines";
+const PROGRAMS_STORAGE_KEY = "nevfit_programs";
 const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
 const ACTIVE_WORKOUT_STORAGE_KEY = "nevfit_active_workout";
 const DEFAULT_REST_SECONDS = 120;
@@ -15,13 +15,15 @@ const routineEditorInputClassName =
 const routineEditorSelectClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition focus:border-emerald-400";
 
-const getRoutineDay = (routineDayId, routineDefinitions) =>
-  routineDefinitions.find((day) => day.id === routineDayId && !day.archived);
+const getProgramDay = (dayId, programDefinitions) =>
+  programDefinitions
+    .flatMap((program) => program.days)
+    .find((day) => day.id === dayId && !day.archived);
 
 const getExercise = (exerciseId) =>
   exerciseCatalog.find((exercise) => exercise.id === exerciseId);
 
-const builtInRoutineDayIds = new Set(routineDays.map((day) => day.id));
+const defaultProgramId = starterProgram.id;
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 const setFeedbackStyles = {
@@ -158,62 +160,92 @@ function normalizeRoutineDay(value, fallbackDay = null) {
   };
 }
 
-function normalizeRoutineDefinitions(value) {
+function normalizeProgram(value, fallbackProgram = null) {
+  if (
+    !(
+      value &&
+      typeof value.id === "string" &&
+      value.id.trim() &&
+      typeof value.name === "string" &&
+      value.name.trim()
+    )
+  ) {
+    return null;
+  }
+
+  if (!Array.isArray(value.days)) {
+    return null;
+  }
+
+  const days = value.days
+    .map((day, index) => {
+      const defaultDay = fallbackProgram?.days?.[index] ?? null;
+      return normalizeRoutineDay(day, defaultDay);
+    })
+    .filter(Boolean);
+
+  return {
+    id: fallbackProgram?.id ?? value.id.trim(),
+    name: fallbackProgram?.name ?? value.name.trim(),
+    days,
+    ...(fallbackProgram ? {} : { archived: value.archived === true }),
+  };
+}
+
+function normalizeProgramDefinitions(value) {
   if (!Array.isArray(value)) {
     return null;
   }
 
-  const normalizedBuiltInDays = routineDays.map((defaultDay) => {
-    const storedDay = value.find((day) => day?.id === defaultDay.id);
-    const normalizedDay = storedDay
-      ? normalizeRoutineDay(storedDay, defaultDay)
-      : null;
+  if (value.every((item) => item && Array.isArray(item.days))) {
+    const normalizedPrograms = value
+      .map((program) => normalizeProgram(program))
+      .filter(Boolean);
 
-    return normalizedDay ?? normalizeRoutineDay(defaultDay, defaultDay);
-  });
-  const normalizedCustomDays = value
-    .filter(
-      (day) =>
-        day && typeof day.id === "string" && !builtInRoutineDayIds.has(day.id),
-    )
-    .map((day) => normalizeRoutineDay(day))
-    .filter(Boolean);
-  const customDaysById = new Map(
-    normalizedCustomDays.map((day) => [day.id, day]),
-  );
-  const normalizedDays = [
-    ...normalizedBuiltInDays,
-    ...Array.from(customDaysById.values()),
-  ];
+    return normalizedPrograms.length ? normalizedPrograms : null;
+  }
 
-  return normalizedDays.every(Boolean) ? normalizedDays : null;
+  if (value.every((item) => item && Array.isArray(item.exercises))) {
+    const legacyProgram = normalizeProgram(
+      {
+        id: defaultProgramId,
+        name: starterProgram.name,
+        days: value,
+      },
+      starterProgram,
+    );
+
+    return legacyProgram ? [legacyProgram] : null;
+  }
+
+  return null;
 }
 
-function loadStoredRoutineDefinitions() {
+function loadStoredPrograms() {
   try {
-    const storedRoutines = window.localStorage.getItem(ROUTINES_STORAGE_KEY);
+    const storedPrograms = window.localStorage.getItem(PROGRAMS_STORAGE_KEY);
 
-    if (!storedRoutines) {
-      return normalizeRoutineDefinitions(routineDays) ?? routineDays;
+    if (!storedPrograms) {
+      return normalizeProgramDefinitions(starterPrograms) ?? starterPrograms;
     }
 
-    const parsedRoutines = JSON.parse(storedRoutines);
+    const parsedPrograms = JSON.parse(storedPrograms);
 
-    return normalizeRoutineDefinitions(parsedRoutines) ?? routineDays;
+    return normalizeProgramDefinitions(parsedPrograms) ?? starterPrograms;
   } catch {
-    return routineDays;
+    return starterPrograms;
   }
 }
 
-function persistRoutineDefinitions(routineDefinitions) {
+function persistPrograms(programDefinitions) {
   window.localStorage.setItem(
-    ROUTINES_STORAGE_KEY,
-    JSON.stringify(routineDefinitions),
+    PROGRAMS_STORAGE_KEY,
+    JSON.stringify(programDefinitions),
   );
 }
 
-function createRoutineId(routineName, existingRoutines) {
-  const slug = routineName
+function createProgramId(programName, existingPrograms) {
+  const slug = programName
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -223,11 +255,37 @@ function createRoutineId(routineName, existingRoutines) {
     typeof crypto.randomUUID === "function"
       ? crypto.randomUUID().slice(0, 8)
       : Date.now().toString(36);
-  const baseId = `custom-${slug || "routine"}`;
+  const baseId = `custom-${slug || "program"}`;
   let nextId = `${baseId}-${suffix}`;
   let index = 2;
 
-  while (existingRoutines.some((routine) => routine.id === nextId)) {
+  while (existingPrograms.some((program) => program.id === nextId)) {
+    nextId = `${baseId}-${suffix}-${index}`;
+    index += 1;
+  }
+
+  return nextId;
+}
+
+function createProgramDayId(programId, dayName, existingPrograms) {
+  const slug = dayName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+  const suffix =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID().slice(0, 8)
+      : Date.now().toString(36);
+  const baseId = `${programId}-${slug || "day"}`;
+  let nextId = `${baseId}-${suffix}`;
+  let index = 2;
+  const existingDayIds = new Set(
+    existingPrograms.flatMap((program) => program.days.map((day) => day.id)),
+  );
+
+  while (existingDayIds.has(nextId)) {
     nextId = `${baseId}-${suffix}-${index}`;
     index += 1;
   }
@@ -733,19 +791,20 @@ function playTimerCompleteSound() {
 
 function App() {
   const [schedule, setSchedule] = useState(loadStoredSchedule);
-  const [routineDefinitions, setRoutineDefinitions] = useState(
-    loadStoredRoutineDefinitions,
+  const [programDefinitions, setProgramDefinitions] =
+    useState(loadStoredPrograms);
+  const [programDrafts, setProgramDrafts] = useState(loadStoredPrograms);
+  const [selectedProgramId, setSelectedProgramId] = useState(defaultProgramId);
+  const [selectedProgramDayId, setSelectedProgramDayId] = useState(
+    starterProgram.days[0]?.id ?? null,
   );
-  const [routineDrafts, setRoutineDrafts] = useState(
-    loadStoredRoutineDefinitions,
-  );
-  const [selectedRoutineDayId, setSelectedRoutineDayId] = useState(
-    routineDays[0]?.id ?? null,
-  );
-  const [newRoutineName, setNewRoutineName] = useState("");
+  const [newProgramName, setNewProgramName] = useState("");
+  const [isProgramCreatorOpen, setIsProgramCreatorOpen] = useState(false);
+  const [isProgramEditorOpen, setIsProgramEditorOpen] = useState(false);
   const [exerciseSearchTerm, setExerciseSearchTerm] = useState("");
   const [exerciseEquipmentFilter, setExerciseEquipmentFilter] = useState("all");
   const [exerciseMuscleFilter, setExerciseMuscleFilter] = useState("all");
+  const [exerciseFinderOpen, setExerciseFinderOpen] = useState(false);
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
   );
@@ -757,7 +816,7 @@ function App() {
     loadStoredActiveWorkoutSession() ? "workout" : "planner",
   );
   const [saveMessage, setSaveMessage] = useState("");
-  const [routineSaveStatus, setRoutineSaveStatus] = useState(null);
+  const [programSaveStatus, setProgramSaveStatus] = useState(null);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
   const wakeLockRef = useRef(null);
@@ -777,14 +836,14 @@ function App() {
   }, [saveMessage]);
 
   useEffect(() => {
-    if (!routineSaveStatus) {
+    if (!programSaveStatus) {
       return undefined;
     }
 
-    const timeoutId = window.setTimeout(() => setRoutineSaveStatus(null), 3000);
+    const timeoutId = window.setTimeout(() => setProgramSaveStatus(null), 3000);
 
     return () => window.clearTimeout(timeoutId);
-  }, [routineSaveStatus]);
+  }, [programSaveStatus]);
 
   useEffect(() => {
     persistActiveWorkoutSession(activeWorkoutSession);
@@ -924,6 +983,45 @@ function App() {
     };
   }, [isWorkoutActive]);
 
+  useEffect(() => {
+    if (
+      programDefinitions.some((program) => program.id === selectedProgramId)
+    ) {
+      return;
+    }
+
+    const nextProgramId =
+      programDefinitions.find((program) => !program.archived)?.id ??
+      programDefinitions[0]?.id ??
+      null;
+
+    setSelectedProgramId(nextProgramId);
+  }, [programDefinitions, selectedProgramId]);
+
+  useEffect(() => {
+    if (selectedProgramId) {
+      return;
+    }
+
+    setIsProgramEditorOpen(false);
+  }, [selectedProgramId]);
+
+  useEffect(() => {
+    const selectedProgram = programDrafts.find(
+      (program) => program.id === selectedProgramId,
+    );
+
+    if (!selectedProgram) {
+      return;
+    }
+
+    if (selectedProgram.days.some((day) => day.id === selectedProgramDayId)) {
+      return;
+    }
+
+    setSelectedProgramDayId(selectedProgram.days[0]?.id ?? null);
+  }, [programDrafts, selectedProgramDayId, selectedProgramId]);
+
   function applyRoutineAssignment(dayId, routineDayId) {
     setSchedule((currentSchedule) => {
       const nextSchedule = currentSchedule.map((day) =>
@@ -942,269 +1040,344 @@ function App() {
     });
   }
 
-  function updateRoutineExercise(dayId, exerciseIndex, patch) {
-    setRoutineSaveStatus(null);
-    setRoutineDrafts((currentDrafts) =>
-      currentDrafts.map((day) =>
-        day.id === dayId
+  function updateProgramDay(programId, dayId, patch) {
+    setProgramSaveStatus(null);
+    setProgramDrafts((currentDrafts) =>
+      currentDrafts.map((program) =>
+        program.id === programId
           ? {
-              ...day,
-              exercises: day.exercises.map((exercise, index) =>
-                index === exerciseIndex ? { ...exercise, ...patch } : exercise,
+              ...program,
+              days: program.days.map((day) =>
+                day.id === dayId ? { ...day, ...patch } : day,
               ),
             }
-          : day,
+          : program,
       ),
     );
   }
 
-  function updateRoutineName(dayId, name) {
-    if (builtInRoutineDayIds.has(dayId)) {
-      return;
-    }
-
-    setRoutineSaveStatus(null);
-    setRoutineDrafts((currentDrafts) =>
-      currentDrafts.map((day) => (day.id === dayId ? { ...day, name } : day)),
+  function updateProgramName(programId, name) {
+    setProgramSaveStatus(null);
+    setProgramDrafts((currentDrafts) =>
+      currentDrafts.map((program) =>
+        program.id === programId ? { ...program, name } : program,
+      ),
     );
   }
 
-  function moveRoutineExercise(dayId, exerciseIndex, direction) {
-    setRoutineSaveStatus(null);
-    setRoutineDrafts((currentDrafts) =>
-      currentDrafts.map((day) => {
-        if (day.id !== dayId) {
-          return day;
+  function moveProgramExercise(programId, dayId, exerciseIndex, direction) {
+    setProgramSaveStatus(null);
+    setProgramDrafts((currentDrafts) =>
+      currentDrafts.map((program) => {
+        if (program.id !== programId) {
+          return program;
         }
-
-        const nextIndex = exerciseIndex + direction;
-
-        if (nextIndex < 0 || nextIndex >= day.exercises.length) {
-          return day;
-        }
-
-        const nextExercises = [...day.exercises];
-        const [movedExercise] = nextExercises.splice(exerciseIndex, 1);
-        nextExercises.splice(nextIndex, 0, movedExercise);
 
         return {
-          ...day,
-          exercises: nextExercises,
+          ...program,
+          days: program.days.map((day) => {
+            if (day.id !== dayId) {
+              return day;
+            }
+
+            const nextIndex = exerciseIndex + direction;
+
+            if (nextIndex < 0 || nextIndex >= day.exercises.length) {
+              return day;
+            }
+
+            const nextExercises = [...day.exercises];
+            const [movedExercise] = nextExercises.splice(exerciseIndex, 1);
+            nextExercises.splice(nextIndex, 0, movedExercise);
+
+            return {
+              ...day,
+              exercises: nextExercises,
+            };
+          }),
         };
       }),
     );
   }
 
-  function removeRoutineExercise(dayId, exerciseIndex) {
-    setRoutineSaveStatus(null);
-    setRoutineDrafts((currentDrafts) =>
-      currentDrafts.map((day) =>
-        day.id === dayId
+  function removeProgramExercise(programId, dayId, exerciseIndex) {
+    setProgramSaveStatus(null);
+    setProgramDrafts((currentDrafts) =>
+      currentDrafts.map((program) =>
+        program.id === programId
           ? {
-              ...day,
-              exercises: day.exercises.filter(
-                (_, index) => index !== exerciseIndex,
+              ...program,
+              days: program.days.map((day) =>
+                day.id === dayId
+                  ? {
+                      ...day,
+                      exercises: day.exercises.filter(
+                        (_, index) => index !== exerciseIndex,
+                      ),
+                    }
+                  : day,
               ),
             }
-          : day,
+          : program,
       ),
     );
   }
 
-  function addRoutineExercise(dayId, exerciseId) {
+  function addProgramExercise(programId, dayId, exerciseId) {
     const defaultExercise = getExercise(exerciseId) ?? exerciseCatalog[0];
 
     if (!defaultExercise) {
       return;
     }
 
-    setRoutineSaveStatus(null);
-    setRoutineDrafts((currentDrafts) =>
-      currentDrafts.map((day) =>
-        day.id === dayId
+    setProgramSaveStatus(null);
+    setProgramDrafts((currentDrafts) =>
+      currentDrafts.map((program) =>
+        program.id === programId
           ? {
-              ...day,
-              exercises: [
-                ...day.exercises,
-                createRoutineExerciseFromCatalog(defaultExercise),
-              ],
+              ...program,
+              days: program.days.map((day) =>
+                day.id === dayId
+                  ? {
+                      ...day,
+                      exercises: [
+                        ...day.exercises,
+                        createRoutineExerciseFromCatalog(defaultExercise),
+                      ],
+                    }
+                  : day,
+              ),
             }
-          : day,
+          : program,
       ),
     );
   }
 
-  function saveRoutineDay(dayId) {
-    const defaultDay = routineDays.find((day) => day.id === dayId) ?? null;
-    const draftDay = routineDrafts.find((day) => day.id === dayId);
+  function saveProgram(programId) {
+    const draftProgram = programDrafts.find(
+      (program) => program.id === programId,
+    );
 
-    if (!draftDay) {
+    if (!draftProgram) {
       return;
     }
 
-    const normalizedDay = normalizeRoutineDay(draftDay, defaultDay);
+    const normalizedProgram = normalizeProgram(draftProgram);
 
-    if (!normalizedDay) {
-      setRoutineSaveStatus({
-        dayId,
+    if (!normalizedProgram) {
+      setProgramSaveStatus({
+        programId,
         type: "error",
-        message: "Routine could not be saved. Check sets, reps, and rest.",
+        message: "Program could not be saved. Check sets, reps, and rest.",
       });
       return;
     }
 
-    const nextRoutineDefinitions = routineDefinitions.map((day) =>
-      day.id === dayId ? normalizedDay : day,
+    const nextProgramDefinitions = programDefinitions.map((program) =>
+      program.id === programId ? normalizedProgram : program,
     );
 
     try {
-      persistRoutineDefinitions(nextRoutineDefinitions);
-      setRoutineDefinitions(nextRoutineDefinitions);
-      setRoutineDrafts((currentDrafts) =>
-        currentDrafts.map((day) => (day.id === dayId ? normalizedDay : day)),
-      );
-      setRoutineSaveStatus({
-        dayId,
-        type: "success",
-        message: "Routine saved.",
-      });
-    } catch {
-      setRoutineSaveStatus({
-        dayId,
-        type: "error",
-        message: "Routine could not be saved. Your edits are still on screen.",
-      });
-    }
-  }
-
-  function duplicateRoutine(dayId) {
-    const sourceRoutine = routineDrafts.find((day) => day.id === dayId);
-
-    if (!sourceRoutine) {
-      return;
-    }
-
-    const duplicateName = `${sourceRoutine.name} Copy`;
-    const duplicateRoutine = {
-      id: createRoutineId(duplicateName, routineDefinitions),
-      name: duplicateName,
-      exercises: sourceRoutine.exercises.map((exercise) => ({ ...exercise })),
-      archived: false,
-    };
-    const nextRoutineDefinitions = [...routineDefinitions, duplicateRoutine];
-
-    try {
-      persistRoutineDefinitions(nextRoutineDefinitions);
-      setRoutineDefinitions(nextRoutineDefinitions);
-      setRoutineDrafts((currentDrafts) => [...currentDrafts, duplicateRoutine]);
-      setSelectedRoutineDayId(duplicateRoutine.id);
-      setRoutineSaveStatus({
-        dayId: duplicateRoutine.id,
-        type: "success",
-        message: "Routine duplicated.",
-      });
-    } catch {
-      setRoutineSaveStatus({
-        dayId,
-        type: "error",
-        message: "Routine could not be duplicated.",
-      });
-    }
-  }
-
-  function archiveCustomRoutine(dayId) {
-    if (builtInRoutineDayIds.has(dayId)) {
-      setRoutineSaveStatus({
-        dayId,
-        type: "error",
-        message: "Default routines cannot be archived.",
-      });
-      return;
-    }
-
-    const routineToArchive = routineDefinitions.find((day) => day.id === dayId);
-
-    if (!routineToArchive) {
-      return;
-    }
-
-    const nextRoutineDefinitions = routineDefinitions.map((day) =>
-      day.id === dayId ? { ...day, archived: true } : day,
-    );
-    const nextSchedule = schedule.map((day) =>
-      day.routineDayId === dayId
-        ? {
-            ...day,
-            routineDayId: null,
-            note: "Rest",
-          }
-        : day,
-    );
-    const nextSelectedRoutineId =
-      nextRoutineDefinitions.find((day) => !day.archived)?.id ?? null;
-
-    try {
-      persistRoutineDefinitions(nextRoutineDefinitions);
-      persistSchedule(nextSchedule);
-      setRoutineDefinitions(nextRoutineDefinitions);
-      setRoutineDrafts((currentDrafts) =>
-        currentDrafts.map((day) =>
-          day.id === dayId ? { ...day, archived: true } : day,
+      persistPrograms(nextProgramDefinitions);
+      setProgramDefinitions(nextProgramDefinitions);
+      setProgramDrafts((currentDrafts) =>
+        currentDrafts.map((program) =>
+          program.id === programId ? normalizedProgram : program,
         ),
       );
-      setSchedule(nextSchedule);
-      setSelectedRoutineDayId(nextSelectedRoutineId);
-      setRoutineSaveStatus({
-        dayId: nextSelectedRoutineId,
+      setProgramSaveStatus({
+        programId,
         type: "success",
-        message: `${routineToArchive.name} archived. Assigned weekdays reset to Rest.`,
+        message: "Program saved.",
       });
     } catch {
-      setRoutineSaveStatus({
-        dayId,
+      setProgramSaveStatus({
+        programId,
         type: "error",
-        message: "Routine could not be archived.",
+        message: "Program could not be saved. Your edits are still on screen.",
       });
     }
   }
 
-  function createCustomRoutine() {
-    const routineName = newRoutineName.trim();
+  function duplicateProgram(programId) {
+    const sourceProgram = programDrafts.find(
+      (program) => program.id === programId,
+    );
 
-    if (!routineName) {
-      setRoutineSaveStatus({
-        dayId: selectedRoutineDayId,
+    if (!sourceProgram) {
+      return;
+    }
+
+    const duplicateName = `${sourceProgram.name} Copy`;
+    const duplicateProgramId = createProgramId(
+      duplicateName,
+      programDefinitions,
+    );
+    const duplicateProgram = {
+      id: duplicateProgramId,
+      name: duplicateName,
+      days: sourceProgram.days.map((day) => ({
+        ...day,
+        id: createProgramDayId(
+          duplicateProgramId,
+          day.name,
+          programDefinitions,
+        ),
+        exercises: day.exercises.map((exercise) => ({ ...exercise })),
+      })),
+      archived: false,
+    };
+    const nextProgramDefinitions = [...programDefinitions, duplicateProgram];
+
+    try {
+      persistPrograms(nextProgramDefinitions);
+      setProgramDefinitions(nextProgramDefinitions);
+      setProgramDrafts((currentDrafts) => [...currentDrafts, duplicateProgram]);
+      setSelectedProgramId(duplicateProgramId);
+      setSelectedProgramDayId(duplicateProgram.days[0]?.id ?? null);
+      setIsProgramEditorOpen(true);
+      setProgramSaveStatus({
+        programId: duplicateProgramId,
+        type: "success",
+        message: "Program duplicated.",
+      });
+    } catch {
+      setProgramSaveStatus({
+        programId,
         type: "error",
-        message: "Enter a routine name first.",
+        message: "Program could not be duplicated.",
+      });
+    }
+  }
+
+  function archiveProgram(programId) {
+    if (programId === defaultProgramId) {
+      setProgramSaveStatus({
+        programId,
+        type: "error",
+        message: "Starter Program cannot be archived.",
       });
       return;
     }
 
-    const customRoutine = {
-      id: createRoutineId(routineName, routineDefinitions),
-      name: routineName,
-      exercises: [],
-    };
-    const nextRoutineDefinitions = [...routineDefinitions, customRoutine];
+    const programToArchive = programDefinitions.find(
+      (program) => program.id === programId,
+    );
+
+    if (!programToArchive) {
+      return;
+    }
+
+    const nextProgramDefinitions = programDefinitions.map((program) =>
+      program.id === programId ? { ...program, archived: true } : program,
+    );
+    const nextSelectedProgramId =
+      nextProgramDefinitions.find((program) => !program.archived)?.id ?? null;
+    const nextSelectedProgram =
+      programDrafts.find((program) => program.id === nextSelectedProgramId) ??
+      null;
 
     try {
-      persistRoutineDefinitions(nextRoutineDefinitions);
-      setRoutineDefinitions(nextRoutineDefinitions);
-      setRoutineDrafts((currentDrafts) => [...currentDrafts, customRoutine]);
-      setSelectedRoutineDayId(customRoutine.id);
-      setNewRoutineName("");
-      setRoutineSaveStatus({
-        dayId: customRoutine.id,
+      persistPrograms(nextProgramDefinitions);
+      setProgramDefinitions(nextProgramDefinitions);
+      setProgramDrafts((currentDrafts) =>
+        currentDrafts.map((program) =>
+          program.id === programId ? { ...program, archived: true } : program,
+        ),
+      );
+      setSelectedProgramId(nextSelectedProgramId);
+      setSelectedProgramDayId(nextSelectedProgram?.days[0]?.id ?? null);
+      setIsProgramEditorOpen(false);
+      setProgramSaveStatus({
+        programId: nextSelectedProgramId,
         type: "success",
-        message: "Routine created.",
+        message: `${programToArchive.name} archived.`,
       });
     } catch {
-      setRoutineSaveStatus({
-        dayId: selectedRoutineDayId,
+      setProgramSaveStatus({
+        programId,
         type: "error",
-        message: "Routine could not be created. Try again.",
+        message: "Program could not be archived.",
       });
     }
+  }
+
+  function createCustomProgram() {
+    const programName = newProgramName.trim();
+
+    if (!programName) {
+      setProgramSaveStatus({
+        programId: selectedProgramId,
+        type: "error",
+        message: "Enter a program name first.",
+      });
+      return;
+    }
+
+    const programId = createProgramId(programName, programDefinitions);
+    const customProgram = {
+      id: programId,
+      name: programName,
+      days: [],
+      archived: false,
+    };
+    const nextProgramDefinitions = [...programDefinitions, customProgram];
+
+    try {
+      persistPrograms(nextProgramDefinitions);
+      setProgramDefinitions(nextProgramDefinitions);
+      setProgramDrafts((currentDrafts) => [...currentDrafts, customProgram]);
+      setSelectedProgramId(programId);
+      setSelectedProgramDayId(null);
+      setIsProgramCreatorOpen(false);
+      setIsProgramEditorOpen(true);
+      setNewProgramName("");
+      setProgramSaveStatus({
+        programId,
+        type: "success",
+        message: "Program created.",
+      });
+    } catch {
+      setProgramSaveStatus({
+        programId: selectedProgramId,
+        type: "error",
+        message: "Program could not be created. Try again.",
+      });
+    }
+  }
+
+  function addProgramRoutine(programId) {
+    const program = programDrafts.find((item) => item.id === programId);
+
+    if (!program) {
+      return;
+    }
+
+    const routineIndex = program.days.length + 1;
+    const newRoutine = {
+      id: createProgramDayId(
+        programId,
+        `Routine ${routineIndex}`,
+        programDefinitions,
+      ),
+      name: `Routine ${routineIndex}`,
+      exercises: [],
+    };
+
+    setProgramSaveStatus(null);
+    setProgramDrafts((currentDrafts) =>
+      currentDrafts.map((item) =>
+        item.id === programId
+          ? {
+              ...item,
+              days: [...item.days, newRoutine],
+            }
+          : item,
+      ),
+    );
+    setSelectedProgramDayId(newRoutine.id);
+    setIsProgramEditorOpen(true);
+    setExerciseFinderOpen(false);
   }
 
   function assignRoutineToDay(dayId, routineDayId) {
@@ -1451,9 +1624,9 @@ function App() {
   const activeWorkoutDay = schedule.find(
     (day) => day.id === activeWorkoutSession?.scheduleDayId,
   );
-  const activeRoutineDay = getRoutineDay(
+  const activeRoutineDay = getProgramDay(
     activeWorkoutSession?.routineDayId,
-    routineDefinitions,
+    programDefinitions,
   );
   const activeWorkoutSetCount =
     activeWorkoutSession?.exercises.reduce(
@@ -1470,43 +1643,40 @@ function App() {
   const restTimerDisplay = restTimer
     ? formatTimerSeconds(restTimer.remainingSeconds)
     : "--:--";
-  const activeRoutineDefinitions = routineDefinitions.filter(
-    (routine) => !routine.archived,
+  const activeProgramDefinitions = programDefinitions.filter(
+    (program) => !program.archived,
   );
-  const activeRoutineDrafts = routineDrafts.filter(
-    (routine) => !routine.archived,
+  const activeProgramDrafts = programDrafts.filter(
+    (program) => !program.archived,
   );
-  const selectedRoutineDraft = routineDrafts.find(
-    (day) => day.id === selectedRoutineDayId,
+  const selectedProgramDraft = programDrafts.find(
+    (program) => program.id === selectedProgramId,
   );
-  const selectedSavedRoutine = routineDefinitions.find(
-    (day) => day.id === selectedRoutineDayId,
+  const selectedSavedProgram = programDefinitions.find(
+    (program) => program.id === selectedProgramId,
   );
-  const selectedDefaultRoutine = routineDays.find(
-    (day) => day.id === selectedRoutineDayId,
+  const selectedProgramDayDraft = selectedProgramDraft?.days.find(
+    (day) => day.id === selectedProgramDayId,
   );
-  const normalizedSelectedRoutineDraft =
-    selectedRoutineDraft && selectedDefaultRoutine
-      ? normalizeRoutineDay(selectedRoutineDraft, selectedDefaultRoutine)
-      : null;
-  const selectedRoutineHasUnsavedChanges =
-    Boolean(selectedRoutineDraft && selectedSavedRoutine) &&
-    (!normalizedSelectedRoutineDraft ||
+  const normalizedSelectedProgramDraft = selectedProgramDraft
+    ? normalizeProgram(selectedProgramDraft)
+    : null;
+  const selectedProgramHasUnsavedChanges =
+    Boolean(selectedProgramDraft && selectedSavedProgram) &&
+    (!normalizedSelectedProgramDraft ||
       !areRoutineDaysEqual(
-        normalizedSelectedRoutineDraft,
-        selectedSavedRoutine,
+        normalizedSelectedProgramDraft,
+        selectedSavedProgram,
       ));
-  const selectedRoutineSaveStatus =
-    routineSaveStatus?.dayId === selectedRoutineDayId
-      ? routineSaveStatus
+  const selectedProgramSaveStatus =
+    programSaveStatus?.programId === selectedProgramId
+      ? programSaveStatus
       : null;
-  const selectedRoutineIsBuiltIn =
-    builtInRoutineDayIds.has(selectedRoutineDayId);
-  const selectedRoutineSaveButtonLabel =
-    selectedRoutineSaveStatus?.type === "success" &&
-    !selectedRoutineHasUnsavedChanges
+  const selectedProgramSaveButtonLabel =
+    selectedProgramSaveStatus?.type === "success" &&
+    !selectedProgramHasUnsavedChanges
       ? "✓ Saved"
-      : "Save Routine";
+      : "Save Program";
   const exerciseEquipmentOptions = getSortedUniqueValues(
     exerciseCatalog.flatMap((exercise) =>
       (exercise.equipment ?? []).map(getEquipmentFilterValue),
@@ -1566,7 +1736,6 @@ function App() {
             <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-80">
               <button
                 type="button"
-                onClick={() => setViewMode("planner")}
                 className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                   viewMode === "planner"
                     ? "bg-emerald-400 text-slate-950"
@@ -1584,7 +1753,7 @@ function App() {
                     : "text-slate-300 hover:bg-slate-800"
                 }`}
               >
-                Routines
+                Programs
               </button>
             </div>
           </header>
@@ -1600,9 +1769,9 @@ function App() {
 
             <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
               {schedule.map((day) => {
-                const routineDay = getRoutineDay(
+                const routineDay = getProgramDay(
                   day.routineDayId,
-                  routineDefinitions,
+                  programDefinitions,
                 );
                 const isSelected = day.id === selectedDayId;
 
@@ -1644,7 +1813,9 @@ function App() {
                       <div className="mt-4 border-t border-slate-700 pt-4">
                         <div className="flex flex-wrap gap-2">
                           {[
-                            ...activeRoutineDefinitions,
+                            ...activeProgramDefinitions.flatMap(
+                              (program) => program.days,
+                            ),
                             { id: null, name: "Rest" },
                           ].map((option) => {
                             const isAssigned = day.routineDayId === option.id;
@@ -1688,55 +1859,73 @@ function App() {
 
         {viewMode === "routines" ? (
           <section className="min-w-0">
-            {selectedRoutineSaveStatus ? (
+            {selectedProgramSaveStatus ? (
               <p
                 className={`mb-4 rounded-lg border px-4 py-3 text-sm font-semibold ${
-                  selectedRoutineSaveStatus.type === "success"
+                  selectedProgramSaveStatus.type === "success"
                     ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
                     : "border-red-400/50 bg-red-500/10 text-red-200"
                 }`}
               >
-                {selectedRoutineSaveStatus.message}
+                {selectedProgramSaveStatus.message}
               </p>
             ) : null}
 
-            <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+            <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
               <nav className="grid gap-2 self-start rounded-2xl border border-slate-800 bg-slate-900 p-3">
-                <form
-                  className="grid gap-2 border-b border-slate-800 pb-3"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    createCustomRoutine();
-                  }}
-                >
-                  <label className="text-sm font-semibold text-slate-300">
-                    New Routine
-                    <input
-                      type="text"
-                      value={newRoutineName}
-                      onChange={(event) =>
-                        setNewRoutineName(event.target.value)
-                      }
-                      placeholder="Push"
-                      className={`${routineEditorInputClassName} mt-1`}
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                {isProgramCreatorOpen ? (
+                  <form
+                    className="grid gap-2 border-b border-slate-800 pb-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      createCustomProgram();
+                    }}
                   >
-                    Create Routine
-                  </button>
-                </form>
+                    <label className="text-sm font-semibold text-slate-300">
+                      New Program
+                      <input
+                        type="text"
+                        value={newProgramName}
+                        onChange={(event) =>
+                          setNewProgramName(event.target.value)
+                        }
+                        placeholder="Upper / Lower"
+                        className={`${routineEditorInputClassName} mt-1`}
+                      />
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                      >
+                        Create Program
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProgramCreatorOpen(false);
+                          setNewProgramName("");
+                        }}
+                        className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
 
-                {activeRoutineDrafts.map((routineDay) => {
-                  const isSelected = routineDay.id === selectedRoutineDayId;
+                {activeProgramDrafts.map((program) => {
+                  const isSelected = program.id === selectedProgramId;
 
                   return (
                     <button
-                      key={routineDay.id}
+                      key={program.id}
                       type="button"
-                      onClick={() => setSelectedRoutineDayId(routineDay.id)}
+                      onClick={() => {
+                        setSelectedProgramId(program.id);
+                        setSelectedProgramDayId(program.days[0]?.id ?? null);
+                        setExerciseFinderOpen(false);
+                      }}
                       className={`rounded-lg border px-4 py-3 text-left transition ${
                         isSelected
                           ? "border-emerald-400 bg-slate-800 text-white"
@@ -1744,42 +1933,46 @@ function App() {
                       }`}
                     >
                       <span className="block font-semibold">
-                        {routineDay.name}
+                        {program.name}
                       </span>
                       <span className="mt-1 block text-sm text-slate-400">
-                        {routineDay.exercises.length} exercises
+                        {program.days.length} routines
                       </span>
                     </button>
                   );
                 })}
+
+                <button
+                  type="button"
+                  onClick={() => setIsProgramCreatorOpen((current) => !current)}
+                  className="rounded-lg border border-slate-700 px-4 py-3 text-left font-semibold text-slate-200 transition hover:border-slate-500"
+                >
+                  + Create Program
+                </button>
               </nav>
 
-              {selectedRoutineDraft ? (
+              {selectedProgramDraft && isProgramEditorOpen ? (
                 <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
                   <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <label className="block text-sm font-semibold text-slate-300">
-                        Routine Name
+                        Program Name
                         <input
                           type="text"
-                          value={selectedRoutineDraft.name}
+                          value={selectedProgramDraft.name}
                           onChange={(event) =>
-                            updateRoutineName(
-                              selectedRoutineDraft.id,
+                            updateProgramName(
+                              selectedProgramDraft.id,
                               event.target.value,
                             )
                           }
-                          disabled={selectedRoutineIsBuiltIn}
-                          className={`${routineEditorInputClassName} mt-1 text-2xl font-bold disabled:cursor-not-allowed disabled:opacity-70`}
+                          className={`${routineEditorInputClassName} mt-1 text-2xl font-bold`}
                         />
                       </label>
                       <p className="mt-2 text-sm text-slate-400">
-                        {selectedRoutineDraft.exercises.length} exercises
-                        {selectedRoutineIsBuiltIn
-                          ? " · default routine"
-                          : " · custom routine"}
+                        {selectedProgramDraft.days.length} routines
                       </p>
-                      {selectedRoutineHasUnsavedChanges ? (
+                      {selectedProgramHasUnsavedChanges ? (
                         <p className="mt-2 text-sm font-semibold text-amber-200">
                           Unsaved changes
                         </p>
@@ -1788,278 +1981,472 @@ function App() {
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
                       <button
                         type="button"
-                        onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
+                        onClick={() => saveProgram(selectedProgramDraft.id)}
                         className={`rounded-lg px-4 py-2 font-semibold transition ${
-                          selectedRoutineSaveStatus?.type === "success" &&
-                          !selectedRoutineHasUnsavedChanges
+                          selectedProgramSaveStatus?.type === "success" &&
+                          !selectedProgramHasUnsavedChanges
                             ? "bg-emerald-300 text-slate-950"
                             : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
                         }`}
                       >
-                        {selectedRoutineSaveButtonLabel}
+                        {selectedProgramSaveButtonLabel}
                       </button>
                       <button
                         type="button"
                         onClick={() =>
-                          duplicateRoutine(selectedRoutineDraft.id)
+                          duplicateProgram(selectedProgramDraft.id)
                         }
                         className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
                       >
                         Duplicate
                       </button>
-                      {!selectedRoutineIsBuiltIn ? (
+                      {selectedProgramDraft.id !== defaultProgramId ? (
                         <button
                           type="button"
                           onClick={() =>
-                            archiveCustomRoutine(selectedRoutineDraft.id)
+                            archiveProgram(selectedProgramDraft.id)
                           }
                           className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300"
                         >
                           Archive
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProgramEditorOpen(false);
+                          setExerciseFinderOpen(false);
+                        }}
+                        className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                      >
+                        Close Editor
+                      </button>
                     </div>
                   </div>
 
                   <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-                    <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
-                      <label className="min-w-0 text-sm font-semibold text-slate-300">
-                        Search
-                        <input
-                          type="search"
-                          value={exerciseSearchTerm}
-                          onChange={(event) =>
-                            setExerciseSearchTerm(event.target.value)
-                          }
-                          placeholder="curl, row, press"
-                          className={`${routineEditorInputClassName} mt-1`}
-                        />
-                      </label>
-
-                      <label className="min-w-0 text-sm font-semibold text-slate-300">
-                        Equipment
-                        <select
-                          value={exerciseEquipmentFilter}
-                          onChange={(event) =>
-                            setExerciseEquipmentFilter(event.target.value)
-                          }
-                          className={`${routineEditorSelectClassName} mt-1`}
-                        >
-                          <option value="all">All equipment</option>
-                          {exerciseEquipmentOptions.map((equipment) => (
-                            <option key={equipment} value={equipment}>
-                              {equipment}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className="min-w-0 text-sm font-semibold text-slate-300">
-                        Muscle
-                        <select
-                          value={exerciseMuscleFilter}
-                          onChange={(event) =>
-                            setExerciseMuscleFilter(event.target.value)
-                          }
-                          className={`${routineEditorSelectClassName} mt-1`}
-                        >
-                          <option value="all">All muscles</option>
-                          {exerciseMuscleOptions.map((muscle) => (
-                            <option key={muscle} value={muscle}>
-                              {muscle}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    <p className="mt-3 text-sm text-slate-400">
-                      {filteredExerciseCatalog.length} exercise
-                      {filteredExerciseCatalog.length === 1 ? "" : "s"} found
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Days
                     </p>
-                  </div>
-
-                  <ul className="mt-4 space-y-3">
-                    {selectedRoutineDraft.exercises.map(
-                      (routineExercise, index) => {
-                        const exercise = getExercise(
-                          routineExercise.exerciseId,
-                        );
-                        const exercisePickerOptions = getExercisePickerOptions(
-                          routineExercise.exerciseId,
-                        );
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedProgramDraft.days.map((day) => {
+                        const isSelected = day.id === selectedProgramDayId;
 
                         return (
-                          <li
-                            key={`${selectedRoutineDraft.id}-${index}`}
-                            className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                          <button
+                            key={day.id}
+                            type="button"
+                            onClick={() => setSelectedProgramDayId(day.id)}
+                            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                              isSelected
+                                ? "border-emerald-400 bg-emerald-400 text-slate-950"
+                                : "border-slate-700 bg-slate-950 text-slate-200 hover:border-slate-500"
+                            }`}
                           >
-                            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start">
-                              <div className="flex shrink-0 gap-2 lg:w-28">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    moveRoutineExercise(
-                                      selectedRoutineDraft.id,
-                                      index,
-                                      -1,
-                                    )
-                                  }
-                                  disabled={index === 0}
-                                  className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                  aria-label={`Move ${exercise?.name ?? "exercise"} up`}
-                                >
-                                  Up
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    moveRoutineExercise(
-                                      selectedRoutineDraft.id,
-                                      index,
-                                      1,
-                                    )
-                                  }
-                                  disabled={
-                                    index ===
-                                    selectedRoutineDraft.exercises.length - 1
-                                  }
-                                  className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                  aria-label={`Move ${exercise?.name ?? "exercise"} down`}
-                                >
-                                  Down
-                                </button>
-                              </div>
-
-                              <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
-                                <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                  Exercise
-                                  <select
-                                    value={routineExercise.exerciseId}
-                                    onChange={(event) =>
-                                      updateRoutineExercise(
-                                        selectedRoutineDraft.id,
-                                        index,
-                                        { exerciseId: event.target.value },
-                                      )
-                                    }
-                                    className={`${routineEditorSelectClassName} mt-1`}
-                                  >
-                                    {exercisePickerOptions.map(
-                                      (catalogExercise) => (
-                                        <option
-                                          key={catalogExercise.id}
-                                          value={catalogExercise.id}
-                                        >
-                                          {catalogExercise.name}
-                                        </option>
-                                      ),
-                                    )}
-                                  </select>
-                                </label>
-
-                                <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                  Sets
-                                  <input
-                                    type="number"
-                                    inputMode="numeric"
-                                    min="1"
-                                    max="12"
-                                    value={routineExercise.sets}
-                                    onChange={(event) =>
-                                      updateRoutineExercise(
-                                        selectedRoutineDraft.id,
-                                        index,
-                                        { sets: event.target.value },
-                                      )
-                                    }
-                                    className={`${routineEditorInputClassName} mt-1`}
-                                  />
-                                </label>
-
-                                <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                  Reps
-                                  <input
-                                    type="text"
-                                    value={routineExercise.repRange}
-                                    onChange={(event) =>
-                                      updateRoutineExercise(
-                                        selectedRoutineDraft.id,
-                                        index,
-                                        { repRange: event.target.value },
-                                      )
-                                    }
-                                    className={`${routineEditorInputClassName} mt-1`}
-                                  />
-                                </label>
-
-                                <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                  Rest
-                                  <input
-                                    type="number"
-                                    inputMode="numeric"
-                                    min="0"
-                                    max="600"
-                                    value={routineExercise.restSeconds ?? ""}
-                                    placeholder={`${DEFAULT_REST_SECONDS}`}
-                                    onChange={(event) =>
-                                      updateRoutineExercise(
-                                        selectedRoutineDraft.id,
-                                        index,
-                                        { restSeconds: event.target.value },
-                                      )
-                                    }
-                                    className={`${routineEditorInputClassName} mt-1`}
-                                  />
-                                </label>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeRoutineExercise(
-                                    selectedRoutineDraft.id,
-                                    index,
-                                  )
-                                }
-                                className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300 lg:mt-6"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </li>
+                            {day.name}
+                          </button>
                         );
-                      },
-                    )}
-                  </ul>
+                      })}
+                    </div>
+                  </div>
 
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  {selectedProgramDayDraft ? (
+                    <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3 sm:p-4">
+                      <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            Selected Day
+                          </p>
+                          <label className="mt-2 block text-sm font-semibold text-slate-300">
+                            Day Name
+                            <input
+                              type="text"
+                              value={selectedProgramDayDraft.name}
+                              onChange={(event) =>
+                                updateProgramDay(
+                                  selectedProgramDraft.id,
+                                  selectedProgramDayDraft.id,
+                                  {
+                                    name: event.target.value,
+                                  },
+                                )
+                              }
+                              className={`${routineEditorInputClassName} mt-1 text-2xl font-bold`}
+                            />
+                          </label>
+                          <p className="mt-2 text-sm text-slate-400">
+                            {selectedProgramDayDraft.exercises.length} exercises
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExerciseFinderOpen((current) => !current)
+                          }
+                          className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                        >
+                          {exerciseFinderOpen
+                            ? "Hide Exercise Finder"
+                            : "Find Exercise"}
+                        </button>
+                      </div>
+
+                      {exerciseFinderOpen ? (
+                        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+                          <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                            <label className="min-w-0 text-sm font-semibold text-slate-300">
+                              Search
+                              <input
+                                type="search"
+                                value={exerciseSearchTerm}
+                                onChange={(event) =>
+                                  setExerciseSearchTerm(event.target.value)
+                                }
+                                placeholder="curl, row, press"
+                                className={`${routineEditorInputClassName} mt-1`}
+                              />
+                            </label>
+
+                            <label className="min-w-0 text-sm font-semibold text-slate-300">
+                              Equipment
+                              <select
+                                value={exerciseEquipmentFilter}
+                                onChange={(event) =>
+                                  setExerciseEquipmentFilter(event.target.value)
+                                }
+                                className={`${routineEditorSelectClassName} mt-1`}
+                              >
+                                <option value="all">All equipment</option>
+                                {exerciseEquipmentOptions.map((equipment) => (
+                                  <option key={equipment} value={equipment}>
+                                    {equipment}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label className="min-w-0 text-sm font-semibold text-slate-300">
+                              Muscle
+                              <select
+                                value={exerciseMuscleFilter}
+                                onChange={(event) =>
+                                  setExerciseMuscleFilter(event.target.value)
+                                }
+                                className={`${routineEditorSelectClassName} mt-1`}
+                              >
+                                <option value="all">All muscles</option>
+                                {exerciseMuscleOptions.map((muscle) => (
+                                  <option key={muscle} value={muscle}>
+                                    {muscle}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+
+                          <p className="mt-3 text-sm text-slate-400">
+                            {filteredExerciseCatalog.length} exercise
+                            {filteredExerciseCatalog.length === 1
+                              ? ""
+                              : "s"}{" "}
+                            found
+                          </p>
+                        </div>
+                      ) : null}
+
+                      <ul className="mt-4 space-y-3">
+                        {selectedProgramDayDraft.exercises.map(
+                          (routineExercise, index) => {
+                            const exercise = getExercise(
+                              routineExercise.exerciseId,
+                            );
+                            const exercisePickerOptions =
+                              getExercisePickerOptions(
+                                routineExercise.exerciseId,
+                              );
+
+                            return (
+                              <li
+                                key={`${selectedProgramDayDraft.id}-${index}`}
+                                className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                              >
+                                <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start">
+                                  <div className="flex shrink-0 gap-2 lg:w-28">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        moveProgramExercise(
+                                          selectedProgramDraft.id,
+                                          selectedProgramDayDraft.id,
+                                          index,
+                                          -1,
+                                        )
+                                      }
+                                      disabled={index === 0}
+                                      className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                      aria-label={`Move ${exercise?.name ?? "exercise"} up`}
+                                    >
+                                      Up
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        moveProgramExercise(
+                                          selectedProgramDraft.id,
+                                          selectedProgramDayDraft.id,
+                                          index,
+                                          1,
+                                        )
+                                      }
+                                      disabled={
+                                        index ===
+                                        selectedProgramDayDraft.exercises
+                                          .length -
+                                          1
+                                      }
+                                      className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                      aria-label={`Move ${exercise?.name ?? "exercise"} down`}
+                                    >
+                                      Down
+                                    </button>
+                                  </div>
+
+                                  <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
+                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                      Exercise
+                                      <select
+                                        value={routineExercise.exerciseId}
+                                        onChange={(event) =>
+                                          updateProgramDay(
+                                            selectedProgramDraft.id,
+                                            selectedProgramDayDraft.id,
+                                            {
+                                              exercises:
+                                                selectedProgramDayDraft.exercises.map(
+                                                  (
+                                                    exerciseItem,
+                                                    exerciseIndex,
+                                                  ) =>
+                                                    exerciseIndex === index
+                                                      ? {
+                                                          ...exerciseItem,
+                                                          exerciseId:
+                                                            event.target.value,
+                                                        }
+                                                      : exerciseItem,
+                                                ),
+                                            },
+                                          )
+                                        }
+                                        className={`${routineEditorSelectClassName} mt-1`}
+                                      >
+                                        {exercisePickerOptions.map(
+                                          (catalogExercise) => (
+                                            <option
+                                              key={catalogExercise.id}
+                                              value={catalogExercise.id}
+                                            >
+                                              {catalogExercise.name}
+                                            </option>
+                                          ),
+                                        )}
+                                      </select>
+                                    </label>
+
+                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                      Sets
+                                      <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min="1"
+                                        max="12"
+                                        value={routineExercise.sets}
+                                        onChange={(event) =>
+                                          updateProgramDay(
+                                            selectedProgramDraft.id,
+                                            selectedProgramDayDraft.id,
+                                            {
+                                              exercises:
+                                                selectedProgramDayDraft.exercises.map(
+                                                  (
+                                                    exerciseItem,
+                                                    exerciseIndex,
+                                                  ) =>
+                                                    exerciseIndex === index
+                                                      ? {
+                                                          ...exerciseItem,
+                                                          sets: event.target
+                                                            .value,
+                                                        }
+                                                      : exerciseItem,
+                                                ),
+                                            },
+                                          )
+                                        }
+                                        className={`${routineEditorInputClassName} mt-1`}
+                                      />
+                                    </label>
+
+                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                      Reps
+                                      <input
+                                        type="text"
+                                        value={routineExercise.repRange}
+                                        onChange={(event) =>
+                                          updateProgramDay(
+                                            selectedProgramDraft.id,
+                                            selectedProgramDayDraft.id,
+                                            {
+                                              exercises:
+                                                selectedProgramDayDraft.exercises.map(
+                                                  (
+                                                    exerciseItem,
+                                                    exerciseIndex,
+                                                  ) =>
+                                                    exerciseIndex === index
+                                                      ? {
+                                                          ...exerciseItem,
+                                                          repRange:
+                                                            event.target.value,
+                                                        }
+                                                      : exerciseItem,
+                                                ),
+                                            },
+                                          )
+                                        }
+                                        className={`${routineEditorInputClassName} mt-1`}
+                                      />
+                                    </label>
+
+                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                      Rest
+                                      <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min="0"
+                                        max="600"
+                                        value={
+                                          routineExercise.restSeconds ?? ""
+                                        }
+                                        placeholder={`${DEFAULT_REST_SECONDS}`}
+                                        onChange={(event) =>
+                                          updateProgramDay(
+                                            selectedProgramDraft.id,
+                                            selectedProgramDayDraft.id,
+                                            {
+                                              exercises:
+                                                selectedProgramDayDraft.exercises.map(
+                                                  (
+                                                    exerciseItem,
+                                                    exerciseIndex,
+                                                  ) =>
+                                                    exerciseIndex === index
+                                                      ? {
+                                                          ...exerciseItem,
+                                                          restSeconds:
+                                                            event.target.value,
+                                                        }
+                                                      : exerciseItem,
+                                                ),
+                                            },
+                                          )
+                                        }
+                                        className={`${routineEditorInputClassName} mt-1`}
+                                      />
+                                    </label>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeProgramExercise(
+                                        selectedProgramDraft.id,
+                                        selectedProgramDayDraft.id,
+                                        index,
+                                      )
+                                    }
+                                    className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300 lg:mt-6"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          },
+                        )}
+                      </ul>
+
+                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            addProgramExercise(
+                              selectedProgramDraft.id,
+                              selectedProgramDayDraft.id,
+                              addExerciseCandidate?.id,
+                            )
+                          }
+                          disabled={!addExerciseCandidate}
+                          className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {addExerciseCandidate
+                            ? `Add ${addExerciseCandidate.name}`
+                            : "Add Exercise"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveProgram(selectedProgramDraft.id)}
+                          className={`rounded-lg px-4 py-3 font-semibold transition ${
+                            selectedProgramSaveStatus?.type === "success" &&
+                            !selectedProgramHasUnsavedChanges
+                              ? "bg-emerald-300 text-slate-950"
+                              : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
+                          }`}
+                        >
+                          {selectedProgramSaveButtonLabel}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-6 text-center">
+                      <p className="text-lg font-semibold text-white">
+                        No routines yet
+                      </p>
+                      <p className="mt-2 text-sm text-slate-400">
+                        Add your first routine to start building this program.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addProgramRoutine(selectedProgramDraft.id)
+                        }
+                        className="mt-4 rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                      >
+                        + Add Routine
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : selectedProgramDraft ? (
+                <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">
+                        {selectedProgramDraft.name}
+                      </h2>
+                      <p className="mt-2 text-sm text-slate-400">
+                        {selectedProgramDraft.days.length} routines
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() =>
-                        addRoutineExercise(
-                          selectedRoutineDraft.id,
-                          addExerciseCandidate?.id,
-                        )
-                      }
-                      disabled={!addExerciseCandidate}
-                      className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => {
+                        setIsProgramEditorOpen(true);
+                        setExerciseFinderOpen(false);
+                      }}
+                      className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
                     >
-                      {addExerciseCandidate
-                        ? `Add ${addExerciseCandidate.name}`
-                        : "Add Exercise"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => saveRoutineDay(selectedRoutineDraft.id)}
-                      className={`rounded-lg px-4 py-3 font-semibold transition ${
-                        selectedRoutineSaveStatus?.type === "success" &&
-                        !selectedRoutineHasUnsavedChanges
-                          ? "bg-emerald-300 text-slate-950"
-                          : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
-                      }`}
-                    >
-                      {selectedRoutineSaveButtonLabel}
+                      Edit Program
                     </button>
                   </div>
                 </div>

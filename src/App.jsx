@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { exerciseCatalog } from "./data/exerciseCatalog";
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
+import {
+  getExerciseById,
+  getLocalExerciseCatalog,
+  searchExercises,
+} from "./services/exerciseProvider";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -18,14 +22,15 @@ const routineEditorInputClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
 const routineEditorSelectClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition focus:border-emerald-400";
+const localExerciseCatalog = getLocalExerciseCatalog();
 
 const getProgramDay = (dayId, programDefinitions) =>
   programDefinitions
     .flatMap((program) => program.days)
     .find((day) => day.id === dayId && !day.archived);
 
-const getExercise = (exerciseId) =>
-  exerciseCatalog.find((exercise) => exercise.id === exerciseId);
+const getExerciseFromLibrary = (exerciseId, exerciseLibrary) =>
+  exerciseLibrary.find((exercise) => exercise.id === exerciseId);
 
 const defaultProgramId = starterProgram.id;
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -93,7 +98,7 @@ function normalizeRoutineExercise(value) {
     !(
       value &&
       typeof value.exerciseId === "string" &&
-      exerciseCatalog.some((exercise) => exercise.id === value.exerciseId)
+      value.exerciseId.trim()
     )
   ) {
     return null;
@@ -119,7 +124,7 @@ function normalizeRoutineExercise(value) {
   }
 
   return {
-    exerciseId: value.exerciseId,
+    exerciseId: value.exerciseId.trim(),
     sets,
     repRange:
       typeof value.repRange === "string" && value.repRange.trim()
@@ -592,19 +597,6 @@ function createRoutineExerciseFromCatalog(exercise) {
   };
 }
 
-function getExerciseSearchText(exercise) {
-  return [
-    exercise.name,
-    exercise.category,
-    exercise.bodyPart,
-    exercise.primaryMuscle,
-    ...(exercise.secondaryMuscles ?? []),
-    ...(exercise.equipment ?? []),
-  ]
-    .join(" ")
-    .toLowerCase();
-}
-
 function getEquipmentFilterValue(equipment) {
   const normalizedEquipment = equipment.toLowerCase();
 
@@ -691,7 +683,12 @@ function persistActiveWorkoutSession(workoutSession) {
   );
 }
 
-function createCompletedWorkoutRecord(workoutSession, routineDay, completedAt) {
+function createCompletedWorkoutRecord(
+  workoutSession,
+  routineDay,
+  completedAt,
+  exerciseLibrary,
+) {
   const workoutId =
     typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -704,7 +701,10 @@ function createCompletedWorkoutRecord(workoutSession, routineDay, completedAt) {
     routineDayId: workoutSession.routineDayId,
     routineDayName: routineDay.name,
     exercises: workoutSession.exercises.map((sessionExercise) => {
-      const exercise = getExercise(sessionExercise.exerciseId);
+      const exercise = getExerciseFromLibrary(
+        sessionExercise.exerciseId,
+        exerciseLibrary,
+      );
 
       return {
         exerciseId: sessionExercise.exerciseId,
@@ -937,6 +937,14 @@ function App() {
   const [exerciseEquipmentFilter, setExerciseEquipmentFilter] = useState("all");
   const [exerciseMuscleFilter, setExerciseMuscleFilter] = useState("all");
   const [exerciseFinderOpen, setExerciseFinderOpen] = useState(false);
+  const [exerciseFinderMode, setExerciseFinderMode] = useState({
+    type: "add",
+    exerciseIndex: null,
+  });
+  const [exerciseLibrary, setExerciseLibrary] = useState(localExerciseCatalog);
+  const [exerciseSearchResults, setExerciseSearchResults] =
+    useState(localExerciseCatalog);
+  const [exerciseSearchStatus, setExerciseSearchStatus] = useState("idle");
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
   );
@@ -963,6 +971,8 @@ function App() {
   const selectedDayCardRef = useRef(null);
   const isWorkoutActive =
     viewMode === "workout" && Boolean(activeWorkoutSession);
+  const getExercise = (exerciseId) =>
+    getExerciseFromLibrary(exerciseId, exerciseLibrary);
 
   useEffect(() => {
     if (!saveMessage) {
@@ -983,6 +993,106 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [programSaveStatus]);
+
+  useEffect(() => {
+    if (!exerciseFinderOpen) {
+      return undefined;
+    }
+
+    let isCurrentSearch = true;
+    const timeoutId = window.setTimeout(() => {
+      setExerciseSearchStatus("loading");
+
+      searchExercises(exerciseSearchTerm, {
+        equipment: exerciseEquipmentFilter,
+        muscle: exerciseMuscleFilter,
+      })
+        .then((results) => {
+          if (!isCurrentSearch) {
+            return;
+          }
+
+          setExerciseSearchResults(results);
+          setExerciseLibrary((currentLibrary) => {
+            const exercisesById = new Map(
+              currentLibrary.map((exercise) => [exercise.id, exercise]),
+            );
+
+            results.forEach((exercise) => exercisesById.set(exercise.id, exercise));
+
+            return Array.from(exercisesById.values());
+          });
+          setExerciseSearchStatus("ready");
+        })
+        .catch(() => {
+          if (!isCurrentSearch) {
+            return;
+          }
+
+          setExerciseSearchResults(localExerciseCatalog);
+          setExerciseSearchStatus("fallback");
+        });
+    }, 250);
+
+    return () => {
+      isCurrentSearch = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    exerciseEquipmentFilter,
+    exerciseFinderOpen,
+    exerciseMuscleFilter,
+    exerciseSearchTerm,
+  ]);
+
+  useEffect(() => {
+    const referencedExerciseIds = new Set(
+      programDrafts.flatMap((program) =>
+        program.days.flatMap((day) =>
+          day.exercises.map((exercise) => exercise.exerciseId),
+        ),
+      ),
+    );
+    const missingExerciseIds = Array.from(referencedExerciseIds).filter(
+      (exerciseId) => !getExerciseFromLibrary(exerciseId, exerciseLibrary),
+    );
+
+    if (!missingExerciseIds.length) {
+      return undefined;
+    }
+
+    let shouldApplyResults = true;
+
+    Promise.all(missingExerciseIds.map((exerciseId) => getExerciseById(exerciseId)))
+      .then((exercises) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        const foundExercises = exercises.filter(Boolean);
+
+        if (!foundExercises.length) {
+          return;
+        }
+
+        setExerciseLibrary((currentLibrary) => {
+          const exercisesById = new Map(
+            currentLibrary.map((exercise) => [exercise.id, exercise]),
+          );
+
+          foundExercises.forEach((exercise) =>
+            exercisesById.set(exercise.id, exercise),
+          );
+
+          return Array.from(exercisesById.values());
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      shouldApplyResults = false;
+    };
+  }, [exerciseLibrary, programDrafts]);
 
   useEffect(() => {
     persistActiveWorkoutSession(activeWorkoutSession);
@@ -1293,7 +1403,8 @@ function App() {
   }
 
   function addProgramExercise(programId, dayId, exerciseId) {
-    const defaultExercise = getExercise(exerciseId) ?? exerciseCatalog[0];
+    const defaultExercise =
+      getExercise(exerciseId) ?? exerciseSearchResults[0] ?? localExerciseCatalog[0];
 
     if (!defaultExercise) {
       return;
@@ -1320,6 +1431,56 @@ function App() {
           : program,
       ),
     );
+  }
+
+  function selectExerciseFromFinder(programId, dayId, exercise, exerciseIndex) {
+    if (!exercise) {
+      return;
+    }
+
+    setExerciseLibrary((currentLibrary) => {
+      if (getExerciseFromLibrary(exercise.id, currentLibrary)) {
+        return currentLibrary;
+      }
+
+      return [...currentLibrary, exercise];
+    });
+
+    if (typeof exerciseIndex === "number") {
+      updateProgramDay(programId, dayId, {
+        exercises: selectedProgramDayDraft.exercises.map(
+          (routineExercise, index) =>
+            index === exerciseIndex
+              ? { ...routineExercise, exerciseId: exercise.id }
+              : routineExercise,
+        ),
+      });
+    } else {
+      setProgramSaveStatus(null);
+      setProgramDrafts((currentDrafts) =>
+        currentDrafts.map((program) =>
+          program.id === programId
+            ? {
+                ...program,
+                days: program.days.map((day) =>
+                  day.id === dayId
+                    ? {
+                        ...day,
+                        exercises: [
+                          ...day.exercises,
+                          createRoutineExerciseFromCatalog(exercise),
+                        ],
+                      }
+                    : day,
+                ),
+              }
+            : program,
+        ),
+      );
+    }
+
+    setExerciseFinderOpen(false);
+    setExerciseFinderMode({ type: "add", exerciseIndex: null });
   }
 
   function saveProgram(programId) {
@@ -1625,6 +1786,7 @@ function App() {
       activeWorkoutSession,
       activeRoutineDay,
       finishedAt,
+      exerciseLibrary,
     );
 
     try {
@@ -1846,50 +2008,35 @@ function App() {
     !selectedProgramHasUnsavedChanges
       ? "✓ Saved"
       : "Save Program";
+  const exerciseOptionSource = [...exerciseLibrary, ...exerciseSearchResults];
   const exerciseEquipmentOptions = getSortedUniqueValues(
-    exerciseCatalog.flatMap((exercise) =>
+    exerciseOptionSource.flatMap((exercise) =>
       (exercise.equipment ?? []).map(getEquipmentFilterValue),
     ),
   );
   const exerciseMuscleOptions = getSortedUniqueValues(
-    exerciseCatalog.flatMap((exercise) => [
+    exerciseOptionSource.flatMap((exercise) => [
       exercise.bodyPart,
       exercise.primaryMuscle,
+      ...(exercise.secondaryMuscles ?? []),
     ]),
   );
-  const normalizedExerciseSearchTerm = exerciseSearchTerm.trim().toLowerCase();
-  const filteredExerciseCatalog = exerciseCatalog.filter((exercise) => {
-    const matchesSearch =
-      !normalizedExerciseSearchTerm ||
-      getExerciseSearchText(exercise).includes(normalizedExerciseSearchTerm);
-    const matchesEquipment =
-      exerciseEquipmentFilter === "all" ||
-      exercise.equipment
-        ?.map(getEquipmentFilterValue)
-        .includes(exerciseEquipmentFilter);
-    const matchesMuscle =
-      exerciseMuscleFilter === "all" ||
-      exercise.bodyPart === exerciseMuscleFilter ||
-      exercise.primaryMuscle === exerciseMuscleFilter;
-
-    return matchesSearch && matchesEquipment && matchesMuscle;
-  });
-  const addExerciseCandidate = filteredExerciseCatalog[0] ?? null;
+  const addExerciseCandidate = exerciseSearchResults[0] ?? null;
   const getExercisePickerOptions = (currentExerciseId) => {
     if (
       !currentExerciseId ||
-      filteredExerciseCatalog.some(
+      exerciseSearchResults.some(
         (exercise) => exercise.id === currentExerciseId,
       )
     ) {
-      return filteredExerciseCatalog;
+      return exerciseSearchResults;
     }
 
     const currentExercise = getExercise(currentExerciseId);
 
     return currentExercise
-      ? [currentExercise, ...filteredExerciseCatalog]
-      : filteredExerciseCatalog;
+      ? [currentExercise, ...exerciseSearchResults]
+      : exerciseSearchResults;
   };
   const todayScheduleDayId = getCurrentWeekdayId();
   const todayScheduleDay = schedule.find(
@@ -2517,9 +2664,13 @@ function App() {
                         </div>
                         <button
                           type="button"
-                          onClick={() =>
-                            setExerciseFinderOpen((current) => !current)
-                          }
+                          onClick={() => {
+                            setExerciseFinderMode({
+                              type: "add",
+                              exerciseIndex: null,
+                            });
+                            setExerciseFinderOpen((current) => !current);
+                          }}
                           className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
                         >
                           {exerciseFinderOpen
@@ -2582,12 +2733,82 @@ function App() {
                           </div>
 
                           <p className="mt-3 text-sm text-slate-400">
-                            {filteredExerciseCatalog.length} exercise
-                            {filteredExerciseCatalog.length === 1
-                              ? ""
-                              : "s"}{" "}
-                            found
+                            {exerciseSearchStatus === "loading"
+                              ? "Searching exercises..."
+                              : `${exerciseSearchResults.length} exercise${
+                                  exerciseSearchResults.length === 1 ? "" : "s"
+                                } found`}
+                            {exerciseSearchStatus === "fallback"
+                              ? " from local catalog"
+                              : ""}
                           </p>
+                          {exerciseSearchStatus === "fallback" ? (
+                            <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
+                              Could not load wger results. Showing local
+                              exercises only.
+                            </p>
+                          ) : null}
+
+                          <div className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-1">
+                            {exerciseSearchStatus === "loading" ? (
+                              <p className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-3 text-sm text-slate-300">
+                                Searching exercises...
+                              </p>
+                            ) : exerciseSearchResults.length ? (
+                              exerciseSearchResults.map((exercise) => (
+                                <article
+                                  key={exercise.id}
+                                  className="flex min-w-0 flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900/80 p-3 sm:flex-row sm:items-start sm:justify-between"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                      <h3 className="font-semibold text-white">
+                                        {exercise.name}
+                                      </h3>
+                                      <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">
+                                        {exercise.source}
+                                      </span>
+                                    </div>
+                                    <p className="mt-1 text-sm text-slate-400">
+                                      {[
+                                        exercise.primaryMuscle,
+                                        ...(exercise.equipment ?? []),
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" - ") || "Exercise"}
+                                    </p>
+                                    {exercise.instructions ? (
+                                      <p className="mt-2 line-clamp-2 text-sm text-slate-500">
+                                        {exercise.instructions}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      selectExerciseFromFinder(
+                                        selectedProgramDraft.id,
+                                        selectedProgramDayDraft.id,
+                                        exercise,
+                                        exerciseFinderMode.type === "swap"
+                                          ? exerciseFinderMode.exerciseIndex
+                                          : null,
+                                      )
+                                    }
+                                    className="shrink-0 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300"
+                                  >
+                                    {exerciseFinderMode.type === "swap"
+                                      ? "Use"
+                                      : "Add"}
+                                  </button>
+                                </article>
+                              ))
+                            ) : (
+                              <p className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-3 text-sm text-slate-300">
+                                No exercises found.
+                              </p>
+                            )}
+                          </div>
                         </div>
                       ) : null}
 
@@ -2684,6 +2905,9 @@ function App() {
                                               value={catalogExercise.id}
                                             >
                                               {catalogExercise.name}
+                                              {catalogExercise.source === "wger"
+                                                ? " (wger)"
+                                                : ""}
                                             </option>
                                           ),
                                         )}
@@ -2793,20 +3017,53 @@ function App() {
                                     </label>
                                   </div>
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      removeProgramExercise(
-                                        selectedProgramDraft.id,
-                                        selectedProgramDayDraft.id,
-                                        index,
-                                      )
-                                    }
-                                    className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300 lg:mt-6"
-                                  >
-                                    Remove
-                                  </button>
+                                  <div className="grid shrink-0 gap-2 lg:mt-6">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setExerciseFinderMode({
+                                          type: "swap",
+                                          exerciseIndex: index,
+                                        });
+                                        setExerciseFinderOpen(true);
+                                      }}
+                                      className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                                    >
+                                      Swap
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeProgramExercise(
+                                          selectedProgramDraft.id,
+                                          selectedProgramDayDraft.id,
+                                          index,
+                                        )
+                                      }
+                                      className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
                                 </div>
+                                {exercise ? (
+                                  <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
+                                    <p>
+                                      {exercise.source === "wger"
+                                        ? "wger"
+                                        : "Local"}{" "}
+                                      - {exercise.primaryMuscle}
+                                      {exercise.equipment.length
+                                        ? ` - ${exercise.equipment.join(", ")}`
+                                        : ""}
+                                    </p>
+                                    {exercise.instructions ? (
+                                      <p className="mt-1 line-clamp-2">
+                                        {exercise.instructions}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                               </li>
                             );
                           },

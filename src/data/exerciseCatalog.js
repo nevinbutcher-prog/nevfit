@@ -283,4 +283,19 @@ export const exerciseCatalog = [
     source: LOCAL_SOURCE,
     sourceId: null,
   },
+
+  {
+    id: "straight-arm-pulldown",
+    name: "Straight-Arm Pulldown",
+    category: "Lats",
+    bodyPart: "Back",
+    primaryMuscle: "Lats",
+    secondaryMuscles: ["Teres Major", "Rear Delts", "Triceps (Long Head)"],
+    equipment: ["Cable", "Straight Bar"],
+    defaultSets: DEFAULT_SETS,
+    defaultRepRange: "10-15",
+    defaultRestSeconds: DEFAULT_REST_SECONDS,
+    source: LOCAL_SOURCE,
+    sourceId: null,
+  },
 ];

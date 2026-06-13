@@ -5,6 +5,7 @@ import {
   subscribeToAuthChanges,
 } from "./services/auth";
 import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
+import { ensureUserProfile } from "./services/userProfile";
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
 import { getExerciseById, searchExercises } from "./services/exerciseProvider";
@@ -975,6 +976,7 @@ function App() {
   const wakeLockRef = useRef(null);
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
+  const lastProfileSyncUidRef = useRef(null);
   const isWorkoutActive =
     viewMode === "workout" && Boolean(activeWorkoutSession);
   const getExercise = (exerciseId) =>
@@ -1000,6 +1002,24 @@ function App() {
       }),
     [],
   );
+
+  useEffect(() => {
+    if (!currentUser) {
+      lastProfileSyncUidRef.current = null;
+      return;
+    }
+
+    if (lastProfileSyncUidRef.current === currentUser.uid) {
+      return;
+    }
+
+    lastProfileSyncUidRef.current = currentUser.uid;
+
+    ensureUserProfile(currentUser).catch((error) => {
+      console.error("User profile sync failed:", error);
+      lastProfileSyncUidRef.current = null;
+    });
+  }, [currentUser]);
 
   useEffect(() => {
     if (!saveMessage) {

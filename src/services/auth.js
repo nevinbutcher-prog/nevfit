@@ -18,6 +18,7 @@ function normalizeUser(user) {
     displayName: user.displayName,
     email: user.email,
     photoURL: user.photoURL,
+    providerId: user.providerData?.[0]?.providerId ?? user.providerId ?? null,
   };
 }
 

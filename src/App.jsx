@@ -7,7 +7,11 @@ const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
 const COMPLETED_WORKOUTS_STORAGE_KEY = "nevfit_completed_workouts";
 const ACTIVE_WORKOUT_STORAGE_KEY = "nevfit_active_workout";
+const ACTIVE_PROGRAM_STORAGE_KEY = "nevfit_active_program";
+const CYCLE_START_DATE_STORAGE_KEY = "nevfit_cycle_start_date";
+const CYCLE_LENGTH_WEEKS_STORAGE_KEY = "nevfit_cycle_length_weeks";
 const DEFAULT_REST_SECONDS = 120;
+const DEFAULT_CYCLE_LENGTH_WEEKS = 12;
 const workoutNumberInputClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
 const routineEditorInputClassName =
@@ -244,6 +248,46 @@ function persistPrograms(programDefinitions) {
   );
 }
 
+function loadStoredActiveProgramId() {
+  try {
+    const storedProgramId = window.localStorage.getItem(
+      ACTIVE_PROGRAM_STORAGE_KEY,
+    );
+
+    return storedProgramId || defaultProgramId;
+  } catch {
+    return defaultProgramId;
+  }
+}
+
+function loadStoredCycleStartDate() {
+  try {
+    const storedCycleStartDate = window.localStorage.getItem(
+      CYCLE_START_DATE_STORAGE_KEY,
+    );
+
+    return storedCycleStartDate || "";
+  } catch {
+    return "";
+  }
+}
+
+function loadStoredCycleLengthWeeks() {
+  try {
+    const storedCycleLengthWeeks = window.localStorage.getItem(
+      CYCLE_LENGTH_WEEKS_STORAGE_KEY,
+    );
+    const parsedCycleLengthWeeks = Number(storedCycleLengthWeeks);
+
+    return Number.isInteger(parsedCycleLengthWeeks) &&
+      parsedCycleLengthWeeks > 0
+      ? parsedCycleLengthWeeks
+      : "";
+  } catch {
+    return "";
+  }
+}
+
 function createProgramId(programName, existingPrograms) {
   const slug = programName
     .trim()
@@ -303,6 +347,92 @@ function getCurrentWeekdayId() {
   return weekSchedule.some((day) => day.id === currentWeekdayId)
     ? currentWeekdayId
     : (weekSchedule[0]?.id ?? null);
+}
+
+function getTodayDateInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getStartOfWeek(date) {
+  const startOfWeek = new Date(date);
+  startOfWeek.setHours(0, 0, 0, 0);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+  return startOfWeek;
+}
+
+function getCompletedWorkoutsThisWeek(completedWorkouts) {
+  const startOfWeek = getStartOfWeek(new Date());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+  return completedWorkouts.filter((workout) => {
+    if (
+      !workout.exercises.some((exercise) =>
+        exercise.sets.some(hasMeaningfulLoggedEffort),
+      )
+    ) {
+      return false;
+    }
+
+    const completedAt = new Date(workout.completedAt);
+
+    return completedAt >= startOfWeek && completedAt < endOfWeek;
+  }).length;
+}
+
+function getCycleWeekLabel(cycleStartDate, cycleLengthWeeks) {
+  if (!cycleStartDate || !cycleLengthWeeks) {
+    return "Cycle not configured";
+  }
+
+  const startDate = new Date(`${cycleStartDate}T00:00:00`);
+
+  if (Number.isNaN(startDate.getTime())) {
+    return "Cycle not configured";
+  }
+
+  const elapsedMilliseconds = Date.now() - startDate.getTime();
+  const elapsedWeeks = Math.max(
+    0,
+    Math.floor(elapsedMilliseconds / (7 * 24 * 60 * 60 * 1000)),
+  );
+  const currentWeek = Math.min(elapsedWeeks + 1, cycleLengthWeeks);
+
+  return `Week ${currentWeek} of ${cycleLengthWeeks}`;
+}
+
+function formatCompletedRelativeDate(completedAt) {
+  const completedDate = new Date(completedAt);
+
+  if (Number.isNaN(completedDate.getTime())) {
+    return "Completed recently";
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const completedDay = new Date(completedDate);
+  completedDay.setHours(0, 0, 0, 0);
+  const dayDifference = Math.round(
+    (today.getTime() - completedDay.getTime()) / (24 * 60 * 60 * 1000),
+  );
+
+  if (dayDifference === 0) {
+    return "Completed today";
+  }
+
+  if (dayDifference === 1) {
+    return "Completed yesterday";
+  }
+
+  if (dayDifference > 1 && dayDifference < 7) {
+    return `Completed ${dayDifference} days ago`;
+  }
+
+  return completedDate.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function normalizeCompletedWorkout(value) {
@@ -794,7 +924,9 @@ function App() {
   const [programDefinitions, setProgramDefinitions] =
     useState(loadStoredPrograms);
   const [programDrafts, setProgramDrafts] = useState(loadStoredPrograms);
-  const [selectedProgramId, setSelectedProgramId] = useState(defaultProgramId);
+  const [selectedProgramId, setSelectedProgramId] = useState(
+    loadStoredActiveProgramId,
+  );
   const [selectedProgramDayId, setSelectedProgramDayId] = useState(
     starterProgram.days[0]?.id ?? null,
   );
@@ -813,10 +945,17 @@ function App() {
     loadStoredActiveWorkoutSession,
   );
   const [viewMode, setViewMode] = useState(() =>
-    loadStoredActiveWorkoutSession() ? "workout" : "planner",
+    loadStoredActiveWorkoutSession() ? "workout" : "dashboard",
   );
   const [saveMessage, setSaveMessage] = useState("");
   const [programSaveStatus, setProgramSaveStatus] = useState(null);
+  const [cycleStartDate, setCycleStartDate] = useState(
+    loadStoredCycleStartDate,
+  );
+  const [cycleLengthWeeks, setCycleLengthWeeks] = useState(
+    loadStoredCycleLengthWeeks,
+  );
+  const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
   const wakeLockRef = useRef(null);
@@ -848,6 +987,36 @@ function App() {
   useEffect(() => {
     persistActiveWorkoutSession(activeWorkoutSession);
   }, [activeWorkoutSession]);
+
+  useEffect(() => {
+    if (!selectedProgramId) {
+      window.localStorage.removeItem(ACTIVE_PROGRAM_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(ACTIVE_PROGRAM_STORAGE_KEY, selectedProgramId);
+  }, [selectedProgramId]);
+
+  useEffect(() => {
+    if (!cycleStartDate) {
+      window.localStorage.removeItem(CYCLE_START_DATE_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(CYCLE_START_DATE_STORAGE_KEY, cycleStartDate);
+  }, [cycleStartDate]);
+
+  useEffect(() => {
+    if (!cycleLengthWeeks) {
+      window.localStorage.removeItem(CYCLE_LENGTH_WEEKS_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      CYCLE_LENGTH_WEEKS_STORAGE_KEY,
+      String(cycleLengthWeeks),
+    );
+  }, [cycleLengthWeeks]);
 
   useEffect(() => {
     if (
@@ -1722,6 +1891,46 @@ function App() {
       ? [currentExercise, ...filteredExerciseCatalog]
       : filteredExerciseCatalog;
   };
+  const todayScheduleDayId = getCurrentWeekdayId();
+  const todayScheduleDay = schedule.find((day) => day.id === todayScheduleDayId);
+  const todayRoutineDay = getProgramDay(
+    todayScheduleDay?.routineDayId,
+    programDefinitions,
+  );
+  const todayExerciseCount = todayRoutineDay?.exercises.length ?? 0;
+  const todaySetCount =
+    todayRoutineDay?.exercises.reduce(
+      (total, exercise) => total + Number(exercise.sets),
+      0,
+    ) ?? 0;
+  const isTodayWorkoutActive =
+    Boolean(activeWorkoutSession && todayScheduleDay && todayRoutineDay) &&
+    activeWorkoutSession.scheduleDayId === todayScheduleDay.id &&
+    activeWorkoutSession.routineDayId === todayRoutineDay.id;
+  const dashboardProgram =
+    programDefinitions.find(
+      (program) => program.id === selectedProgramId && !program.archived,
+    ) ??
+    programDefinitions.find((program) => !program.archived) ??
+    null;
+  const plannedWorkoutsThisWeek = schedule.filter((day) =>
+    Boolean(getProgramDay(day.routineDayId, programDefinitions)),
+  ).length;
+  const completedWorkoutsThisWeek =
+    getCompletedWorkoutsThisWeek(completedWorkouts);
+  const latestCompletedWorkout =
+    [...completedWorkouts]
+      .filter((workout) =>
+        workout.exercises.some((exercise) =>
+          exercise.sets.some(hasMeaningfulLoggedEffort),
+        ),
+      )
+      .sort(
+        (firstWorkout, secondWorkout) =>
+          Date.parse(secondWorkout.completedAt) -
+          Date.parse(firstWorkout.completedAt),
+      )[0] ?? null;
+  const cycleWeekLabel = getCycleWeekLabel(cycleStartDate, cycleLengthWeeks);
 
   return (
     <main
@@ -1733,9 +1942,21 @@ function App() {
         {viewMode !== "workout" ? (
           <header className="mb-6">
             <h1 className="text-4xl font-bold">NevFit</h1>
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-80">
+            <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[28rem]">
               <button
                 type="button"
+                onClick={() => setViewMode("dashboard")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  viewMode === "dashboard"
+                    ? "bg-emerald-400 text-slate-950"
+                    : "text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("planner")}
                 className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                   viewMode === "planner"
                     ? "bg-emerald-400 text-slate-950"
@@ -1757,6 +1978,218 @@ function App() {
               </button>
             </div>
           </header>
+        ) : null}
+
+        {viewMode === "dashboard" ? (
+          <section className="min-w-0 space-y-4">
+            {saveMessage ? (
+              <p className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">
+                {saveMessage}
+              </p>
+            ) : null}
+
+            <article className="min-w-0 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30 sm:p-6">
+              <div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                    Today
+                  </p>
+                  <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
+                    {todayRoutineDay ? todayRoutineDay.name : "Rest Day"}
+                  </h2>
+                  {todayRoutineDay ? (
+                    <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-slate-300">
+                      <span>{todayExerciseCount} exercises</span>
+                      <span>{todaySetCount} sets</span>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-base text-slate-300">
+                      No workout scheduled today.
+                    </p>
+                  )}
+                </div>
+
+                {todayScheduleDay && todayRoutineDay ? (
+                  <button
+                    type="button"
+                    onClick={() => openWorkout(todayScheduleDay, todayRoutineDay)}
+                    className="w-full rounded-xl bg-emerald-400 px-5 py-4 text-base font-bold text-slate-950 transition hover:bg-emerald-300 md:w-auto md:min-w-52"
+                  >
+                    {isTodayWorkoutActive ? "Resume Workout" : "Start Workout"}
+                  </button>
+                ) : plannedWorkoutsThisWeek === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("planner")}
+                    className="w-full rounded-xl border border-slate-700 px-5 py-4 font-semibold text-slate-200 transition hover:border-slate-500 md:w-auto"
+                  >
+                    Assign in Week View
+                  </button>
+                ) : null}
+              </div>
+            </article>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Current Program
+                </p>
+                {dashboardProgram ? (
+                  <>
+                    <h2 className="mt-3 text-2xl font-bold text-white">
+                      {dashboardProgram.name}
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-400">
+                      {dashboardProgram.days.length} routines
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="mt-3 text-xl font-bold text-white">
+                      No Program Selected
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Create a Program to get started.
+                    </p>
+                  </>
+                )}
+              </article>
+
+              <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Current Cycle
+                    </p>
+                    <h2 className="mt-3 text-2xl font-bold text-white">
+                      {cycleWeekLabel}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCycleStartDate(
+                        (currentCycleStartDate) =>
+                          currentCycleStartDate || getTodayDateInputValue(),
+                      );
+                      setCycleLengthWeeks(
+                        (currentCycleLengthWeeks) =>
+                          currentCycleLengthWeeks || DEFAULT_CYCLE_LENGTH_WEEKS,
+                      );
+                      setIsCycleEditorOpen((current) => !current);
+                    }}
+                    className="shrink-0 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
+                  >
+                    {cycleStartDate && cycleLengthWeeks
+                      ? "Edit Cycle"
+                      : "Set Cycle"}
+                  </button>
+                </div>
+
+                {isCycleEditorOpen ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="text-sm font-semibold text-slate-300">
+                      Start Date
+                      <input
+                        type="date"
+                        value={cycleStartDate}
+                        onChange={(event) =>
+                          setCycleStartDate(event.target.value)
+                        }
+                        className={`${routineEditorInputClassName} mt-1`}
+                      />
+                    </label>
+                    <label className="text-sm font-semibold text-slate-300">
+                      Weeks
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        max="52"
+                        value={cycleLengthWeeks}
+                        onChange={(event) => {
+                          const weeks = Number(event.target.value);
+                          setCycleLengthWeeks(
+                            Number.isInteger(weeks) && weeks > 0 ? weeks : "",
+                          );
+                        }}
+                        className={`${routineEditorInputClassName} mt-1`}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </article>
+
+              <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  This Week
+                </p>
+                {plannedWorkoutsThisWeek > 0 ? (
+                  <>
+                    <p className="mt-3 text-sm font-semibold text-slate-300">
+                      Workouts Completed
+                    </p>
+                    <h2 className="mt-1 text-3xl font-bold text-white">
+                      {completedWorkoutsThisWeek} / {plannedWorkoutsThisWeek}
+                    </h2>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="mt-3 text-xl font-bold text-white">
+                      No Workouts Scheduled
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Assign routines in Week View.
+                    </p>
+                  </>
+                )}
+              </article>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+              <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Latest Workout
+                </p>
+                {latestCompletedWorkout ? (
+                  <>
+                    <h2 className="mt-3 text-2xl font-bold text-white">
+                      {latestCompletedWorkout.routineDayName}
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-400">
+                      {formatCompletedRelativeDate(
+                        latestCompletedWorkout.completedAt,
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-400">
+                    No workouts completed yet.
+                  </p>
+                )}
+              </article>
+
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+                {[
+                  "Runs This Week",
+                  "Average Daily Steps",
+                  "Progress Highlights",
+                ].map((placeholderTitle) => (
+                  <article
+                    key={placeholderTitle}
+                    className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4"
+                  >
+                    <p className="text-sm font-semibold text-slate-300">
+                      {placeholderTitle}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-slate-500">
+                      Coming Soon
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
         ) : null}
 
         {viewMode === "planner" ? (

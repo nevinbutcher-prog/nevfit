@@ -12,7 +12,7 @@ The current app supports:
 - Append-only completed workout history
 - Previous performance lookup from completed history
 - Rest timer and workout-mode feedback
-- wger-backed exercise search with local catalog fallback
+- wger-native exercise search
 
 ## Development
 
@@ -31,8 +31,9 @@ npm run build
 
 ## Data
 
-NevFit currently stores app state in `localStorage`. There is no backend,
-authentication, or Firestore integration yet.
+NevFit currently stores workout, program, schedule, and history state in
+`localStorage`. Firebase Auth and a Firestore user-profile document are wired as
+the identity foundation, but workout data has not been migrated.
 
 Key docs:
 

@@ -621,6 +621,18 @@ function getEquipmentFilterValue(equipment) {
     return "Bodyweight";
   }
 
+  if (normalizedEquipment.includes("machine")) {
+    return "Machine";
+  }
+
+  if (normalizedEquipment.includes("kettlebell")) {
+    return "Kettlebell";
+  }
+
+  if (normalizedEquipment.includes("band")) {
+    return "Band";
+  }
+
   return equipment;
 }
 
@@ -2074,19 +2086,26 @@ function App() {
     !selectedProgramHasUnsavedChanges
       ? "✓ Saved"
       : "Save Program";
-  const exerciseOptionSource = [...exerciseLibrary, ...exerciseSearchResults];
   const exerciseEquipmentOptions = getSortedUniqueValues(
-    exerciseOptionSource.flatMap((exercise) =>
+    exerciseSearchResults.flatMap((exercise) =>
       (exercise.equipment ?? []).map(getEquipmentFilterValue),
     ),
   );
   const exerciseMuscleOptions = getSortedUniqueValues(
-    exerciseOptionSource.flatMap((exercise) => [
+    exerciseSearchResults.flatMap((exercise) => [
       exercise.bodyPart,
       exercise.primaryMuscle,
       ...(exercise.secondaryMuscles ?? []),
     ]),
   );
+  const showExerciseEquipmentFilter = exerciseEquipmentOptions.length > 0;
+  const showExerciseMuscleFilter = exerciseMuscleOptions.length > 0;
+  const showHiddenFilterNotice =
+    exerciseSearchStatus === "ready" &&
+    exerciseSearchTerm.trim() &&
+    exerciseSearchResults.length > 0 &&
+    !showExerciseEquipmentFilter &&
+    !showExerciseMuscleFilter;
   const addExerciseCandidate = exerciseSearchResults[0] ?? null;
   const getExercisePickerOptions = (currentExerciseId) => {
     if (
@@ -2778,63 +2797,81 @@ function App() {
 
                       {exerciseFinderOpen ? (
                         <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-                          <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                          <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_repeat(2,minmax(0,1fr))]">
                             <label className="min-w-0 text-sm font-semibold text-slate-300">
                               Search
                               <input
                                 type="search"
                                 value={exerciseSearchTerm}
-                                onChange={(event) =>
-                                  setExerciseSearchTerm(event.target.value)
-                                }
-                                placeholder="curl, row, press"
+                                onChange={(event) => {
+                                  setExerciseSearchTerm(event.target.value);
+                                  setExerciseEquipmentFilter("all");
+                                  setExerciseMuscleFilter("all");
+                                }}
+                                placeholder="deadlift, curl, pulldown"
                                 className={`${routineEditorInputClassName} mt-1`}
                               />
                             </label>
 
-                            <label className="min-w-0 text-sm font-semibold text-slate-300">
-                              Equipment
-                              <select
-                                value={exerciseEquipmentFilter}
-                                onChange={(event) =>
-                                  setExerciseEquipmentFilter(event.target.value)
-                                }
-                                className={`${routineEditorSelectClassName} mt-1`}
-                              >
-                                <option value="all">All equipment</option>
-                                {exerciseEquipmentOptions.map((equipment) => (
-                                  <option key={equipment} value={equipment}>
-                                    {equipment}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            {showExerciseMuscleFilter ? (
+                              <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                Muscle
+                                <select
+                                  value={exerciseMuscleFilter}
+                                  onChange={(event) =>
+                                    setExerciseMuscleFilter(event.target.value)
+                                  }
+                                  className={`${routineEditorSelectClassName} mt-1`}
+                                >
+                                  <option value="all">All muscles</option>
+                                  {exerciseMuscleOptions.map((muscle) => (
+                                    <option key={muscle} value={muscle}>
+                                      {muscle}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            ) : null}
 
-                            <label className="min-w-0 text-sm font-semibold text-slate-300">
-                              Muscle
-                              <select
-                                value={exerciseMuscleFilter}
-                                onChange={(event) =>
-                                  setExerciseMuscleFilter(event.target.value)
-                                }
-                                className={`${routineEditorSelectClassName} mt-1`}
-                              >
-                                <option value="all">All muscles</option>
-                                {exerciseMuscleOptions.map((muscle) => (
-                                  <option key={muscle} value={muscle}>
-                                    {muscle}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+                            {showExerciseEquipmentFilter ? (
+                              <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                Equipment
+                                <select
+                                  value={exerciseEquipmentFilter}
+                                  onChange={(event) =>
+                                    setExerciseEquipmentFilter(
+                                      event.target.value,
+                                    )
+                                  }
+                                  className={`${routineEditorSelectClassName} mt-1`}
+                                >
+                                  <option value="all">All equipment</option>
+                                  {exerciseEquipmentOptions.map((equipment) => (
+                                    <option key={equipment} value={equipment}>
+                                      {equipment}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            ) : null}
                           </div>
+                          {showHiddenFilterNotice ? (
+                            <p className="mt-2 text-sm text-slate-500">
+                              Filters hidden because wger did not provide usable
+                              muscle or equipment metadata for these results.
+                            </p>
+                          ) : null}
 
                           <p className="mt-3 text-sm text-slate-400">
                             {exerciseSearchStatus === "loading"
                               ? "Searching exercises..."
-                              : `${exerciseSearchResults.length} exercise${
-                                  exerciseSearchResults.length === 1 ? "" : "s"
-                                } found`}
+                              : exerciseSearchTerm.trim()
+                                ? `${exerciseSearchResults.length} exercise${
+                                    exerciseSearchResults.length === 1
+                                      ? ""
+                                      : "s"
+                                  } found`
+                                : "Type an exercise name to search wger"}
                           </p>
                           {exerciseSearchStatus === "error" ? (
                             <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
@@ -2899,7 +2936,9 @@ function App() {
                               ))
                             ) : (
                               <p className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-3 text-sm text-slate-300">
-                                No exercises found.
+                                {exerciseSearchTerm.trim()
+                                  ? "No matching exercises found."
+                                  : "Type an exercise name to find wger exercises."}
                               </p>
                             )}
                           </div>

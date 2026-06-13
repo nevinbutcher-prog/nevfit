@@ -13,6 +13,8 @@ The current app supports:
 - Previous performance lookup from completed history
 - Rest timer and workout-mode feedback
 - wger-native exercise search
+- Routine-level exercise name overrides for wger variants
+- Firebase Google sign-in and user profile document sync
 
 ## Development
 

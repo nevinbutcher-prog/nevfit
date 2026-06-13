@@ -16,6 +16,8 @@
 - Exercise search and filtering
 - wger-native selectable exercise results
 - Add and Swap exercise picker flows
+- wger result dedupe and cleaned English display names
+- Routine-level exercise display name overrides
 - Workout mode
 - Active workout save/load
 - Non-destructive blank workout close
@@ -27,11 +29,15 @@
 - Wake lock during active workouts
 - Rep-range feedback and progression indicators
 - Workout completion workflow improvements
+- Firebase Google sign-in shell
+- Firestore user profile document sync at `users/{uid}`
 
 ## Current Known Limitations
 
 - Exercise search depends on the public wger API.
+- wger equipment metadata can be incomplete, so the equipment filter is hidden for now.
 - wger-selected exercise metadata is cached in memory for the current app session; saved routines retain stable wger IDs and can rehydrate metadata with `getExerciseById`.
+- Workout, program, schedule, active workout, and history data are still localStorage-backed.
 - Timer completion notification still needs validation across devices.
 - Minor mobile viewport movement has been reported on some devices when editing inputs.
 
@@ -39,6 +45,7 @@
 
 - Workout history screen
 - Persist selected external exercise metadata more durably if offline reload behavior becomes important
+- Decide the first cloud-sync shape for programs/routines after the user profile foundation
 - Custom exercise support
 - PR tracking
 - Historical progression analysis

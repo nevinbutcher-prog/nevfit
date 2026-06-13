@@ -17,9 +17,18 @@ src/
     routineDays.js
     weekSchedule.js
   services/
+    auth.js
     exerciseProvider.js
+    firebase.js
+    firebaseSmokeTest.js
+    userProfile.js
   index.css
 ```
+
+Root Firebase config files:
+
+- `firebase.json`
+- `firestore.rules`
 
 ## localStorage Keys
 
@@ -58,6 +67,21 @@ The Starter Program is migrated from default routine data. Newly created
 programs should start empty and routines are added explicitly through the
 program editor.
 
+Routine exercises store a stable `exerciseId` that points to the selected wger
+exercise. They can also store an optional `displayNameOverride`, allowing a
+base wger movement to be named as a practical routine variant such as
+`DB Reverse Lunge`.
+
+Workout sessions snapshot the effective exercise name at start time:
+
+```js
+displayNameOverride || exercise.name
+```
+
+Completed workout records preserve that snapped name in `exerciseName`, so
+history keeps the name used during the workout even if the routine is renamed
+later.
+
 ## Exercise Provider
 
 Exercise search is routed through `src/services/exerciseProvider.js`.
@@ -78,11 +102,13 @@ Normalized exercise shape:
 {
   id,
   name,
+  originalName,
   category,
   bodyPart,
   primaryMuscle,
   secondaryMuscles,
   equipment,
+  aliases,
   defaultSets,
   defaultRepRange,
   defaultRestSeconds,
@@ -96,12 +122,44 @@ The routine editor keeps a local in-memory exercise library of fetched wger
 results. This lets selected wger exercises continue rendering in the editor,
 workout screen, and completed history snapshots during the current app session.
 
-Exercise discovery is search-first. `searchExercises(query, filters)` queries
-wger directly and then applies optional equipment and muscle filters to the
-returned wger metadata. There is no local catalog fallback or local taxonomy
-merge layer.
+Exercise discovery is search-first. `searchExercises(query, filters)` loads an
+English wger `exerciseinfo` pool, normalizes the result names and metadata,
+deduplicates normalized results, and ranks by name/alias relevance. It does not
+use instruction text for direct search ranking.
+
+The picker currently shows the muscle filter only when populated from current
+search results. The equipment filter is hidden for now because wger equipment
+metadata is often incomplete or too generic. Equipment is still displayed on
+result cards when available.
+
+There is no local catalog fallback, local taxonomy merge layer, or local result
+set.
+
+## Firebase Identity Layer
+
+Firebase is initialized in `src/services/firebase.js`.
+
+Authentication is isolated in `src/services/auth.js`:
+
+- `signInWithGoogle()`
+- `signOutUser()`
+- `subscribeToAuthChanges(callback)`
+
+The app tracks `currentUser` and `authLoading`, but signing in does not alter
+workout, program, schedule, active workout, or history persistence.
+
+`src/services/userProfile.js` exports `ensureUserProfile(user)`, which creates
+or updates `users/{uid}` with `setDoc(..., { merge: true })`. This is the only
+application Firestore write currently implemented.
+
+Firestore rules are intentionally narrow:
+
+- signed-in users can read/write only their own `users/{uid}` document
+- workout/program/routine data has not been migrated
 
 ## Future Storage
 
-- Firebase Auth
-- Firestore
+- Cloud-backed program, routine, schedule, active workout, and completed
+  workout storage
+- Durable selected exercise metadata if offline reload behavior becomes
+  important

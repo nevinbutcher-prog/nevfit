@@ -37,6 +37,9 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - wger-native exercise search
 - Selectable exercise result cards for Add and Swap flows
 - Exercise metadata display for source, muscle, equipment, and instructions where available
+- Routine-level exercise display name overrides for variants like DB Reverse Lunge
+- Firebase Google sign-in
+- Firestore `users/{uid}` profile document sync
 
 ## Current Product Direction
 
@@ -50,12 +53,14 @@ Users can:
 - Create and manage programs and routines
 - Build custom training splits
 - Search wger exercises while editing routines
+- Rename selected exercises inside a routine without changing the underlying wger ID
 - Track workout history
 - Review previous performance
 
 Future expansion:
 
 - Workout history screen
+- Migrate workout/program data from localStorage to Firestore
 - Progression tracking
 - PR tracking
 - Custom exercise creation

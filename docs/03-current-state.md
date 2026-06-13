@@ -14,8 +14,7 @@
 - Custom programs and routines
 - Routine management: rename, duplicate, archive, add routine
 - Exercise search and filtering
-- wger-backed selectable exercise results
-- Local exercise catalog fallback
+- wger-native selectable exercise results
 - Add and Swap exercise picker flows
 - Workout mode
 - Active workout save/load
@@ -31,8 +30,7 @@
 
 ## Current Known Limitations
 
-- Exercise search depends on the public wger API when online and falls back to the local catalog when unavailable.
-- wger taxonomy is broader than the local catalog, so filter matching is normalized/fuzzy rather than exact.
+- Exercise search depends on the public wger API.
 - wger-selected exercise metadata is cached in memory for the current app session; saved routines retain stable wger IDs and can rehydrate metadata with `getExerciseById`.
 - Timer completion notification still needs validation across devices.
 - Minor mobile viewport movement has been reported on some devices when editing inputs.

@@ -13,7 +13,6 @@
 src/
   App.jsx
   data/
-    exerciseCatalog.js
     programs.js
     routineDays.js
     weekSchedule.js
@@ -68,11 +67,9 @@ The provider exposes:
 - `searchExercises(query, filters)`
 - `getExerciseById(id)`
 - `normalizeExercise(sourceExercise)`
-- `getLocalExerciseCatalog()`
 
 Supported sources:
 
-- local catalog fallback
 - wger API results
 
 Normalized exercise shape:
@@ -95,14 +92,14 @@ Normalized exercise shape:
 }
 ```
 
-The routine editor keeps a local in-memory exercise library that combines local
-catalog entries and fetched wger results. This lets selected wger exercises
-continue rendering in the editor, workout screen, and completed history
-snapshots.
+The routine editor keeps a local in-memory exercise library of fetched wger
+results. This lets selected wger exercises continue rendering in the editor,
+workout screen, and completed history snapshots during the current app session.
 
-Filter matching is intentionally normalized/fuzzy because local catalog terms
-and wger taxonomy labels differ. For example, `Dumbbell` should match
-`Dumbbells`, and `Biceps` should match `Biceps brachii`.
+Exercise discovery is search-first. `searchExercises(query, filters)` queries
+wger directly and then applies optional equipment and muscle filters to the
+returned wger metadata. There is no local catalog fallback or local taxonomy
+merge layer.
 
 ## Future Storage
 

@@ -1,5 +1,3 @@
-import { exerciseCatalog } from "../data/exerciseCatalog.js";
-
 const WGER_API_BASE_URL = "https://wger.de/api/v2";
 const DEFAULT_SETS = 3;
 const DEFAULT_REP_RANGE = "8-12";
@@ -60,22 +58,7 @@ function getWgerTranslation(sourceExercise) {
   );
 }
 
-function getExerciseSearchText(exercise) {
-  return [
-    exercise.name,
-    exercise.category,
-    exercise.bodyPart,
-    exercise.primaryMuscle,
-    ...(exercise.secondaryMuscles ?? []),
-    ...(exercise.equipment ?? []),
-    exercise.instructions,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-}
-
-function valuesMatchFilter(values, filterValue) {
+function valuesMatchFilter(values = [], filterValue) {
   const normalizedFilter = normalizeFilterValue(filterValue);
 
   if (!normalizedFilter || normalizedFilter === "all") {
@@ -94,18 +77,13 @@ function valuesMatchFilter(values, filterValue) {
 }
 
 function matchesFilters(exercise, filters = {}) {
-  const query = normalizeText(filters.query).toLowerCase();
   const equipment = normalizeFilterValue(filters.equipment);
   const muscle = normalizeFilterValue(filters.muscle);
-
-  if (query && !getExerciseSearchText(exercise).includes(query)) {
-    return false;
-  }
 
   if (
     equipment &&
     equipment !== "all" &&
-    !valuesMatchFilter(exercise.equipment, equipment)
+    !valuesMatchFilter(exercise.equipment ?? [], equipment)
   ) {
     return false;
   }
@@ -114,7 +92,11 @@ function matchesFilters(exercise, filters = {}) {
     muscle &&
     muscle !== "all" &&
     !valuesMatchFilter(
-      [exercise.bodyPart, exercise.primaryMuscle, ...exercise.secondaryMuscles],
+      [
+        exercise.bodyPart,
+        exercise.primaryMuscle,
+        ...(exercise.secondaryMuscles ?? []),
+      ],
       muscle,
     )
   ) {
@@ -122,27 +104,6 @@ function matchesFilters(exercise, filters = {}) {
   }
 
   return true;
-}
-
-function normalizeLocalExercise(sourceExercise) {
-  return {
-    id: sourceExercise.id,
-    name: sourceExercise.name,
-    category: sourceExercise.category ?? "Exercise",
-    bodyPart: sourceExercise.bodyPart ?? sourceExercise.category ?? "Exercise",
-    primaryMuscle: sourceExercise.primaryMuscle ?? "General",
-    secondaryMuscles: sourceExercise.secondaryMuscles ?? [],
-    equipment: sourceExercise.equipment ?? [],
-    defaultSets: sourceExercise.defaultSets ?? DEFAULT_SETS,
-    defaultRepRange: sourceExercise.defaultRepRange ?? DEFAULT_REP_RANGE,
-    defaultRestSeconds:
-      sourceExercise.defaultRestSeconds ?? DEFAULT_REST_SECONDS,
-    source: "local",
-    sourceId: sourceExercise.sourceId ?? sourceExercise.id,
-    ...(sourceExercise.instructions
-      ? { instructions: sourceExercise.instructions }
-      : {}),
-  };
 }
 
 function normalizeWgerExercise(sourceExercise) {
@@ -187,7 +148,7 @@ export function normalizeExercise(sourceExercise) {
   }
 
   if (
-    sourceExercise.source &&
+    sourceExercise.source === "wger" &&
     sourceExercise.id &&
     sourceExercise.name &&
     Array.isArray(sourceExercise.equipment)
@@ -208,11 +169,7 @@ export function normalizeExercise(sourceExercise) {
     return normalizeWgerExercise(sourceExercise);
   }
 
-  return normalizeLocalExercise(sourceExercise);
-}
-
-export function getLocalExerciseCatalog() {
-  return exerciseCatalog.map(normalizeLocalExercise);
+  return null;
 }
 
 async function searchWgerExercises(query) {
@@ -240,32 +197,14 @@ async function searchWgerExercises(query) {
 }
 
 export async function searchExercises(query = "", filters = {}) {
-  const localResults = getLocalExerciseCatalog().filter((exercise) =>
-    matchesFilters(exercise, { ...filters, query }),
-  );
+  const wgerResults = await searchWgerExercises(query);
 
-  try {
-    const wgerResults = await searchWgerExercises(query);
-    const mergedResults = [...wgerResults, ...localResults];
-    const dedupedResults = Array.from(
-      new Map(mergedResults.map((exercise) => [exercise.id, exercise])).values(),
-    );
-
-    return dedupedResults.filter((exercise) =>
-      matchesFilters(exercise, { ...filters, query }),
-    );
-  } catch {
-    return localResults;
-  }
+  return wgerResults.filter((exercise) => matchesFilters(exercise, filters));
 }
 
 export async function getExerciseById(id) {
-  const localExercise = getLocalExerciseCatalog().find(
-    (exercise) => exercise.id === id,
-  );
-
-  if (localExercise || !id?.startsWith?.("wger-")) {
-    return localExercise ?? null;
+  if (!id?.startsWith?.("wger-")) {
+    return null;
   }
 
   const sourceId = id.replace(/^wger-/, "");

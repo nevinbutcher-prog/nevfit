@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
-import {
-  getExerciseById,
-  getLocalExerciseCatalog,
-  searchExercises,
-} from "./services/exerciseProvider";
+import { getExerciseById, searchExercises } from "./services/exerciseProvider";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -22,7 +19,6 @@ const routineEditorInputClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
 const routineEditorSelectClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition focus:border-emerald-400";
-const localExerciseCatalog = getLocalExerciseCatalog();
 
 const getProgramDay = (dayId, programDefinitions) =>
   programDefinitions
@@ -34,6 +30,8 @@ const getExerciseFromLibrary = (exerciseId, exerciseLibrary) =>
 
 const defaultProgramId = starterProgram.id;
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const isWgerExerciseId = (exerciseId) => exerciseId?.startsWith?.("wger-");
+let hasRunFirebaseSmokeTest = false;
 
 const setFeedbackStyles = {
   below: "border-red-500/70 bg-red-500/10 text-red-200 focus:border-red-400",
@@ -98,7 +96,8 @@ function normalizeRoutineExercise(value) {
     !(
       value &&
       typeof value.exerciseId === "string" &&
-      value.exerciseId.trim()
+      value.exerciseId.trim() &&
+      isWgerExerciseId(value.exerciseId.trim())
     )
   ) {
     return null;
@@ -635,6 +634,7 @@ function isValidWorkoutSession(value) {
       (exercise) =>
         exercise &&
         typeof exercise.exerciseId === "string" &&
+        isWgerExerciseId(exercise.exerciseId) &&
         typeof exercise.prescribedSets === "number" &&
         typeof exercise.repRange === "string" &&
         (typeof exercise.note === "string" ||
@@ -941,9 +941,8 @@ function App() {
     type: "add",
     exerciseIndex: null,
   });
-  const [exerciseLibrary, setExerciseLibrary] = useState(localExerciseCatalog);
-  const [exerciseSearchResults, setExerciseSearchResults] =
-    useState(localExerciseCatalog);
+  const [exerciseLibrary, setExerciseLibrary] = useState([]);
+  const [exerciseSearchResults, setExerciseSearchResults] = useState([]);
   const [exerciseSearchStatus, setExerciseSearchStatus] = useState("idle");
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
@@ -973,6 +972,18 @@ function App() {
     viewMode === "workout" && Boolean(activeWorkoutSession);
   const getExercise = (exerciseId) =>
     getExerciseFromLibrary(exerciseId, exerciseLibrary);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || hasRunFirebaseSmokeTest) {
+      return;
+    }
+
+    hasRunFirebaseSmokeTest = true;
+
+    runFirebaseSmokeTest().catch((error) => {
+      console.error("Firebase smoke test failed:", error);
+    });
+  }, []);
 
   useEffect(() => {
     if (!saveMessage) {
@@ -1018,7 +1029,9 @@ function App() {
               currentLibrary.map((exercise) => [exercise.id, exercise]),
             );
 
-            results.forEach((exercise) => exercisesById.set(exercise.id, exercise));
+            results.forEach((exercise) =>
+              exercisesById.set(exercise.id, exercise),
+            );
 
             return Array.from(exercisesById.values());
           });
@@ -1029,8 +1042,8 @@ function App() {
             return;
           }
 
-          setExerciseSearchResults(localExerciseCatalog);
-          setExerciseSearchStatus("fallback");
+          setExerciseSearchResults([]);
+          setExerciseSearchStatus("error");
         });
     }, 250);
 
@@ -1063,7 +1076,9 @@ function App() {
 
     let shouldApplyResults = true;
 
-    Promise.all(missingExerciseIds.map((exerciseId) => getExerciseById(exerciseId)))
+    Promise.all(
+      missingExerciseIds.map((exerciseId) => getExerciseById(exerciseId)),
+    )
       .then((exercises) => {
         if (!shouldApplyResults) {
           return;
@@ -1403,8 +1418,7 @@ function App() {
   }
 
   function addProgramExercise(programId, dayId, exerciseId) {
-    const defaultExercise =
-      getExercise(exerciseId) ?? exerciseSearchResults[0] ?? localExerciseCatalog[0];
+    const defaultExercise = getExercise(exerciseId) ?? exerciseSearchResults[0];
 
     if (!defaultExercise) {
       return;
@@ -2738,14 +2752,11 @@ function App() {
                               : `${exerciseSearchResults.length} exercise${
                                   exerciseSearchResults.length === 1 ? "" : "s"
                                 } found`}
-                            {exerciseSearchStatus === "fallback"
-                              ? " from local catalog"
-                              : ""}
                           </p>
-                          {exerciseSearchStatus === "fallback" ? (
+                          {exerciseSearchStatus === "error" ? (
                             <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
-                              Could not load wger results. Showing local
-                              exercises only.
+                              Could not load wger results. Check your connection
+                              and try another search.
                             </p>
                           ) : null}
 
@@ -2766,7 +2777,7 @@ function App() {
                                         {exercise.name}
                                       </h3>
                                       <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                                        {exercise.source}
+                                        wger
                                       </span>
                                     </div>
                                     <p className="mt-1 text-sm text-slate-400">
@@ -2905,9 +2916,6 @@ function App() {
                                               value={catalogExercise.id}
                                             >
                                               {catalogExercise.name}
-                                              {catalogExercise.source === "wger"
-                                                ? " (wger)"
-                                                : ""}
                                             </option>
                                           ),
                                         )}
@@ -3049,10 +3057,7 @@ function App() {
                                 {exercise ? (
                                   <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
                                     <p>
-                                      {exercise.source === "wger"
-                                        ? "wger"
-                                        : "Local"}{" "}
-                                      - {exercise.primaryMuscle}
+                                      wger - {exercise.primaryMuscle}
                                       {exercise.equipment.length
                                         ? ` - ${exercise.equipment.join(", ")}`
                                         : ""}

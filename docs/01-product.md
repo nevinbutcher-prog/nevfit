@@ -34,7 +34,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Append-only completed workout history
 - Previous performance derived from completed workout history
 - Blank workout sessions are non-destructive and are not saved as completed workouts
-- wger exercise search with local catalog fallback
+- wger-native exercise search
 - Selectable exercise result cards for Add and Swap flows
 - Exercise metadata display for source, muscle, equipment, and instructions where available
 
@@ -49,7 +49,7 @@ Users can:
 - Schedule workouts
 - Create and manage programs and routines
 - Build custom training splits
-- Search wger and local exercises while editing routines
+- Search wger exercises while editing routines
 - Track workout history
 - Review previous performance
 

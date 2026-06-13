@@ -1892,7 +1892,9 @@ function App() {
       : filteredExerciseCatalog;
   };
   const todayScheduleDayId = getCurrentWeekdayId();
-  const todayScheduleDay = schedule.find((day) => day.id === todayScheduleDayId);
+  const todayScheduleDay = schedule.find(
+    (day) => day.id === todayScheduleDayId,
+  );
   const todayRoutineDay = getProgramDay(
     todayScheduleDay?.routineDayId,
     programDefinitions,
@@ -2012,7 +2014,9 @@ function App() {
                 {todayScheduleDay && todayRoutineDay ? (
                   <button
                     type="button"
-                    onClick={() => openWorkout(todayScheduleDay, todayRoutineDay)}
+                    onClick={() =>
+                      openWorkout(todayScheduleDay, todayRoutineDay)
+                    }
                     className="w-full rounded-xl bg-emerald-400 px-5 py-4 text-base font-bold text-slate-950 transition hover:bg-emerald-300 md:w-auto md:min-w-52"
                   >
                     {isTodayWorkoutActive ? "Resume Workout" : "Start Workout"}

@@ -90,6 +90,19 @@ function isProbablyEnglishExerciseName(name) {
   return !tokens.some((token) => nonEnglishTokens.has(token));
 }
 
+function getCleanDisplayName(name) {
+  const normalizedName = normalizeText(name);
+  const parentheticalMatch = /^([^()]+?)\s*\(([^)]*)\)\s*$/.exec(normalizedName);
+
+  if (!parentheticalMatch) {
+    return normalizedName;
+  }
+
+  const englishName = normalizeText(parentheticalMatch[1]);
+
+  return englishName || normalizedName;
+}
+
 function getNamedValue(value) {
   if (!value) {
     return "";
@@ -307,7 +320,8 @@ function normalizeWgerExercise(sourceExercise) {
   const category = getNamedValue(sourceExercise.category) || "Exercise";
   const primaryMuscle = muscles[0] ?? category;
   const id = String(sourceExercise.id ?? sourceExercise.uuid ?? "");
-  const name = normalizeText(translation?.name);
+  const originalName = normalizeText(translation?.name);
+  const name = getCleanDisplayName(originalName);
   const aliases = getAliasValues(translation);
 
   if (!id || !translation || !name || !isProbablyEnglishExerciseName(name)) {
@@ -317,6 +331,7 @@ function normalizeWgerExercise(sourceExercise) {
   return {
     id: `wger-${id}`,
     name,
+    originalName,
     category,
     bodyPart: category,
     primaryMuscle,
@@ -338,6 +353,28 @@ function normalizeWgerExercise(sourceExercise) {
         }
       : {}),
   };
+}
+
+function getDedupeKey(exercise) {
+  return [
+    getCanonicalText(exercise.name),
+    getCanonicalText(exercise.primaryMuscle),
+    ...(exercise.equipment ?? []).map(getCanonicalText).sort(),
+  ].join("|");
+}
+
+function dedupeExercises(exercises) {
+  const exercisesByKey = new Map();
+
+  exercises.forEach((exercise) => {
+    const key = getDedupeKey(exercise);
+
+    if (!exercisesByKey.has(key)) {
+      exercisesByKey.set(key, exercise);
+    }
+  });
+
+  return Array.from(exercisesByKey.values());
 }
 
 function getExerciseMatchScore(exercise, query) {
@@ -437,7 +474,7 @@ async function fetchWgerExercisePool() {
   const payload = await response.json();
   const results = Array.isArray(payload.results) ? payload.results : [];
 
-  return results.map(normalizeWgerExercise).filter(Boolean);
+  return dedupeExercises(results.map(normalizeWgerExercise).filter(Boolean));
 }
 
 export async function searchExercises(query = "", filters = {}) {

@@ -136,6 +136,10 @@ function normalizeRoutineExercise(value) {
         ? value.repRange.trim()
         : "8-12",
     restSeconds,
+    ...(typeof value.displayNameOverride === "string" &&
+    value.displayNameOverride.trim()
+      ? { displayNameOverride: value.displayNameOverride.trim() }
+      : {}),
     ...(typeof value.note === "string" && value.note.trim()
       ? { note: value.note.trim() }
       : {}),
@@ -574,23 +578,39 @@ function hasWorkoutLoggedEffort(workoutSession) {
   );
 }
 
-function createWorkoutSession(scheduleDay, routineDay) {
+function createWorkoutSession(scheduleDay, routineDay, exerciseLibrary = []) {
   return {
     scheduleDayId: scheduleDay.id,
     routineDayId: routineDay.id,
-    exercises: routineDay.exercises.map((exercise) => ({
-      exerciseId: exercise.exerciseId,
-      prescribedSets: exercise.sets,
-      repRange: exercise.repRange,
-      note: exercise.note,
-      restSeconds: exercise.restSeconds,
-      sets: Array.from({ length: exercise.sets }, (_, index) => ({
-        setNumber: index + 1,
-        weight: "",
-        reps: "",
-      })),
-    })),
+    exercises: routineDay.exercises.map((exercise) => {
+      const sourceExercise = getExerciseFromLibrary(
+        exercise.exerciseId,
+        exerciseLibrary,
+      );
+
+      return {
+        exerciseId: exercise.exerciseId,
+        exerciseName: getEffectiveExerciseName(exercise, sourceExercise),
+        prescribedSets: exercise.sets,
+        repRange: exercise.repRange,
+        note: exercise.note,
+        restSeconds: exercise.restSeconds,
+        sets: Array.from({ length: exercise.sets }, (_, index) => ({
+          setNumber: index + 1,
+          weight: "",
+          reps: "",
+        })),
+      };
+    }),
   };
+}
+
+function getEffectiveExerciseName(routineExercise, sourceExercise) {
+  return (
+    routineExercise.displayNameOverride?.trim() ||
+    sourceExercise?.name ||
+    "Unknown exercise"
+  );
 }
 
 function createRoutineExerciseFromCatalog(exercise) {
@@ -653,6 +673,8 @@ function isValidWorkoutSession(value) {
         exercise &&
         typeof exercise.exerciseId === "string" &&
         isWgerExerciseId(exercise.exerciseId) &&
+        (typeof exercise.exerciseName === "string" ||
+          typeof exercise.exerciseName === "undefined") &&
         typeof exercise.prescribedSets === "number" &&
         typeof exercise.repRange === "string" &&
         (typeof exercise.note === "string" ||
@@ -726,7 +748,8 @@ function createCompletedWorkoutRecord(
 
       return {
         exerciseId: sessionExercise.exerciseId,
-        exerciseName: exercise?.name ?? "Unknown exercise",
+        exerciseName:
+          sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise",
         restSeconds: sessionExercise.restSeconds ?? null,
         sets: sessionExercise.sets.map((set) => ({
           setNumber: set.setNumber,
@@ -1063,7 +1086,7 @@ function App() {
       setExerciseSearchStatus("loading");
 
       searchExercises(exerciseSearchTerm, {
-        equipment: exerciseEquipmentFilter,
+        equipment: "all",
         muscle: exerciseMuscleFilter,
       })
         .then((results) => {
@@ -1529,7 +1552,11 @@ function App() {
         exercises: selectedProgramDayDraft.exercises.map(
           (routineExercise, index) =>
             index === exerciseIndex
-              ? { ...routineExercise, exerciseId: exercise.id }
+              ? {
+                  ...routineExercise,
+                  exerciseId: exercise.id,
+                  displayNameOverride: "",
+                }
               : routineExercise,
         ),
       });
@@ -1826,7 +1853,7 @@ function App() {
         return currentSession;
       }
 
-      return createWorkoutSession(scheduleDay, routineDay);
+      return createWorkoutSession(scheduleDay, routineDay, exerciseLibrary);
     });
     setRestTimer(null);
     setViewMode("workout");
@@ -1904,7 +1931,7 @@ function App() {
 
     if (action.type === "open-workout") {
       setActiveWorkoutSession(
-        createWorkoutSession(action.scheduleDay, action.routineDay),
+        createWorkoutSession(action.scheduleDay, action.routineDay, exerciseLibrary),
       );
       setRestTimer(null);
       setViewMode("workout");
@@ -2098,7 +2125,7 @@ function App() {
       ...(exercise.secondaryMuscles ?? []),
     ]),
   );
-  const showExerciseEquipmentFilter = exerciseEquipmentOptions.length > 0;
+  const showExerciseEquipmentFilter = false;
   const showExerciseMuscleFilter = exerciseMuscleOptions.length > 0;
   const showHiddenFilterNotice =
     exerciseSearchStatus === "ready" &&
@@ -2955,6 +2982,11 @@ function App() {
                               getExercisePickerOptions(
                                 routineExercise.exerciseId,
                               );
+                            const effectiveExerciseName =
+                              getEffectiveExerciseName(
+                                routineExercise,
+                                exercise,
+                              );
 
                             return (
                               <li
@@ -2975,7 +3007,7 @@ function App() {
                                       }
                                       disabled={index === 0}
                                       className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                      aria-label={`Move ${exercise?.name ?? "exercise"} up`}
+                                      aria-label={`Move ${effectiveExerciseName} up`}
                                     >
                                       Up
                                     </button>
@@ -2996,15 +3028,15 @@ function App() {
                                           1
                                       }
                                       className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                                      aria-label={`Move ${exercise?.name ?? "exercise"} down`}
+                                      aria-label={`Move ${effectiveExerciseName} down`}
                                     >
                                       Down
                                     </button>
                                   </div>
 
-                                  <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
+                                  <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
                                     <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                      Exercise
+                                      wger Exercise
                                       <select
                                         value={routineExercise.exerciseId}
                                         onChange={(event) =>
@@ -3023,6 +3055,8 @@ function App() {
                                                           ...exerciseItem,
                                                           exerciseId:
                                                             event.target.value,
+                                                          displayNameOverride:
+                                                            "",
                                                         }
                                                       : exerciseItem,
                                                 ),
@@ -3042,6 +3076,43 @@ function App() {
                                           ),
                                         )}
                                       </select>
+                                    </label>
+
+                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                      Routine Name
+                                      <input
+                                        type="text"
+                                        value={
+                                          routineExercise.displayNameOverride ??
+                                          ""
+                                        }
+                                        placeholder={
+                                          exercise?.name ?? "Exercise name"
+                                        }
+                                        onChange={(event) =>
+                                          updateProgramDay(
+                                            selectedProgramDraft.id,
+                                            selectedProgramDayDraft.id,
+                                            {
+                                              exercises:
+                                                selectedProgramDayDraft.exercises.map(
+                                                  (
+                                                    exerciseItem,
+                                                    exerciseIndex,
+                                                  ) =>
+                                                    exerciseIndex === index
+                                                      ? {
+                                                          ...exerciseItem,
+                                                          displayNameOverride:
+                                                            event.target.value,
+                                                        }
+                                                      : exerciseItem,
+                                                ),
+                                            },
+                                          )
+                                        }
+                                        className={`${routineEditorInputClassName} mt-1`}
+                                      />
                                     </label>
 
                                     <label className="min-w-0 text-sm font-semibold text-slate-300">
@@ -3178,8 +3249,14 @@ function App() {
                                 </div>
                                 {exercise ? (
                                   <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
+                                    {routineExercise.displayNameOverride ? (
+                                      <p className="font-semibold text-slate-300">
+                                        Routine name: {effectiveExerciseName}
+                                      </p>
+                                    ) : null}
                                     <p>
-                                      wger - {exercise.primaryMuscle}
+                                      wger - {exercise.name} -{" "}
+                                      {exercise.primaryMuscle}
                                       {exercise.equipment.length
                                         ? ` - ${exercise.equipment.join(", ")}`
                                         : ""}
@@ -3336,7 +3413,9 @@ function App() {
                   >
                     <div>
                       <p className="font-medium text-slate-100">
-                        {exercise?.name ?? "Unknown exercise"}
+                        {sessionExercise.exerciseName ??
+                          exercise?.name ??
+                          "Unknown exercise"}
                       </p>
                       <p className="mt-1 text-sm text-slate-400">
                         Target: {sessionExercise.prescribedSets} x{" "}

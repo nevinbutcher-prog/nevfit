@@ -18,8 +18,11 @@ const ACTIVE_PROGRAM_STORAGE_KEY = "nevfit_active_program";
 const CYCLE_START_DATE_STORAGE_KEY = "nevfit_cycle_start_date";
 const CYCLE_LENGTH_WEEKS_STORAGE_KEY = "nevfit_cycle_length_weeks";
 const STEPS_STORAGE_KEY = "nevfit_steps";
+const RUNS_STORAGE_KEY = "nevfit_runs";
+const WEEKLY_RUN_TARGET_STORAGE_KEY = "nevfit_weekly_run_target";
 const DEFAULT_REST_SECONDS = 120;
 const DEFAULT_CYCLE_LENGTH_WEEKS = 12;
+const DEFAULT_WEEKLY_RUN_TARGET = 2;
 const workoutNumberInputClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400";
 const routineEditorInputClassName =
@@ -368,6 +371,13 @@ function getTodayDateInputValue() {
   return getDateInputValue(new Date());
 }
 
+function getYesterdayDateInputValue() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  return getDateInputValue(yesterday);
+}
+
 function getDateInputValue(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -413,7 +423,7 @@ function getCompletedWorkoutsThisWeek(completedWorkouts) {
   }).length;
 }
 
-function isValidStepEntryDate(date) {
+function isValidDateInputValue(date) {
   return /^\d{4}-\d{2}-\d{2}$/.test(date);
 }
 
@@ -427,7 +437,7 @@ function normalizeStoredSteps(value) {
       .map(([date, steps]) => [date, Number(steps)])
       .filter(
         ([date, steps]) =>
-          isValidStepEntryDate(date) &&
+          isValidDateInputValue(date) &&
           Number.isInteger(steps) &&
           steps >= 0,
       ),
@@ -486,6 +496,115 @@ function formatStepEntryDate(dateInputValue) {
     day: "numeric",
     month: "short",
   });
+}
+
+function normalizeStoredRuns(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((run) => {
+      if (!run || typeof run !== "object" || !isValidDateInputValue(run.date)) {
+        return null;
+      }
+
+      const distanceKm =
+        run.distanceKm === null ||
+        typeof run.distanceKm === "undefined" ||
+        run.distanceKm === ""
+          ? null
+          : Number(run.distanceKm);
+      const durationMinutes =
+        run.durationMinutes === null ||
+        typeof run.durationMinutes === "undefined" ||
+        run.durationMinutes === ""
+          ? null
+          : Number(run.durationMinutes);
+
+      if (
+        (distanceKm !== null &&
+          (!Number.isFinite(distanceKm) || distanceKm <= 0)) ||
+        (durationMinutes !== null &&
+          (!Number.isFinite(durationMinutes) || durationMinutes <= 0))
+      ) {
+        return null;
+      }
+
+      return {
+        id:
+          typeof run.id === "string" && run.id.trim()
+            ? run.id
+            : `run-${run.date}-${Date.now()}`,
+        date: run.date,
+        distanceKm,
+        durationMinutes,
+        notes: typeof run.notes === "string" ? run.notes : "",
+      };
+    })
+    .filter(Boolean);
+}
+
+function loadStoredRuns() {
+  try {
+    const storedRuns = window.localStorage.getItem(RUNS_STORAGE_KEY);
+
+    return storedRuns ? normalizeStoredRuns(JSON.parse(storedRuns)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistRuns(runs) {
+  window.localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
+}
+
+function loadStoredWeeklyRunTarget() {
+  const target = Number(
+    window.localStorage.getItem(WEEKLY_RUN_TARGET_STORAGE_KEY),
+  );
+
+  return [2, 3].includes(target) ? target : DEFAULT_WEEKLY_RUN_TARGET;
+}
+
+function persistWeeklyRunTarget(target) {
+  window.localStorage.setItem(WEEKLY_RUN_TARGET_STORAGE_KEY, String(target));
+}
+
+function getRunsThisWeek(runs) {
+  const startOfWeek = getStartOfWeek(new Date());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+  return runs.filter((run) => {
+    const runDate = new Date(`${run.date}T00:00:00`);
+
+    return (
+      !Number.isNaN(runDate.getTime()) &&
+      runDate >= startOfWeek &&
+      runDate < endOfWeek
+    );
+  }).length;
+}
+
+function getRecentRuns(runs) {
+  return [...runs]
+    .sort((firstRun, secondRun) => secondRun.date.localeCompare(firstRun.date))
+    .slice(0, 5);
+}
+
+function formatRecentRunDetails(run) {
+  const details = [];
+
+  if (run.distanceKm) {
+    details.push(`${run.distanceKm.toLocaleString()} km`);
+  }
+
+  if (run.durationMinutes) {
+    details.push(`${run.durationMinutes.toLocaleString()} min`);
+  }
+
+  return details.length > 0 ? details.join(" - ") : "Run logged";
 }
 
 function getCycleWeekLabel(cycleStartDate, cycleLengthWeeks) {
@@ -1112,9 +1231,20 @@ function App() {
     loadCompletedWorkouts,
   );
   const [stepsByDate, setStepsByDate] = useState(loadStoredSteps);
-  const [stepEntryDate, setStepEntryDate] = useState(getTodayDateInputValue);
+  const [stepEntryDate, setStepEntryDate] = useState(
+    getYesterdayDateInputValue,
+  );
   const [stepEntryValue, setStepEntryValue] = useState("");
   const [stepSaveMessage, setStepSaveMessage] = useState("");
+  const [runs, setRuns] = useState(loadStoredRuns);
+  const [weeklyRunTarget, setWeeklyRunTarget] = useState(
+    loadStoredWeeklyRunTarget,
+  );
+  const [runEntryDate, setRunEntryDate] = useState(getTodayDateInputValue);
+  const [runDistanceKm, setRunDistanceKm] = useState("");
+  const [runDurationMinutes, setRunDurationMinutes] = useState("");
+  const [runNotes, setRunNotes] = useState("");
+  const [runSaveMessage, setRunSaveMessage] = useState("");
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
@@ -1212,6 +1342,16 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [stepSaveMessage]);
+
+  useEffect(() => {
+    if (!runSaveMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setRunSaveMessage(""), 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [runSaveMessage]);
 
   useEffect(() => {
     if (!exerciseFinderOpen) {
@@ -1561,7 +1701,7 @@ function App() {
   function saveStepEntry() {
     const normalizedStepValue = stepEntryValue.trim();
 
-    if (!isValidStepEntryDate(stepEntryDate)) {
+    if (!isValidDateInputValue(stepEntryDate)) {
       setStepSaveMessage("Choose a valid date.");
       return;
     }
@@ -1589,6 +1729,62 @@ function App() {
       setStepSaveMessage("Steps saved.");
     } catch {
       setStepSaveMessage("Steps could not be saved.");
+    }
+  }
+
+  function updateWeeklyRunTarget(target) {
+    setWeeklyRunTarget(target);
+    persistWeeklyRunTarget(target);
+  }
+
+  function saveRunEntry() {
+    const normalizedDistance = runDistanceKm.trim();
+    const normalizedDuration = runDurationMinutes.trim();
+    const distanceKm = normalizedDistance ? Number(normalizedDistance) : null;
+    const durationMinutes = normalizedDuration
+      ? Number(normalizedDuration)
+      : null;
+
+    if (!isValidDateInputValue(runEntryDate)) {
+      setRunSaveMessage("Choose a valid date.");
+      return;
+    }
+
+    if (
+      normalizedDistance &&
+      (!Number.isFinite(distanceKm) || distanceKm <= 0)
+    ) {
+      setRunSaveMessage("Distance must be positive.");
+      return;
+    }
+
+    if (
+      normalizedDuration &&
+      (!Number.isFinite(durationMinutes) || durationMinutes <= 0)
+    ) {
+      setRunSaveMessage("Duration must be positive.");
+      return;
+    }
+
+    const createdAt = new Date();
+    const nextRun = {
+      id: `run-${runEntryDate}-${createdAt.getTime()}`,
+      date: runEntryDate,
+      distanceKm,
+      durationMinutes,
+      notes: runNotes.trim(),
+    };
+    const nextRuns = [nextRun, ...runs];
+
+    try {
+      persistRuns(nextRuns);
+      setRuns(nextRuns);
+      setRunDistanceKm("");
+      setRunDurationMinutes("");
+      setRunNotes("");
+      setRunSaveMessage("Run saved.");
+    } catch {
+      setRunSaveMessage("Run could not be saved.");
     }
   }
 
@@ -2360,6 +2556,8 @@ function App() {
     getCompletedWorkoutsThisWeek(completedWorkouts);
   const averageStepsLastSevenDays = getStepAverageForLastSevenDays(stepsByDate);
   const recentStepEntries = getRecentStepEntries(stepsByDate);
+  const runsThisWeek = getRunsThisWeek(runs);
+  const recentRuns = getRecentRuns(runs);
   const latestCompletedWorkout =
     [...completedWorkouts]
       .filter((workout) =>
@@ -2644,7 +2842,124 @@ function App() {
                 )}
               </article>
 
-              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="grid gap-4 lg:grid-cols-1">
+                <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                        Runs This Week
+                      </p>
+                      <h2 className="mt-3 text-3xl font-bold text-white">
+                        {runsThisWeek}/{weeklyRunTarget}
+                      </h2>
+                    </div>
+                    <label className="shrink-0 text-sm font-semibold text-slate-300">
+                      Target
+                      <select
+                        value={weeklyRunTarget}
+                        onChange={(event) =>
+                          updateWeeklyRunTarget(Number(event.target.value))
+                        }
+                        className={`${routineEditorSelectClassName} mt-1`}
+                      >
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <form
+                    className="mt-4 grid gap-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveRunEntry();
+                    }}
+                  >
+                    <label className="text-sm font-semibold text-slate-300">
+                      Date
+                      <input
+                        type="date"
+                        value={runEntryDate}
+                        max={getTodayDateInputValue()}
+                        onChange={(event) =>
+                          setRunEntryDate(event.target.value)
+                        }
+                        className={`${routineEditorInputClassName} mt-1`}
+                      />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                      <label className="text-sm font-semibold text-slate-300">
+                        Distance km
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="0.1"
+                          value={runDistanceKm}
+                          onChange={(event) =>
+                            setRunDistanceKm(event.target.value)
+                          }
+                          className={`${routineEditorInputClassName} mt-1`}
+                        />
+                      </label>
+                      <label className="text-sm font-semibold text-slate-300">
+                        Duration minutes
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="1"
+                          value={runDurationMinutes}
+                          onChange={(event) =>
+                            setRunDurationMinutes(event.target.value)
+                          }
+                          className={`${routineEditorInputClassName} mt-1`}
+                        />
+                      </label>
+                    </div>
+                    <label className="text-sm font-semibold text-slate-300">
+                      Notes
+                      <input
+                        type="text"
+                        value={runNotes}
+                        onChange={(event) => setRunNotes(event.target.value)}
+                        className={`${routineEditorInputClassName} mt-1`}
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                    >
+                      Save Run
+                    </button>
+                    {runSaveMessage ? (
+                      <p className="text-sm font-semibold text-emerald-200">
+                        {runSaveMessage}
+                      </p>
+                    ) : null}
+                  </form>
+
+                  {recentRuns.length > 0 ? (
+                    <ul className="mt-4 space-y-2 border-t border-slate-800 pt-4">
+                      {recentRuns.map((run) => (
+                        <li key={run.id} className="grid gap-1 text-sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-slate-400">
+                              {formatStepEntryDate(run.date)}
+                            </span>
+                            <span className="font-semibold text-slate-200">
+                              {formatRecentRunDetails(run)}
+                            </span>
+                          </div>
+                          {run.notes ? (
+                            <p className="text-slate-500">{run.notes}</p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </article>
+
                 <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                     Average Daily Steps
@@ -2680,7 +2995,7 @@ function App() {
                         />
                       </label>
                       <label className="text-sm font-semibold text-slate-300">
-                        Step Count
+                        Yesterday's steps
                         <input
                           type="number"
                           inputMode="numeric"
@@ -2726,7 +3041,7 @@ function App() {
                   ) : null}
                 </article>
 
-                {["Runs This Week", "Progress Highlights"].map((placeholderTitle) => (
+                {["Progress Highlights"].map((placeholderTitle) => (
                   <article
                     key={placeholderTitle}
                     className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4"

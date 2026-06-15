@@ -1246,67 +1246,48 @@ function formatFinishedTime(date) {
   });
 }
 
-let timerAudioContext = null;
+const timerSounds = {
+  restComplete: {
+    src: "/sounds/rest-complete.wav",
+    repeatDelayMs: 2900,
+    volume: 1,
+  },
+};
 
-function getTimerAudioContext() {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-
-  if (!AudioContext) {
-    return null;
-  }
-
-  if (!timerAudioContext || timerAudioContext.state === "closed") {
-    timerAudioContext = new AudioContext();
-  }
-
-  return timerAudioContext;
-}
+let preparedRestCompleteAudio = null;
 
 function prepareTimerCompleteSound() {
   try {
-    const audioContext = getTimerAudioContext();
+    preparedRestCompleteAudio ??= new Audio(timerSounds.restComplete.src);
+    preparedRestCompleteAudio.preload = "auto";
+    preparedRestCompleteAudio.volume = timerSounds.restComplete.volume;
+    preparedRestCompleteAudio.load();
+  } catch {
+    // Visual completion feedback is enough if the browser blocks audio.
+  }
+}
 
-    if (audioContext?.state === "suspended") {
-      void audioContext.resume();
-    }
+function playAlertAudio(src, volume = 1) {
+  try {
+    const audio = new Audio(src);
+    audio.volume = volume;
+
+    void audio.play();
   } catch {
     // Visual completion feedback is enough if the browser blocks audio.
   }
 }
 
 function playTimerCompleteSound() {
+  const { src, repeatDelayMs, volume } = timerSounds.restComplete;
+
+  playAlertAudio(src, volume);
+  window.setTimeout(() => playAlertAudio(src, volume), repeatDelayMs);
+
   try {
-    const audioContext = getTimerAudioContext();
-
-    if (!audioContext) {
-      return;
-    }
-
-    if (audioContext.state === "suspended") {
-      void audioContext.resume();
-    }
-
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-    gain.gain.setValueAtTime(0.001, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(
-      0.2,
-      audioContext.currentTime + 0.02,
-    );
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      audioContext.currentTime + 0.25,
-    );
-
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.28);
+    navigator.vibrate?.([300, 150, 300]);
   } catch {
-    // Visual completion feedback is enough if the browser blocks audio.
+    // Vibration support varies by browser and device.
   }
 }
 
@@ -1697,11 +1678,7 @@ function App() {
 
     playTimerCompleteSound();
 
-    if ("vibrate" in navigator) {
-      navigator.vibrate([160, 80, 160]);
-    }
-
-    const timeoutId = window.setTimeout(() => setRestTimer(null), 4000);
+    const timeoutId = window.setTimeout(() => setRestTimer(null), 6500);
 
     return () => window.clearTimeout(timeoutId);
   }, [restTimer?.status]);
@@ -2553,7 +2530,7 @@ function App() {
   const restTimerStatusLabel = !restTimer
     ? "Ready"
     : restTimer.status === "complete"
-      ? "Rest Complete"
+      ? "REST COMPLETE - NEXT SET"
       : restTimer.paused
         ? "Paused"
         : "Running";
@@ -4407,7 +4384,7 @@ function App() {
         <div
           className={`workout-footer fixed inset-x-0 bottom-0 z-30 border-t px-3 pt-3 shadow-2xl backdrop-blur sm:px-4 ${
             restTimer?.status === "complete"
-              ? "rest-timer-complete border-emerald-300/70 bg-emerald-500/95 text-slate-950"
+              ? "rest-timer-complete border-yellow-200 bg-yellow-300 text-slate-950"
               : "border-slate-700 bg-slate-950/95 text-white"
           }`}
         >
@@ -4416,14 +4393,22 @@ function App() {
               <p
                 className={`text-xs font-semibold uppercase tracking-wide ${
                   restTimer?.status === "complete"
-                    ? "text-emerald-950/80"
+                    ? "text-slate-950"
                     : "text-slate-400"
                 }`}
               >
-                Rest Timer
+                {restTimer?.status === "complete"
+                  ? "Time For Your Next Set"
+                  : "Rest Timer"}
               </p>
               <div className="mt-1 flex min-w-0 items-baseline gap-2">
-                <p className="text-3xl font-bold leading-none">
+                <p
+                  className={`font-bold leading-none ${
+                    restTimer?.status === "complete"
+                      ? "text-4xl"
+                      : "text-3xl"
+                  }`}
+                >
                   {restTimerDisplay}
                 </p>
                 <p className="truncate text-sm font-semibold">

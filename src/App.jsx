@@ -912,8 +912,20 @@ function ExerciseMetadata({ exercise, includeInstructions = true }) {
   const instructionExcerpt = includeInstructions
     ? getInstructionExcerpt(exercise.instructions)
     : "";
+  const mainImage = exercise.images?.find((image) => image.url === exercise.imageUrl);
+  const imageCredit = [
+    mainImage?.licenseAuthor ? `Image credit: ${mainImage.licenseAuthor}` : "",
+    mainImage?.license,
+  ]
+    .filter(Boolean)
+    .join(" - ");
 
-  if (!metadataRows.length && !instructionExcerpt && !exercise.imageUrl) {
+  if (
+    !metadataRows.length &&
+    !instructionExcerpt &&
+    !exercise.imageUrl &&
+    !imageCredit
+  ) {
     return null;
   }
 
@@ -932,6 +944,11 @@ function ExerciseMetadata({ exercise, includeInstructions = true }) {
         ))}
         {instructionExcerpt ? (
           <p className="mt-2 leading-6 text-slate-400">{instructionExcerpt}</p>
+        ) : null}
+        {imageCredit ? (
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            {imageCredit}
+          </p>
         ) : null}
       </div>
     </div>
@@ -2693,7 +2710,7 @@ function App() {
                 )}
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[28rem]">
+            <div className="mt-4 grid grid-cols-4 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem]">
               <button
                 type="button"
                 onClick={() => setViewMode("dashboard")}
@@ -2726,6 +2743,17 @@ function App() {
                 }`}
               >
                 Programs
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("settings")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  viewMode === "settings"
+                    ? "bg-emerald-400 text-slate-950"
+                    : "text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                Settings
               </button>
             </div>
           </header>
@@ -3292,6 +3320,20 @@ function App() {
           </>
         ) : null}
 
+        {viewMode === "settings" ? (
+          <section className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Settings
+            </p>
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h2 className="text-2xl font-bold text-white">NevFit</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Exercise data and images provided by wger and its contributors.
+              </p>
+            </div>
+          </section>
+        ) : null}
+
         {viewMode === "routines" ? (
           <section className="min-w-0">
             {selectedProgramSaveStatus ? (
@@ -3656,7 +3698,7 @@ function App() {
                                   <div className="border-t border-slate-800 p-3">
                                     <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
                                       <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                        wger Exercise
+                                        Exercise
                                         <select
                                           value={routineExercise.exerciseId}
                                           onChange={(event) =>
@@ -4023,8 +4065,8 @@ function App() {
 
               {showHiddenFilterNotice ? (
                 <p className="pb-2 text-sm text-slate-500">
-                  Filters hidden because wger did not provide usable muscle or
-                  equipment metadata for these results.
+                  Filters hidden because these results do not include usable
+                  muscle or equipment metadata.
                 </p>
               ) : null}
 
@@ -4035,11 +4077,11 @@ function App() {
                     ? `${exerciseSearchResults.length} exercise${
                         exerciseSearchResults.length === 1 ? "" : "s"
                       } found`
-                    : "Type an exercise name to search wger"}
+                    : "Type an exercise name to search"}
               </p>
               {exerciseSearchStatus === "error" ? (
                 <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
-                  Could not load wger results. Check your connection and try
+                  Could not load exercise results. Check your connection and try
                   another search.
                 </p>
               ) : null}
@@ -4065,9 +4107,6 @@ function App() {
                             <h3 className="font-semibold text-white">
                               {exercise.name}
                             </h3>
-                            <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                              wger
-                            </span>
                           </div>
                           <div className="mt-2 space-y-1 text-sm text-slate-400">
                             {exercise.primaryMuscle ? (
@@ -4124,7 +4163,7 @@ function App() {
                   <p className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-3 text-sm text-slate-300">
                     {exerciseSearchTerm.trim()
                       ? "No matching exercises found."
-                      : "Type an exercise name to find wger exercises."}
+                      : "Type an exercise name to find exercises."}
                   </p>
                 )}
               </div>

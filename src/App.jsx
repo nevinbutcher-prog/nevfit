@@ -1227,6 +1227,7 @@ function App() {
   const [exerciseLibrary, setExerciseLibrary] = useState([]);
   const [exerciseSearchResults, setExerciseSearchResults] = useState([]);
   const [exerciseSearchStatus, setExerciseSearchStatus] = useState("idle");
+  const [expandedExerciseIndex, setExpandedExerciseIndex] = useState(null);
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
   );
@@ -1333,6 +1334,10 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [programSaveStatus]);
+
+  useEffect(() => {
+    setExpandedExerciseIndex(null);
+  }, [selectedProgramDayId]);
 
   useEffect(() => {
     if (!stepSaveMessage) {
@@ -3393,6 +3398,7 @@ function App() {
                             const exercise = getExercise(
                               routineExercise.exerciseId,
                             );
+                            const isExpanded = expandedExerciseIndex === index;
                             const exercisePickerOptions =
                               getExercisePickerOptions(
                                 routineExercise.exerciseId,
@@ -3406,280 +3412,338 @@ function App() {
                             return (
                               <li
                                 key={`${selectedProgramDayDraft.id}-${index}`}
-                                className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                                className={`min-w-0 rounded-xl border bg-slate-950/60 transition ${
+                                  isExpanded
+                                    ? "border-emerald-400/70"
+                                    : "border-slate-800"
+                                }`}
                               >
-                                <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start">
-                                  <div className="flex shrink-0 gap-2 lg:w-28">
+                                <div className="flex min-w-0 items-center gap-2 p-3">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpandedExerciseIndex((currentIndex) =>
+                                        currentIndex === index ? null : index,
+                                      )
+                                    }
+                                    className="min-w-0 flex-1 rounded-lg px-2 py-1 text-left transition hover:bg-slate-900"
+                                    aria-expanded={isExpanded}
+                                  >
+                                    <div className="flex min-w-0 items-start gap-3">
+                                      <span className="shrink-0 text-sm font-semibold text-slate-500">
+                                        {index + 1}.
+                                      </span>
+                                      <div className="min-w-0">
+                                        <p className="truncate font-semibold text-white">
+                                          {effectiveExerciseName}
+                                        </p>
+                                        <p className="mt-1 text-sm text-slate-400">
+                                          {routineExercise.sets} sets -{" "}
+                                          {routineExercise.repRange} reps -{" "}
+                                          {routineExercise.restSeconds ??
+                                            DEFAULT_REST_SECONDS}{" "}
+                                          sec
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </button>
+                                  <div className="flex shrink-0 gap-2">
                                     <button
                                       type="button"
-                                      onClick={() =>
+                                      onClick={() => {
                                         moveProgramExercise(
                                           selectedProgramDraft.id,
                                           selectedProgramDayDraft.id,
                                           index,
                                           -1,
-                                        )
-                                      }
+                                        );
+                                        setExpandedExerciseIndex(
+                                          (currentIndex) =>
+                                            currentIndex === index
+                                              ? index - 1
+                                              : currentIndex === index - 1
+                                                ? index
+                                              : currentIndex,
+                                        );
+                                      }}
                                       disabled={index === 0}
-                                      className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="h-10 w-12 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
                                       aria-label={`Move ${effectiveExerciseName} up`}
                                     >
                                       Up
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() =>
+                                      onClick={() => {
                                         moveProgramExercise(
                                           selectedProgramDraft.id,
                                           selectedProgramDayDraft.id,
                                           index,
                                           1,
-                                        )
-                                      }
+                                        );
+                                        setExpandedExerciseIndex(
+                                          (currentIndex) =>
+                                            currentIndex === index
+                                              ? index + 1
+                                              : currentIndex === index + 1
+                                                ? index
+                                              : currentIndex,
+                                        );
+                                      }}
                                       disabled={
                                         index ===
                                         selectedProgramDayDraft.exercises
                                           .length -
                                           1
                                       }
-                                      className="h-10 w-14 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="h-10 w-12 rounded-lg border border-slate-700 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
                                       aria-label={`Move ${effectiveExerciseName} down`}
                                     >
                                       Down
                                     </button>
                                   </div>
-
-                                  <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
-                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                      wger Exercise
-                                      <select
-                                        value={routineExercise.exerciseId}
-                                        onChange={(event) =>
-                                          updateProgramDay(
-                                            selectedProgramDraft.id,
-                                            selectedProgramDayDraft.id,
-                                            {
-                                              exercises:
-                                                selectedProgramDayDraft.exercises.map(
-                                                  (
-                                                    exerciseItem,
-                                                    exerciseIndex,
-                                                  ) =>
-                                                    exerciseIndex === index
-                                                      ? {
-                                                          ...exerciseItem,
-                                                          exerciseId:
-                                                            event.target.value,
-                                                          displayNameOverride:
-                                                            "",
-                                                        }
-                                                      : exerciseItem,
-                                                ),
-                                            },
-                                          )
-                                        }
-                                        className={`${routineEditorSelectClassName} mt-1`}
-                                      >
-                                        {exercisePickerOptions.map(
-                                          (catalogExercise) => (
-                                            <option
-                                              key={catalogExercise.id}
-                                              value={catalogExercise.id}
-                                            >
-                                              {catalogExercise.name}
-                                            </option>
-                                          ),
-                                        )}
-                                      </select>
-                                    </label>
-
-                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                      Routine Name
-                                      <input
-                                        type="text"
-                                        value={
-                                          routineExercise.displayNameOverride ??
-                                          ""
-                                        }
-                                        placeholder={
-                                          exercise?.name ?? "Exercise name"
-                                        }
-                                        onChange={(event) =>
-                                          updateProgramDay(
-                                            selectedProgramDraft.id,
-                                            selectedProgramDayDraft.id,
-                                            {
-                                              exercises:
-                                                selectedProgramDayDraft.exercises.map(
-                                                  (
-                                                    exerciseItem,
-                                                    exerciseIndex,
-                                                  ) =>
-                                                    exerciseIndex === index
-                                                      ? {
-                                                          ...exerciseItem,
-                                                          displayNameOverride:
-                                                            event.target.value,
-                                                        }
-                                                      : exerciseItem,
-                                                ),
-                                            },
-                                          )
-                                        }
-                                        className={`${routineEditorInputClassName} mt-1`}
-                                      />
-                                    </label>
-
-                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                      Sets
-                                      <input
-                                        type="number"
-                                        inputMode="numeric"
-                                        min="1"
-                                        max="12"
-                                        value={routineExercise.sets}
-                                        onChange={(event) =>
-                                          updateProgramDay(
-                                            selectedProgramDraft.id,
-                                            selectedProgramDayDraft.id,
-                                            {
-                                              exercises:
-                                                selectedProgramDayDraft.exercises.map(
-                                                  (
-                                                    exerciseItem,
-                                                    exerciseIndex,
-                                                  ) =>
-                                                    exerciseIndex === index
-                                                      ? {
-                                                          ...exerciseItem,
-                                                          sets: event.target
-                                                            .value,
-                                                        }
-                                                      : exerciseItem,
-                                                ),
-                                            },
-                                          )
-                                        }
-                                        className={`${routineEditorInputClassName} mt-1`}
-                                      />
-                                    </label>
-
-                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                      Reps
-                                      <input
-                                        type="text"
-                                        value={routineExercise.repRange}
-                                        onChange={(event) =>
-                                          updateProgramDay(
-                                            selectedProgramDraft.id,
-                                            selectedProgramDayDraft.id,
-                                            {
-                                              exercises:
-                                                selectedProgramDayDraft.exercises.map(
-                                                  (
-                                                    exerciseItem,
-                                                    exerciseIndex,
-                                                  ) =>
-                                                    exerciseIndex === index
-                                                      ? {
-                                                          ...exerciseItem,
-                                                          repRange:
-                                                            event.target.value,
-                                                        }
-                                                      : exerciseItem,
-                                                ),
-                                            },
-                                          )
-                                        }
-                                        className={`${routineEditorInputClassName} mt-1`}
-                                      />
-                                    </label>
-
-                                    <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                      Rest
-                                      <input
-                                        type="number"
-                                        inputMode="numeric"
-                                        min="0"
-                                        max="600"
-                                        value={
-                                          routineExercise.restSeconds ?? ""
-                                        }
-                                        placeholder={`${DEFAULT_REST_SECONDS}`}
-                                        onChange={(event) =>
-                                          updateProgramDay(
-                                            selectedProgramDraft.id,
-                                            selectedProgramDayDraft.id,
-                                            {
-                                              exercises:
-                                                selectedProgramDayDraft.exercises.map(
-                                                  (
-                                                    exerciseItem,
-                                                    exerciseIndex,
-                                                  ) =>
-                                                    exerciseIndex === index
-                                                      ? {
-                                                          ...exerciseItem,
-                                                          restSeconds:
-                                                            event.target.value,
-                                                        }
-                                                      : exerciseItem,
-                                                ),
-                                            },
-                                          )
-                                        }
-                                        className={`${routineEditorInputClassName} mt-1`}
-                                      />
-                                    </label>
-                                  </div>
-
-                                  <div className="grid shrink-0 gap-2 lg:mt-6">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setExerciseFinderMode({
-                                          type: "swap",
-                                          exerciseIndex: index,
-                                        });
-                                        setExerciseFinderOpen(true);
-                                      }}
-                                      className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
-                                    >
-                                      Swap
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        removeProgramExercise(
-                                          selectedProgramDraft.id,
-                                          selectedProgramDayDraft.id,
-                                          index,
-                                        )
-                                      }
-                                      className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300"
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
                                 </div>
-                                {exercise ? (
-                                  <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
-                                    {routineExercise.displayNameOverride ? (
-                                      <p className="font-semibold text-slate-300">
-                                        Routine name: {effectiveExerciseName}
-                                      </p>
-                                    ) : null}
-                                    <p>
-                                      wger - {exercise.name} -{" "}
-                                      {exercise.primaryMuscle}
-                                      {exercise.equipment.length
-                                        ? ` - ${exercise.equipment.join(", ")}`
-                                        : ""}
-                                    </p>
-                                    {exercise.instructions ? (
-                                      <p className="mt-1 line-clamp-2">
-                                        {exercise.instructions}
-                                      </p>
+
+                                {isExpanded ? (
+                                  <div className="border-t border-slate-800 p-3">
+                                    <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
+                                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                        wger Exercise
+                                        <select
+                                          value={routineExercise.exerciseId}
+                                          onChange={(event) =>
+                                            updateProgramDay(
+                                              selectedProgramDraft.id,
+                                              selectedProgramDayDraft.id,
+                                              {
+                                                exercises:
+                                                  selectedProgramDayDraft.exercises.map(
+                                                    (
+                                                      exerciseItem,
+                                                      exerciseIndex,
+                                                    ) =>
+                                                      exerciseIndex === index
+                                                        ? {
+                                                            ...exerciseItem,
+                                                            exerciseId:
+                                                              event.target
+                                                                .value,
+                                                            displayNameOverride:
+                                                              "",
+                                                          }
+                                                        : exerciseItem,
+                                                  ),
+                                              },
+                                            )
+                                          }
+                                          className={`${routineEditorSelectClassName} mt-1`}
+                                        >
+                                          {exercisePickerOptions.map(
+                                            (catalogExercise) => (
+                                              <option
+                                                key={catalogExercise.id}
+                                                value={catalogExercise.id}
+                                              >
+                                                {catalogExercise.name}
+                                              </option>
+                                            ),
+                                          )}
+                                        </select>
+                                      </label>
+
+                                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                        Routine Name
+                                        <input
+                                          type="text"
+                                          value={
+                                            routineExercise.displayNameOverride ??
+                                            ""
+                                          }
+                                          placeholder={
+                                            exercise?.name ?? "Exercise name"
+                                          }
+                                          onChange={(event) =>
+                                            updateProgramDay(
+                                              selectedProgramDraft.id,
+                                              selectedProgramDayDraft.id,
+                                              {
+                                                exercises:
+                                                  selectedProgramDayDraft.exercises.map(
+                                                    (
+                                                      exerciseItem,
+                                                      exerciseIndex,
+                                                    ) =>
+                                                      exerciseIndex === index
+                                                        ? {
+                                                            ...exerciseItem,
+                                                            displayNameOverride:
+                                                              event.target
+                                                                .value,
+                                                          }
+                                                        : exerciseItem,
+                                                  ),
+                                              },
+                                            )
+                                          }
+                                          className={`${routineEditorInputClassName} mt-1`}
+                                        />
+                                      </label>
+
+                                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                        Sets
+                                        <input
+                                          type="number"
+                                          inputMode="numeric"
+                                          min="1"
+                                          max="12"
+                                          value={routineExercise.sets}
+                                          onChange={(event) =>
+                                            updateProgramDay(
+                                              selectedProgramDraft.id,
+                                              selectedProgramDayDraft.id,
+                                              {
+                                                exercises:
+                                                  selectedProgramDayDraft.exercises.map(
+                                                    (
+                                                      exerciseItem,
+                                                      exerciseIndex,
+                                                    ) =>
+                                                      exerciseIndex === index
+                                                        ? {
+                                                            ...exerciseItem,
+                                                            sets: event.target
+                                                              .value,
+                                                          }
+                                                        : exerciseItem,
+                                                  ),
+                                              },
+                                            )
+                                          }
+                                          className={`${routineEditorInputClassName} mt-1`}
+                                        />
+                                      </label>
+
+                                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                        Reps
+                                        <input
+                                          type="text"
+                                          value={routineExercise.repRange}
+                                          onChange={(event) =>
+                                            updateProgramDay(
+                                              selectedProgramDraft.id,
+                                              selectedProgramDayDraft.id,
+                                              {
+                                                exercises:
+                                                  selectedProgramDayDraft.exercises.map(
+                                                    (
+                                                      exerciseItem,
+                                                      exerciseIndex,
+                                                    ) =>
+                                                      exerciseIndex === index
+                                                        ? {
+                                                            ...exerciseItem,
+                                                            repRange:
+                                                              event.target
+                                                                .value,
+                                                          }
+                                                        : exerciseItem,
+                                                  ),
+                                              },
+                                            )
+                                          }
+                                          className={`${routineEditorInputClassName} mt-1`}
+                                        />
+                                      </label>
+
+                                      <label className="min-w-0 text-sm font-semibold text-slate-300">
+                                        Rest
+                                        <input
+                                          type="number"
+                                          inputMode="numeric"
+                                          min="0"
+                                          max="600"
+                                          value={
+                                            routineExercise.restSeconds ?? ""
+                                          }
+                                          placeholder={`${DEFAULT_REST_SECONDS}`}
+                                          onChange={(event) =>
+                                            updateProgramDay(
+                                              selectedProgramDraft.id,
+                                              selectedProgramDayDraft.id,
+                                              {
+                                                exercises:
+                                                  selectedProgramDayDraft.exercises.map(
+                                                    (
+                                                      exerciseItem,
+                                                      exerciseIndex,
+                                                    ) =>
+                                                      exerciseIndex === index
+                                                        ? {
+                                                            ...exerciseItem,
+                                                            restSeconds:
+                                                              event.target
+                                                                .value,
+                                                          }
+                                                        : exerciseItem,
+                                                  ),
+                                              },
+                                            )
+                                          }
+                                          className={`${routineEditorInputClassName} mt-1`}
+                                        />
+                                      </label>
+                                    </div>
+
+                                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setExerciseFinderMode({
+                                            type: "swap",
+                                            exerciseIndex: index,
+                                          });
+                                          setExerciseFinderOpen(true);
+                                        }}
+                                        className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                                      >
+                                        Swap
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          removeProgramExercise(
+                                            selectedProgramDraft.id,
+                                            selectedProgramDayDraft.id,
+                                            index,
+                                          );
+                                          setExpandedExerciseIndex(null);
+                                        }}
+                                        className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+
+                                    {exercise ? (
+                                      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
+                                        {routineExercise.displayNameOverride ? (
+                                          <p className="font-semibold text-slate-300">
+                                            Routine name: {effectiveExerciseName}
+                                          </p>
+                                        ) : null}
+                                        <p>
+                                          wger - {exercise.name} -{" "}
+                                          {exercise.primaryMuscle}
+                                          {exercise.equipment.length
+                                            ? ` - ${exercise.equipment.join(", ")}`
+                                            : ""}
+                                        </p>
+                                        {exercise.instructions ? (
+                                          <p className="mt-1 line-clamp-2">
+                                            {exercise.instructions}
+                                          </p>
+                                        ) : null}
+                                      </div>
                                     ) : null}
                                   </div>
                                 ) : null}

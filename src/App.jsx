@@ -1269,6 +1269,7 @@ function App() {
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
   const lastProfileSyncUidRef = useRef(null);
+  const exerciseSearchInputRef = useRef(null);
   const isWorkoutActive =
     viewMode === "workout" && Boolean(activeWorkoutSession);
   const getExercise = (exerciseId) =>
@@ -1352,6 +1353,18 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [runSaveMessage]);
+
+  useEffect(() => {
+    if (!exerciseFinderOpen) {
+      return undefined;
+    }
+
+    const focusTimeoutId = window.setTimeout(() => {
+      exerciseSearchInputRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(focusTimeoutId);
+  }, [exerciseFinderOpen, selectedProgramDayId]);
 
   useEffect(() => {
     if (!exerciseFinderOpen) {
@@ -1871,36 +1884,6 @@ function App() {
     );
   }
 
-  function addProgramExercise(programId, dayId, exerciseId) {
-    const defaultExercise = getExercise(exerciseId) ?? exerciseSearchResults[0];
-
-    if (!defaultExercise) {
-      return;
-    }
-
-    setProgramSaveStatus(null);
-    setProgramDrafts((currentDrafts) =>
-      currentDrafts.map((program) =>
-        program.id === programId
-          ? {
-              ...program,
-              days: program.days.map((day) =>
-                day.id === dayId
-                  ? {
-                      ...day,
-                      exercises: [
-                        ...day.exercises,
-                        createRoutineExerciseFromCatalog(defaultExercise),
-                      ],
-                    }
-                  : day,
-              ),
-            }
-          : program,
-      ),
-    );
-  }
-
   function selectExerciseFromFinder(programId, dayId, exercise, exerciseIndex) {
     if (!exercise) {
       return;
@@ -1927,6 +1910,8 @@ function App() {
               : routineExercise,
         ),
       });
+      setExerciseFinderOpen(false);
+      setExerciseFinderMode({ type: "add", exerciseIndex: null });
     } else {
       setProgramSaveStatus(null);
       setProgramDrafts((currentDrafts) =>
@@ -1949,10 +1934,15 @@ function App() {
             : program,
         ),
       );
+      setExerciseSearchTerm("");
+      setExerciseEquipmentFilter("all");
+      setExerciseMuscleFilter("all");
+      setExerciseSearchResults([]);
+      setExerciseSearchStatus("idle");
+      window.setTimeout(() => {
+        exerciseSearchInputRef.current?.focus();
+      }, 0);
     }
-
-    setExerciseFinderOpen(false);
-    setExerciseFinderMode({ type: "add", exerciseIndex: null });
   }
 
   function saveProgram(programId) {
@@ -2508,7 +2498,6 @@ function App() {
     exerciseSearchResults.length > 0 &&
     !showExerciseEquipmentFilter &&
     !showExerciseMuscleFilter;
-  const addExerciseCandidate = exerciseSearchResults[0] ?? null;
   const getExercisePickerOptions = (currentExerciseId) => {
     if (
       !currentExerciseId ||
@@ -3253,32 +3242,22 @@ function App() {
 
               {selectedProgramDraft && isProgramEditorOpen ? (
                 <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
-                  <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-300">
-                        Program Name
-                        <input
-                          type="text"
-                          value={selectedProgramDraft.name}
-                          onChange={(event) =>
-                            updateProgramName(
-                              selectedProgramDraft.id,
-                              event.target.value,
-                            )
-                          }
-                          className={`${routineEditorInputClassName} mt-1 text-2xl font-bold`}
-                        />
-                      </label>
-                      <p className="mt-2 text-sm text-slate-400">
-                        {selectedProgramDraft.days.length} routines
-                      </p>
+                  <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h2 className="truncate text-2xl font-bold text-white">
+                        {selectedProgramDraft.name}
+                      </h2>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-400">
+                        <span>{selectedProgramDraft.days.length} routines</span>
+                        <span>{selectedProgramDayDraft?.exercises.length ?? 0} exercises</span>
+                      </div>
                       {selectedProgramHasUnsavedChanges ? (
-                        <p className="mt-2 text-sm font-semibold text-amber-200">
+                        <p className="mt-1 text-sm font-semibold text-amber-200">
                           Unsaved changes
                         </p>
                       ) : null}
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                    <div className="flex shrink-0 flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => saveProgram(selectedProgramDraft.id)}
@@ -3291,74 +3270,89 @@ function App() {
                       >
                         {selectedProgramSaveButtonLabel}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          duplicateProgram(selectedProgramDraft.id)
-                        }
-                        className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
-                      >
-                        Duplicate
-                      </button>
-                      {selectedProgramDraft.id !== defaultProgramId ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            archiveProgram(selectedProgramDraft.id)
-                          }
-                          className="rounded-lg border border-red-400/60 px-4 py-2 font-semibold text-red-200 transition hover:border-red-300"
-                        >
-                          Archive
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsProgramEditorOpen(false);
-                          setExerciseFinderOpen(false);
-                        }}
-                        className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
-                      >
-                        Close Editor
-                      </button>
+                      <details className="relative">
+                        <summary className="cursor-pointer list-none rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500">
+                          More
+                        </summary>
+                        <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-slate-700 bg-slate-950 p-3 shadow-2xl">
+                          <label className="block text-sm font-semibold text-slate-300">
+                            Rename Program
+                            <input
+                              type="text"
+                              value={selectedProgramDraft.name}
+                              onChange={(event) =>
+                                updateProgramName(
+                                  selectedProgramDraft.id,
+                                  event.target.value,
+                                )
+                              }
+                              className={`${routineEditorInputClassName} mt-1`}
+                            />
+                          </label>
+                          <div className="mt-3 grid gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                duplicateProgram(selectedProgramDraft.id)
+                              }
+                              className="rounded-lg border border-slate-700 px-4 py-2 text-left font-semibold text-slate-200 transition hover:border-slate-500"
+                            >
+                              Duplicate Program
+                            </button>
+                            {selectedProgramDraft.id !== defaultProgramId ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  archiveProgram(selectedProgramDraft.id)
+                                }
+                                className="rounded-lg border border-red-400/60 px-4 py-2 text-left font-semibold text-red-200 transition hover:border-red-300"
+                              >
+                                Archive Program
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProgramEditorOpen(false);
+                                setExerciseFinderOpen(false);
+                              }}
+                              className="rounded-lg border border-slate-700 px-4 py-2 text-left font-semibold text-slate-200 transition hover:border-slate-500"
+                            >
+                              Close Editor
+                            </button>
+                          </div>
+                        </div>
+                      </details>
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      Days
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {selectedProgramDraft.days.map((day) => {
-                        const isSelected = day.id === selectedProgramDayId;
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedProgramDraft.days.map((day) => {
+                      const isSelected = day.id === selectedProgramDayId;
 
-                        return (
-                          <button
-                            key={day.id}
-                            type="button"
-                            onClick={() => setSelectedProgramDayId(day.id)}
-                            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                              isSelected
-                                ? "border-emerald-400 bg-emerald-400 text-slate-950"
-                                : "border-slate-700 bg-slate-950 text-slate-200 hover:border-slate-500"
-                            }`}
-                          >
-                            {day.name}
-                          </button>
-                        );
-                      })}
-                    </div>
+                      return (
+                        <button
+                          key={day.id}
+                          type="button"
+                          onClick={() => setSelectedProgramDayId(day.id)}
+                          className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                            isSelected
+                              ? "border-emerald-400 bg-emerald-400 text-slate-950"
+                              : "border-slate-700 bg-slate-950 text-slate-200 hover:border-slate-500"
+                          }`}
+                        >
+                          {day.name}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {selectedProgramDayDraft ? (
                     <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3 sm:p-4">
-                      <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-3 sm:flex-row sm:items-end sm:justify-between">
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            Selected Day
-                          </p>
-                          <label className="mt-2 block text-sm font-semibold text-slate-300">
-                            Day Name
+                          <label className="block text-sm font-semibold text-slate-300">
+                            Routine Name
                             <input
                               type="text"
                               value={selectedProgramDayDraft.name}
@@ -3374,7 +3368,7 @@ function App() {
                               className={`${routineEditorInputClassName} mt-1 text-2xl font-bold`}
                             />
                           </label>
-                          <p className="mt-2 text-sm text-slate-400">
+                          <p className="mt-1 text-sm text-slate-400">
                             {selectedProgramDayDraft.exercises.length} exercises
                           </p>
                         </div>
@@ -3385,165 +3379,13 @@ function App() {
                               type: "add",
                               exerciseIndex: null,
                             });
-                            setExerciseFinderOpen((current) => !current);
+                            setExerciseFinderOpen(true);
                           }}
-                          className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                          className="rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
                         >
-                          {exerciseFinderOpen
-                            ? "Hide Exercise Finder"
-                            : "Find Exercise"}
+                          + Add Exercise
                         </button>
                       </div>
-
-                      {exerciseFinderOpen ? (
-                        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-                          <div className="grid gap-3 md:grid-cols-[minmax(0,1.5fr)_repeat(2,minmax(0,1fr))]">
-                            <label className="min-w-0 text-sm font-semibold text-slate-300">
-                              Search
-                              <input
-                                type="search"
-                                value={exerciseSearchTerm}
-                                onChange={(event) => {
-                                  setExerciseSearchTerm(event.target.value);
-                                  setExerciseEquipmentFilter("all");
-                                  setExerciseMuscleFilter("all");
-                                }}
-                                placeholder="deadlift, curl, pulldown"
-                                className={`${routineEditorInputClassName} mt-1`}
-                              />
-                            </label>
-
-                            {showExerciseMuscleFilter ? (
-                              <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                Muscle
-                                <select
-                                  value={exerciseMuscleFilter}
-                                  onChange={(event) =>
-                                    setExerciseMuscleFilter(event.target.value)
-                                  }
-                                  className={`${routineEditorSelectClassName} mt-1`}
-                                >
-                                  <option value="all">All muscles</option>
-                                  {exerciseMuscleOptions.map((muscle) => (
-                                    <option key={muscle} value={muscle}>
-                                      {muscle}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            ) : null}
-
-                            {showExerciseEquipmentFilter ? (
-                              <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                Equipment
-                                <select
-                                  value={exerciseEquipmentFilter}
-                                  onChange={(event) =>
-                                    setExerciseEquipmentFilter(
-                                      event.target.value,
-                                    )
-                                  }
-                                  className={`${routineEditorSelectClassName} mt-1`}
-                                >
-                                  <option value="all">All equipment</option>
-                                  {exerciseEquipmentOptions.map((equipment) => (
-                                    <option key={equipment} value={equipment}>
-                                      {equipment}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            ) : null}
-                          </div>
-                          {showHiddenFilterNotice ? (
-                            <p className="mt-2 text-sm text-slate-500">
-                              Filters hidden because wger did not provide usable
-                              muscle or equipment metadata for these results.
-                            </p>
-                          ) : null}
-
-                          <p className="mt-3 text-sm text-slate-400">
-                            {exerciseSearchStatus === "loading"
-                              ? "Searching exercises..."
-                              : exerciseSearchTerm.trim()
-                                ? `${exerciseSearchResults.length} exercise${
-                                    exerciseSearchResults.length === 1
-                                      ? ""
-                                      : "s"
-                                  } found`
-                                : "Type an exercise name to search wger"}
-                          </p>
-                          {exerciseSearchStatus === "error" ? (
-                            <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
-                              Could not load wger results. Check your connection
-                              and try another search.
-                            </p>
-                          ) : null}
-
-                          <div className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-1">
-                            {exerciseSearchStatus === "loading" ? (
-                              <p className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-3 text-sm text-slate-300">
-                                Searching exercises...
-                              </p>
-                            ) : exerciseSearchResults.length ? (
-                              exerciseSearchResults.map((exercise) => (
-                                <article
-                                  key={exercise.id}
-                                  className="flex min-w-0 flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900/80 p-3 sm:flex-row sm:items-start sm:justify-between"
-                                >
-                                  <div className="min-w-0">
-                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                      <h3 className="font-semibold text-white">
-                                        {exercise.name}
-                                      </h3>
-                                      <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                                        wger
-                                      </span>
-                                    </div>
-                                    <p className="mt-1 text-sm text-slate-400">
-                                      {[
-                                        exercise.primaryMuscle,
-                                        ...(exercise.equipment ?? []),
-                                      ]
-                                        .filter(Boolean)
-                                        .join(" - ") || "Exercise"}
-                                    </p>
-                                    {exercise.instructions ? (
-                                      <p className="mt-2 line-clamp-2 text-sm text-slate-500">
-                                        {exercise.instructions}
-                                      </p>
-                                    ) : null}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      selectExerciseFromFinder(
-                                        selectedProgramDraft.id,
-                                        selectedProgramDayDraft.id,
-                                        exercise,
-                                        exerciseFinderMode.type === "swap"
-                                          ? exerciseFinderMode.exerciseIndex
-                                          : null,
-                                      )
-                                    }
-                                    className="shrink-0 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300"
-                                  >
-                                    {exerciseFinderMode.type === "swap"
-                                      ? "Use"
-                                      : "Add"}
-                                  </button>
-                                </article>
-                              ))
-                            ) : (
-                              <p className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-3 text-sm text-slate-300">
-                                {exerciseSearchTerm.trim()
-                                  ? "No matching exercises found."
-                                  : "Type an exercise name to find wger exercises."}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
 
                       <ul className="mt-4 space-y-3">
                         {selectedProgramDayDraft.exercises.map(
@@ -3847,36 +3689,6 @@ function App() {
                         )}
                       </ul>
 
-                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            addProgramExercise(
-                              selectedProgramDraft.id,
-                              selectedProgramDayDraft.id,
-                              addExerciseCandidate?.id,
-                            )
-                          }
-                          disabled={!addExerciseCandidate}
-                          className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {addExerciseCandidate
-                            ? `Add ${addExerciseCandidate.name}`
-                            : "Add Exercise"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => saveProgram(selectedProgramDraft.id)}
-                          className={`rounded-lg px-4 py-3 font-semibold transition ${
-                            selectedProgramSaveStatus?.type === "success" &&
-                            !selectedProgramHasUnsavedChanges
-                              ? "bg-emerald-300 text-slate-950"
-                              : "bg-emerald-400 text-slate-950 hover:bg-emerald-300"
-                          }`}
-                        >
-                          {selectedProgramSaveButtonLabel}
-                        </button>
-                      </div>
                     </div>
                   ) : (
                     <div className="mt-4 rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-6 text-center">
@@ -3924,6 +3736,175 @@ function App() {
               ) : null}
             </div>
           </section>
+        ) : null}
+
+        {exerciseFinderOpen && selectedProgramDraft && selectedProgramDayDraft ? (
+          <div className="fixed inset-0 z-50 flex bg-slate-950/90 p-3 sm:p-4">
+            <section className="mx-auto flex h-full w-full max-w-6xl min-w-0 flex-col rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-2xl sm:p-4">
+              <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Add Exercises
+                  </p>
+                  <h2 className="mt-1 text-2xl font-bold text-white">
+                    {selectedProgramDayDraft.name}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExerciseFinderOpen(false);
+                    setExerciseFinderMode({ type: "add", exerciseIndex: null });
+                  }}
+                  className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+                >
+                  Done
+                </button>
+              </div>
+
+              <div className="grid gap-3 py-3 md:grid-cols-[minmax(0,1.5fr)_repeat(2,minmax(0,1fr))]">
+                <label className="min-w-0 text-sm font-semibold text-slate-300">
+                  Search
+                  <input
+                    ref={exerciseSearchInputRef}
+                    type="search"
+                    value={exerciseSearchTerm}
+                    onChange={(event) => {
+                      setExerciseSearchTerm(event.target.value);
+                      setExerciseEquipmentFilter("all");
+                      setExerciseMuscleFilter("all");
+                    }}
+                    placeholder="deadlift, curl, pulldown"
+                    className={`${routineEditorInputClassName} mt-1`}
+                  />
+                </label>
+
+                {showExerciseMuscleFilter ? (
+                  <label className="min-w-0 text-sm font-semibold text-slate-300">
+                    Muscle
+                    <select
+                      value={exerciseMuscleFilter}
+                      onChange={(event) =>
+                        setExerciseMuscleFilter(event.target.value)
+                      }
+                      className={`${routineEditorSelectClassName} mt-1`}
+                    >
+                      <option value="all">All muscles</option>
+                      {exerciseMuscleOptions.map((muscle) => (
+                        <option key={muscle} value={muscle}>
+                          {muscle}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+
+                {showExerciseEquipmentFilter ? (
+                  <label className="min-w-0 text-sm font-semibold text-slate-300">
+                    Equipment
+                    <select
+                      value={exerciseEquipmentFilter}
+                      onChange={(event) =>
+                        setExerciseEquipmentFilter(event.target.value)
+                      }
+                      className={`${routineEditorSelectClassName} mt-1`}
+                    >
+                      <option value="all">All equipment</option>
+                      {exerciseEquipmentOptions.map((equipment) => (
+                        <option key={equipment} value={equipment}>
+                          {equipment}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+
+              {showHiddenFilterNotice ? (
+                <p className="pb-2 text-sm text-slate-500">
+                  Filters hidden because wger did not provide usable muscle or
+                  equipment metadata for these results.
+                </p>
+              ) : null}
+
+              <p className="pb-3 text-sm text-slate-400">
+                {exerciseSearchStatus === "loading"
+                  ? "Searching exercises..."
+                  : exerciseSearchTerm.trim()
+                    ? `${exerciseSearchResults.length} exercise${
+                        exerciseSearchResults.length === 1 ? "" : "s"
+                      } found`
+                    : "Type an exercise name to search wger"}
+              </p>
+              {exerciseSearchStatus === "error" ? (
+                <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
+                  Could not load wger results. Check your connection and try
+                  another search.
+                </p>
+              ) : null}
+
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {exerciseSearchStatus === "loading" ? (
+                  <p className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-3 text-sm text-slate-300">
+                    Searching exercises...
+                  </p>
+                ) : exerciseSearchResults.length ? (
+                  exerciseSearchResults.map((exercise) => (
+                    <article
+                      key={exercise.id}
+                      className="flex min-w-0 flex-col gap-3 rounded-lg border border-slate-800 bg-slate-950/80 p-3 sm:flex-row sm:items-start sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <h3 className="font-semibold text-white">
+                            {exercise.name}
+                          </h3>
+                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">
+                            wger
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {[
+                            exercise.primaryMuscle,
+                            ...(exercise.equipment ?? []),
+                          ]
+                            .filter(Boolean)
+                            .join(" - ") || "Exercise"}
+                        </p>
+                        {exercise.instructions ? (
+                          <p className="mt-2 line-clamp-2 text-sm text-slate-500">
+                            {exercise.instructions}
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          selectExerciseFromFinder(
+                            selectedProgramDraft.id,
+                            selectedProgramDayDraft.id,
+                            exercise,
+                            exerciseFinderMode.type === "swap"
+                              ? exerciseFinderMode.exerciseIndex
+                              : null,
+                          )
+                        }
+                        className="shrink-0 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300"
+                      >
+                        {exerciseFinderMode.type === "swap" ? "Use" : "Add"}
+                      </button>
+                    </article>
+                  ))
+                ) : (
+                  <p className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-3 text-sm text-slate-300">
+                    {exerciseSearchTerm.trim()
+                      ? "No matching exercises found."
+                      : "Type an exercise name to find wger exercises."}
+                  </p>
+                )}
+              </div>
+            </section>
+          </div>
         ) : null}
 
         {viewMode === "workout" &&

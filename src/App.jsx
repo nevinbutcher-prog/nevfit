@@ -864,6 +864,89 @@ function SignInScreen({ onSignIn }) {
   );
 }
 
+function getInstructionExcerpt(instructions, maxLength = 140) {
+  if (!instructions) {
+    return "";
+  }
+
+  const normalizedInstructions = instructions.replace(/\s+/g, " ").trim();
+
+  if (normalizedInstructions.length <= maxLength) {
+    return normalizedInstructions;
+  }
+
+  return `${normalizedInstructions.slice(0, maxLength).trim()}...`;
+}
+
+function ExerciseImage({ exercise, className }) {
+  const [hasImageError, setHasImageError] = useState(false);
+
+  if (!exercise?.imageUrl || hasImageError) {
+    return null;
+  }
+
+  return (
+    <img
+      src={exercise.imageUrl}
+      alt={exercise.name}
+      loading="lazy"
+      onError={() => setHasImageError(true)}
+      className={className}
+    />
+  );
+}
+
+function ExerciseMetadata({ exercise, includeInstructions = true }) {
+  if (!exercise) {
+    return null;
+  }
+
+  const metadataRows = [
+    ["Primary", exercise.primaryMuscle],
+    [
+      "Secondary",
+      (exercise.secondaryMuscles ?? []).filter(Boolean).join(", "),
+    ],
+    ["Equipment", (exercise.equipment ?? []).filter(Boolean).join(", ")],
+  ].filter(([, value]) => value);
+  const instructionExcerpt = includeInstructions
+    ? getInstructionExcerpt(exercise.instructions)
+    : "";
+
+  if (!metadataRows.length && !instructionExcerpt && !exercise.imageUrl) {
+    return null;
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
+      <ExerciseImage
+        exercise={exercise}
+        className="h-24 w-full rounded-lg border border-slate-800 object-cover sm:w-32"
+      />
+      <div className="min-w-0 text-sm text-slate-400">
+        {metadataRows.map(([label, value]) => (
+          <p key={label}>
+            <span className="font-semibold text-slate-300">{label}:</span>{" "}
+            {value}
+          </p>
+        ))}
+        {instructionExcerpt ? (
+          <p className="mt-2 leading-6 text-slate-400">{instructionExcerpt}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function getCompactExerciseMetadata(exercise) {
+  return [
+    exercise?.primaryMuscle,
+    ...(exercise?.equipment ?? []),
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
 function getEquipmentFilterValue(equipment) {
   const normalizedEquipment = equipment.toLowerCase();
 
@@ -1267,6 +1350,8 @@ function App() {
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
+  const [expandedWorkoutDetailsExerciseId, setExpandedWorkoutDetailsExerciseId] =
+    useState(null);
   const wakeLockRef = useRef(null);
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
@@ -3500,6 +3585,13 @@ function App() {
                                             DEFAULT_REST_SECONDS}{" "}
                                           sec
                                         </p>
+                                        {getCompactExerciseMetadata(exercise) ? (
+                                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                                            {getCompactExerciseMetadata(
+                                              exercise,
+                                            )}
+                                          </p>
+                                        ) : null}
                                       </div>
                                     </div>
                                   </button>
@@ -3787,18 +3879,7 @@ function App() {
                                             Routine name: {effectiveExerciseName}
                                           </p>
                                         ) : null}
-                                        <p>
-                                          wger - {exercise.name} -{" "}
-                                          {exercise.primaryMuscle}
-                                          {exercise.equipment.length
-                                            ? ` - ${exercise.equipment.join(", ")}`
-                                            : ""}
-                                        </p>
-                                        {exercise.instructions ? (
-                                          <p className="mt-1 line-clamp-2">
-                                            {exercise.instructions}
-                                          </p>
-                                        ) : null}
+                                        <ExerciseMetadata exercise={exercise} />
                                       </div>
                                     ) : null}
                                   </div>
@@ -3974,28 +4055,52 @@ function App() {
                       key={exercise.id}
                       className="flex min-w-0 flex-col gap-3 rounded-lg border border-slate-800 bg-slate-950/80 p-3 sm:flex-row sm:items-start sm:justify-between"
                     >
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-white">
-                            {exercise.name}
-                          </h3>
-                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">
-                            wger
-                          </span>
+                      <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
+                        <ExerciseImage
+                          exercise={exercise}
+                          className="h-28 w-full rounded-lg border border-slate-800 object-cover sm:w-32"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h3 className="font-semibold text-white">
+                              {exercise.name}
+                            </h3>
+                            <span className="rounded-full border border-slate-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">
+                              wger
+                            </span>
+                          </div>
+                          <div className="mt-2 space-y-1 text-sm text-slate-400">
+                            {exercise.primaryMuscle ? (
+                              <p>
+                                <span className="font-semibold text-slate-300">
+                                  Primary:
+                                </span>{" "}
+                                {exercise.primaryMuscle}
+                              </p>
+                            ) : null}
+                            {exercise.secondaryMuscles?.length ? (
+                              <p>
+                                <span className="font-semibold text-slate-300">
+                                  Secondary:
+                                </span>{" "}
+                                {exercise.secondaryMuscles.join(", ")}
+                              </p>
+                            ) : null}
+                            {exercise.equipment?.length ? (
+                              <p>
+                                <span className="font-semibold text-slate-300">
+                                  Equipment:
+                                </span>{" "}
+                                {exercise.equipment.join(", ")}
+                              </p>
+                            ) : null}
+                          </div>
+                          {exercise.instructions ? (
+                            <p className="mt-2 line-clamp-2 text-sm text-slate-500">
+                              {getInstructionExcerpt(exercise.instructions)}
+                            </p>
+                          ) : null}
                         </div>
-                        <p className="mt-1 text-sm text-slate-400">
-                          {[
-                            exercise.primaryMuscle,
-                            ...(exercise.equipment ?? []),
-                          ]
-                            .filter(Boolean)
-                            .join(" - ") || "Exercise"}
-                        </p>
-                        {exercise.instructions ? (
-                          <p className="mt-2 line-clamp-2 text-sm text-slate-500">
-                            {exercise.instructions}
-                          </p>
-                        ) : null}
                       </div>
                       <button
                         type="button"
@@ -4079,6 +4184,9 @@ function App() {
                   completedWorkouts,
                 );
                 const exerciseFeedback = getExerciseFeedback(sessionExercise);
+                const isWorkoutDetailsExpanded =
+                  expandedWorkoutDetailsExerciseId ===
+                  sessionExercise.exerciseId;
 
                 return (
                   <li
@@ -4108,6 +4216,35 @@ function App() {
                         </p>
                       ) : null}
                     </div>
+
+                    {exercise ? (
+                      <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/60">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedWorkoutDetailsExerciseId(
+                              (currentExerciseId) =>
+                                currentExerciseId ===
+                                sessionExercise.exerciseId
+                                  ? null
+                                  : sessionExercise.exerciseId,
+                            )
+                          }
+                          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                          aria-expanded={isWorkoutDetailsExpanded}
+                        >
+                          <span>Exercise Details</span>
+                          <span>
+                            {isWorkoutDetailsExpanded ? "Hide" : "Show"}
+                          </span>
+                        </button>
+                        {isWorkoutDetailsExpanded ? (
+                          <div className="border-t border-slate-800 p-3">
+                            <ExerciseMetadata exercise={exercise} />
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="mt-4 min-w-0 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">

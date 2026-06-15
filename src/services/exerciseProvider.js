@@ -131,6 +131,46 @@ function getAliasValues(translation) {
     .filter(Boolean);
 }
 
+function normalizeImageUrl(value) {
+  const url = normalizeText(value);
+
+  if (!url) {
+    return "";
+  }
+
+  return url.startsWith("http") ? url : `https://wger.de${url}`;
+}
+
+function normalizeExerciseImages(images) {
+  if (!Array.isArray(images)) {
+    return [];
+  }
+
+  return images
+    .map((image) => {
+      const url = normalizeImageUrl(image?.image ?? image?.url);
+
+      if (!url) {
+        return null;
+      }
+
+      return {
+        id: String(image.id ?? image.uuid ?? url),
+        url,
+        isMain: Boolean(image.is_main ?? image.isMain),
+        license: getNamedValue(image.license),
+        licenseAuthor: normalizeText(
+          image.license_author ?? image.licenseAuthor,
+        ),
+      };
+    })
+    .filter(Boolean);
+}
+
+function getPreferredImageUrl(images) {
+  return images.find((image) => image.isMain)?.url ?? images[0]?.url ?? null;
+}
+
 function getWgerTranslation(sourceExercise) {
   if (!Array.isArray(sourceExercise.translations)) {
     return null;
@@ -323,6 +363,8 @@ function normalizeWgerExercise(sourceExercise) {
   const originalName = normalizeText(translation?.name);
   const name = getCleanDisplayName(originalName);
   const aliases = getAliasValues(translation);
+  const images = normalizeExerciseImages(sourceExercise.images);
+  const imageUrl = getPreferredImageUrl(images);
 
   if (!id || !translation || !name || !isProbablyEnglishExerciseName(name)) {
     return null;
@@ -339,6 +381,8 @@ function normalizeWgerExercise(sourceExercise) {
     equipment: getNamedValues(sourceExercise.equipment)
       .map(normalizeEquipmentName)
       .filter(Boolean),
+    images,
+    imageUrl,
     aliases,
     defaultSets: DEFAULT_SETS,
     defaultRepRange: DEFAULT_REP_RANGE,
@@ -441,8 +485,12 @@ export function normalizeExercise(sourceExercise) {
     sourceExercise.name &&
     Array.isArray(sourceExercise.equipment)
   ) {
+    const images = normalizeExerciseImages(sourceExercise.images);
+
     return {
       ...sourceExercise,
+      images,
+      imageUrl: sourceExercise.imageUrl ?? getPreferredImageUrl(images),
       defaultSets: sourceExercise.defaultSets ?? DEFAULT_SETS,
       defaultRepRange: sourceExercise.defaultRepRange ?? DEFAULT_REP_RANGE,
       defaultRestSeconds:

@@ -1246,6 +1246,7 @@ function App() {
   const [runDurationMinutes, setRunDurationMinutes] = useState("");
   const [runNotes, setRunNotes] = useState("");
   const [runSaveMessage, setRunSaveMessage] = useState("");
+  const [expandedDashboardEntry, setExpandedDashboardEntry] = useState(null);
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
@@ -2837,201 +2838,256 @@ function App() {
               </article>
 
               <div className="grid gap-4 lg:grid-cols-1">
-                <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <div className="flex min-w-0 items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Runs This Week
-                      </p>
-                      <h2 className="mt-3 text-3xl font-bold text-white">
-                        {runsThisWeek}/{weeklyRunTarget}
-                      </h2>
-                    </div>
-                    <label className="shrink-0 text-sm font-semibold text-slate-300">
-                      Target
-                      <select
-                        value={weeklyRunTarget}
-                        onChange={(event) =>
-                          updateWeeklyRunTarget(Number(event.target.value))
-                        }
-                        className={`${routineEditorSelectClassName} mt-1`}
-                      >
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <form
-                    className="mt-4 grid gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      saveRunEntry();
-                    }}
+                <article
+                  className={`min-w-0 rounded-xl border bg-slate-900 p-4 transition ${
+                    expandedDashboardEntry === "runs"
+                      ? "border-emerald-400/70"
+                      : "border-slate-800"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedDashboardEntry((currentEntry) =>
+                        currentEntry === "runs" ? null : "runs",
+                      )
+                    }
+                    className="w-full rounded-lg text-left transition hover:bg-slate-800/60"
+                    aria-expanded={expandedDashboardEntry === "runs"}
                   >
-                    <label className="text-sm font-semibold text-slate-300">
-                      Date
-                      <input
-                        type="date"
-                        value={runEntryDate}
-                        max={getTodayDateInputValue()}
-                        onChange={(event) =>
-                          setRunEntryDate(event.target.value)
-                        }
-                        className={`${routineEditorInputClassName} mt-1`}
-                      />
-                    </label>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                      <label className="text-sm font-semibold text-slate-300">
-                        Distance km
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          step="0.1"
-                          value={runDistanceKm}
-                          onChange={(event) =>
-                            setRunDistanceKm(event.target.value)
-                          }
-                          className={`${routineEditorInputClassName} mt-1`}
-                        />
-                      </label>
-                      <label className="text-sm font-semibold text-slate-300">
-                        Duration minutes
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          step="1"
-                          value={runDurationMinutes}
-                          onChange={(event) =>
-                            setRunDurationMinutes(event.target.value)
-                          }
-                          className={`${routineEditorInputClassName} mt-1`}
-                        />
-                      </label>
+                    <div className="flex min-w-0 items-start justify-between gap-3 p-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          Runs This Week
+                        </p>
+                        <h2 className="mt-3 text-3xl font-bold text-white">
+                          {runsThisWeek}/{weeklyRunTarget}
+                        </h2>
+                      </div>
+                      <span className="shrink-0 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300">
+                        {expandedDashboardEntry === "runs" ? "Hide" : "Log"}
+                      </span>
                     </div>
-                    <label className="text-sm font-semibold text-slate-300">
-                      Notes
-                      <input
-                        type="text"
-                        value={runNotes}
-                        onChange={(event) => setRunNotes(event.target.value)}
-                        className={`${routineEditorInputClassName} mt-1`}
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-                    >
-                      Save Run
-                    </button>
-                    {runSaveMessage ? (
-                      <p className="text-sm font-semibold text-emerald-200">
-                        {runSaveMessage}
-                      </p>
-                    ) : null}
-                  </form>
+                  </button>
 
-                  {recentRuns.length > 0 ? (
-                    <ul className="mt-4 space-y-2 border-t border-slate-800 pt-4">
-                      {recentRuns.map((run) => (
-                        <li key={run.id} className="grid gap-1 text-sm">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-slate-400">
-                              {formatStepEntryDate(run.date)}
-                            </span>
-                            <span className="font-semibold text-slate-200">
-                              {formatRecentRunDetails(run)}
-                            </span>
-                          </div>
-                          {run.notes ? (
-                            <p className="text-slate-500">{run.notes}</p>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
+                  {expandedDashboardEntry === "runs" ? (
+                    <div className="mt-4 border-t border-slate-800 pt-4">
+                      <label className="block text-sm font-semibold text-slate-300">
+                        Weekly run target
+                        <select
+                          value={weeklyRunTarget}
+                          onChange={(event) =>
+                            updateWeeklyRunTarget(Number(event.target.value))
+                          }
+                          className={`${routineEditorSelectClassName} mt-1`}
+                        >
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                        </select>
+                      </label>
+
+                      <form
+                        className="mt-4 grid gap-3"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          saveRunEntry();
+                        }}
+                      >
+                        <label className="text-sm font-semibold text-slate-300">
+                          Date
+                          <input
+                            type="date"
+                            value={runEntryDate}
+                            max={getTodayDateInputValue()}
+                            onChange={(event) =>
+                              setRunEntryDate(event.target.value)
+                            }
+                            className={`${routineEditorInputClassName} mt-1`}
+                          />
+                        </label>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                          <label className="text-sm font-semibold text-slate-300">
+                            Distance km
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              step="0.1"
+                              value={runDistanceKm}
+                              onChange={(event) =>
+                                setRunDistanceKm(event.target.value)
+                              }
+                              className={`${routineEditorInputClassName} mt-1`}
+                            />
+                          </label>
+                          <label className="text-sm font-semibold text-slate-300">
+                            Duration minutes
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              step="1"
+                              value={runDurationMinutes}
+                              onChange={(event) =>
+                                setRunDurationMinutes(event.target.value)
+                              }
+                              className={`${routineEditorInputClassName} mt-1`}
+                            />
+                          </label>
+                        </div>
+                        <label className="text-sm font-semibold text-slate-300">
+                          Notes
+                          <input
+                            type="text"
+                            value={runNotes}
+                            onChange={(event) =>
+                              setRunNotes(event.target.value)
+                            }
+                            className={`${routineEditorInputClassName} mt-1`}
+                          />
+                        </label>
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                        >
+                          Save Run
+                        </button>
+                        {runSaveMessage ? (
+                          <p className="text-sm font-semibold text-emerald-200">
+                            {runSaveMessage}
+                          </p>
+                        ) : null}
+                      </form>
+
+                      {recentRuns.length > 0 ? (
+                        <ul className="mt-4 space-y-2 border-t border-slate-800 pt-4">
+                          {recentRuns.map((run) => (
+                            <li key={run.id} className="grid gap-1 text-sm">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-slate-400">
+                                  {formatStepEntryDate(run.date)}
+                                </span>
+                                <span className="font-semibold text-slate-200">
+                                  {formatRecentRunDetails(run)}
+                                </span>
+                              </div>
+                              {run.notes ? (
+                                <p className="text-slate-500">{run.notes}</p>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
                   ) : null}
                 </article>
 
-                <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Average Daily Steps
-                  </p>
-                  {averageStepsLastSevenDays === null ? (
-                    <p className="mt-3 text-sm text-slate-400">
-                      Add steps to start tracking your 7-day average.
-                    </p>
-                  ) : (
-                    <h2 className="mt-3 text-3xl font-bold text-white">
-                      {averageStepsLastSevenDays.toLocaleString()}
-                    </h2>
-                  )}
-
-                  <form
-                    className="mt-4 grid gap-3"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      saveStepEntry();
-                    }}
+                <article
+                  className={`min-w-0 rounded-xl border bg-slate-900 p-4 transition ${
+                    expandedDashboardEntry === "steps"
+                      ? "border-emerald-400/70"
+                      : "border-slate-800"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedDashboardEntry((currentEntry) =>
+                        currentEntry === "steps" ? null : "steps",
+                      )
+                    }
+                    className="w-full rounded-lg text-left transition hover:bg-slate-800/60"
+                    aria-expanded={expandedDashboardEntry === "steps"}
                   >
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                      <label className="text-sm font-semibold text-slate-300">
-                        Date
-                        <input
-                          type="date"
-                          value={stepEntryDate}
-                          max={getTodayDateInputValue()}
-                          onChange={(event) =>
-                            setStepEntryDate(event.target.value)
-                          }
-                          className={`${routineEditorInputClassName} mt-1`}
-                        />
-                      </label>
-                      <label className="text-sm font-semibold text-slate-300">
-                        Yesterday's steps
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min="0"
-                          step="1"
-                          value={stepEntryValue}
-                          onChange={(event) =>
-                            setStepEntryValue(event.target.value)
-                          }
-                          className={`${routineEditorInputClassName} mt-1`}
-                        />
-                      </label>
+                    <div className="flex min-w-0 items-start justify-between gap-3 p-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          Average Daily Steps
+                        </p>
+                        {averageStepsLastSevenDays === null ? (
+                          <p className="mt-3 text-sm text-slate-400">
+                            Add steps to start tracking your 7-day average.
+                          </p>
+                        ) : (
+                          <h2 className="mt-3 text-3xl font-bold text-white">
+                            {averageStepsLastSevenDays.toLocaleString()}
+                          </h2>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300">
+                        {expandedDashboardEntry === "steps" ? "Hide" : "Add"}
+                      </span>
                     </div>
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-                    >
-                      Save Steps
-                    </button>
-                    {stepSaveMessage ? (
-                      <p className="text-sm font-semibold text-emerald-200">
-                        {stepSaveMessage}
-                      </p>
-                    ) : null}
-                  </form>
+                  </button>
 
-                  {recentStepEntries.length > 0 ? (
-                    <ul className="mt-4 space-y-2 border-t border-slate-800 pt-4">
-                      {recentStepEntries.map((entry) => (
-                        <li
-                          key={entry.date}
-                          className="flex items-center justify-between gap-3 text-sm"
+                  {expandedDashboardEntry === "steps" ? (
+                    <div className="mt-4 border-t border-slate-800 pt-4">
+                      <form
+                        className="grid gap-3"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          saveStepEntry();
+                        }}
+                      >
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                          <label className="text-sm font-semibold text-slate-300">
+                            Date
+                            <input
+                              type="date"
+                              value={stepEntryDate}
+                              max={getTodayDateInputValue()}
+                              onChange={(event) =>
+                                setStepEntryDate(event.target.value)
+                              }
+                              className={`${routineEditorInputClassName} mt-1`}
+                            />
+                          </label>
+                          <label className="text-sm font-semibold text-slate-300">
+                            Yesterday's steps
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min="0"
+                              step="1"
+                              value={stepEntryValue}
+                              onChange={(event) =>
+                                setStepEntryValue(event.target.value)
+                              }
+                              className={`${routineEditorInputClassName} mt-1`}
+                            />
+                          </label>
+                        </div>
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
                         >
-                          <span className="text-slate-400">
-                            {formatStepEntryDate(entry.date)}
-                          </span>
-                          <span className="font-semibold text-slate-200">
-                            {entry.steps.toLocaleString()}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                          Save Steps
+                        </button>
+                        {stepSaveMessage ? (
+                          <p className="text-sm font-semibold text-emerald-200">
+                            {stepSaveMessage}
+                          </p>
+                        ) : null}
+                      </form>
+
+                      {recentStepEntries.length > 0 ? (
+                        <ul className="mt-4 space-y-2 border-t border-slate-800 pt-4">
+                          {recentStepEntries.map((entry) => (
+                            <li
+                              key={entry.date}
+                              className="flex items-center justify-between gap-3 text-sm"
+                            >
+                              <span className="text-slate-400">
+                                {formatStepEntryDate(entry.date)}
+                              </span>
+                              <span className="font-semibold text-slate-200">
+                                {entry.steps.toLocaleString()}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
                   ) : null}
                 </article>
 
@@ -3279,7 +3335,7 @@ function App() {
                         <summary className="cursor-pointer list-none rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500">
                           More
                         </summary>
-                        <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-slate-700 bg-slate-950 p-3 shadow-2xl">
+                        <div className="fixed inset-x-3 top-28 z-50 rounded-xl border border-slate-700 bg-slate-950 p-3 shadow-2xl sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-72">
                           <label className="block text-sm font-semibold text-slate-300">
                             Rename Program
                             <input

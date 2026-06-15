@@ -622,6 +622,36 @@ function createRoutineExerciseFromCatalog(exercise) {
   };
 }
 
+function LoadingScreen() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
+      <p className="text-base font-semibold text-slate-300">
+        Loading NevFit...
+      </p>
+    </main>
+  );
+}
+
+function SignInScreen({ onSignIn }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
+      <section className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-5">
+        <h1 className="text-4xl font-bold">NevFit</h1>
+        <p className="mt-3 text-sm leading-6 text-slate-300">
+          Sign in to access your workout programs, schedule, and history.
+        </p>
+        <button
+          type="button"
+          onClick={onSignIn}
+          className="mt-5 w-full rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+        >
+          Sign in with Google
+        </button>
+      </section>
+    </main>
+  );
+}
+
 function getEquipmentFilterValue(equipment) {
   const normalizedEquipment = equipment.toLowerCase();
 
@@ -2055,6 +2085,14 @@ function App() {
         ),
       };
     });
+  }
+
+  if (authLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!currentUser) {
+    return <SignInScreen onSignIn={handleSignInWithGoogle} />;
   }
 
   const activeWorkoutDay = schedule.find(

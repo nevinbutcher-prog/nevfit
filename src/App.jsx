@@ -896,7 +896,11 @@ function ExerciseImage({ exercise, className }) {
   );
 }
 
-function ExerciseMetadata({ exercise, includeInstructions = true }) {
+function ExerciseMetadata({
+  exercise,
+  includeInstructions = true,
+  instructionMode = "excerpt",
+}) {
   if (!exercise) {
     return null;
   }
@@ -909,8 +913,10 @@ function ExerciseMetadata({ exercise, includeInstructions = true }) {
     ],
     ["Equipment", (exercise.equipment ?? []).filter(Boolean).join(", ")],
   ].filter(([, value]) => value);
-  const instructionExcerpt = includeInstructions
-    ? getInstructionExcerpt(exercise.instructions)
+  const instructionText = includeInstructions
+    ? instructionMode === "full"
+      ? exercise.instructions
+      : getInstructionExcerpt(exercise.instructions)
     : "";
   const mainImage = exercise.images?.find((image) => image.url === exercise.imageUrl);
   const imageCredit = [
@@ -922,7 +928,7 @@ function ExerciseMetadata({ exercise, includeInstructions = true }) {
 
   if (
     !metadataRows.length &&
-    !instructionExcerpt &&
+    !instructionText &&
     !exercise.imageUrl &&
     !imageCredit
   ) {
@@ -942,8 +948,10 @@ function ExerciseMetadata({ exercise, includeInstructions = true }) {
             {value}
           </p>
         ))}
-        {instructionExcerpt ? (
-          <p className="mt-2 leading-6 text-slate-400">{instructionExcerpt}</p>
+        {instructionText ? (
+          <p className="mt-2 whitespace-pre-line leading-6 text-slate-400">
+            {instructionText}
+          </p>
         ) : null}
         {imageCredit ? (
           <p className="mt-2 text-xs font-semibold text-slate-500">
@@ -3696,7 +3704,7 @@ function App() {
 
                                 {isExpanded ? (
                                   <div className="border-t border-slate-800 p-3">
-                                    <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(5rem,0.55fr)_minmax(6rem,0.7fr)_minmax(6rem,0.8fr)]">
+                                    <div className="grid min-w-0 gap-3 md:grid-cols-2">
                                       <label className="min-w-0 text-sm font-semibold text-slate-300">
                                         Exercise
                                         <select
@@ -3778,7 +3786,23 @@ function App() {
                                           className={`${routineEditorInputClassName} mt-1`}
                                         />
                                       </label>
+                                    </div>
 
+                                    {exercise ? (
+                                      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
+                                        {routineExercise.displayNameOverride ? (
+                                          <p className="font-semibold text-slate-300">
+                                            Routine name: {effectiveExerciseName}
+                                          </p>
+                                        ) : null}
+                                        <ExerciseMetadata
+                                          exercise={exercise}
+                                          instructionMode="full"
+                                        />
+                                      </div>
+                                    ) : null}
+
+                                    <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-3">
                                       <label className="min-w-0 text-sm font-semibold text-slate-300">
                                         Sets
                                         <input
@@ -3913,17 +3937,6 @@ function App() {
                                         Remove
                                       </button>
                                     </div>
-
-                                    {exercise ? (
-                                      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
-                                        {routineExercise.displayNameOverride ? (
-                                          <p className="font-semibold text-slate-300">
-                                            Routine name: {effectiveExerciseName}
-                                          </p>
-                                        ) : null}
-                                        <ExerciseMetadata exercise={exercise} />
-                                      </div>
-                                    ) : null}
                                   </div>
                                 ) : null}
                               </li>

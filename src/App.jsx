@@ -17,6 +17,7 @@ const ACTIVE_WORKOUT_STORAGE_KEY = "nevfit_active_workout";
 const ACTIVE_PROGRAM_STORAGE_KEY = "nevfit_active_program";
 const CYCLE_START_DATE_STORAGE_KEY = "nevfit_cycle_start_date";
 const CYCLE_LENGTH_WEEKS_STORAGE_KEY = "nevfit_cycle_length_weeks";
+const STEPS_STORAGE_KEY = "nevfit_steps";
 const DEFAULT_REST_SECONDS = 120;
 const DEFAULT_CYCLE_LENGTH_WEEKS = 12;
 const workoutNumberInputClassName =
@@ -364,13 +365,26 @@ function getCurrentWeekdayId() {
 }
 
 function getTodayDateInputValue() {
-  return new Date().toISOString().slice(0, 10);
+  return getDateInputValue(new Date());
 }
 
-function getStartOfWeek(date) {
+function getDateInputValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getStartOfWeek(date, firstDayId = weekSchedule[0]?.id ?? "mon") {
+  const firstDayIndex = dayIdsByDateIndex.indexOf(firstDayId);
+  const normalizedFirstDayIndex = firstDayIndex >= 0 ? firstDayIndex : 1;
   const startOfWeek = new Date(date);
   startOfWeek.setHours(0, 0, 0, 0);
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  startOfWeek.setDate(
+    startOfWeek.getDate() -
+      ((startOfWeek.getDay() - normalizedFirstDayIndex + 7) % 7),
+  );
 
   return startOfWeek;
 }
@@ -391,8 +405,87 @@ function getCompletedWorkoutsThisWeek(completedWorkouts) {
 
     const completedAt = new Date(workout.completedAt);
 
-    return completedAt >= startOfWeek && completedAt < endOfWeek;
+    return (
+      !Number.isNaN(completedAt.getTime()) &&
+      completedAt >= startOfWeek &&
+      completedAt < endOfWeek
+    );
   }).length;
+}
+
+function isValidStepEntryDate(date) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}
+
+function normalizeStoredSteps(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([date, steps]) => [date, Number(steps)])
+      .filter(
+        ([date, steps]) =>
+          isValidStepEntryDate(date) &&
+          Number.isInteger(steps) &&
+          steps >= 0,
+      ),
+  );
+}
+
+function loadStoredSteps() {
+  try {
+    const storedSteps = window.localStorage.getItem(STEPS_STORAGE_KEY);
+
+    return storedSteps ? normalizeStoredSteps(JSON.parse(storedSteps)) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistSteps(stepsByDate) {
+  window.localStorage.setItem(STEPS_STORAGE_KEY, JSON.stringify(stepsByDate));
+}
+
+function getStepAverageForLastSevenDays(stepsByDate) {
+  const today = new Date();
+  const values = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(today.getDate() - index);
+
+    return stepsByDate[getDateInputValue(date)];
+  }).filter((steps) => Number.isInteger(steps));
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  return Math.round(
+    values.reduce((total, steps) => total + steps, 0) / values.length,
+  );
+}
+
+function getRecentStepEntries(stepsByDate) {
+  return Object.entries(stepsByDate)
+    .sort(([firstDate], [secondDate]) => secondDate.localeCompare(firstDate))
+    .slice(0, 7)
+    .map(([date, steps]) => ({ date, steps }));
+}
+
+function formatStepEntryDate(dateInputValue) {
+  const date = new Date(`${dateInputValue}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateInputValue;
+  }
+
+  return date.toLocaleDateString([], {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
 
 function getCycleWeekLabel(cycleStartDate, cycleLengthWeeks) {
@@ -1018,6 +1111,10 @@ function App() {
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
   );
+  const [stepsByDate, setStepsByDate] = useState(loadStoredSteps);
+  const [stepEntryDate, setStepEntryDate] = useState(getTodayDateInputValue);
+  const [stepEntryValue, setStepEntryValue] = useState("");
+  const [stepSaveMessage, setStepSaveMessage] = useState("");
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
@@ -1105,6 +1202,16 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [programSaveStatus]);
+
+  useEffect(() => {
+    if (!stepSaveMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => setStepSaveMessage(""), 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [stepSaveMessage]);
 
   useEffect(() => {
     if (!exerciseFinderOpen) {
@@ -1448,6 +1555,40 @@ function App() {
       await signOutUser();
     } catch (error) {
       console.error("Google sign-out failed:", error);
+    }
+  }
+
+  function saveStepEntry() {
+    const normalizedStepValue = stepEntryValue.trim();
+
+    if (!isValidStepEntryDate(stepEntryDate)) {
+      setStepSaveMessage("Choose a valid date.");
+      return;
+    }
+
+    if (!/^\d+$/.test(normalizedStepValue)) {
+      setStepSaveMessage("Enter a non-negative whole number.");
+      return;
+    }
+
+    const steps = Number(normalizedStepValue);
+
+    if (!Number.isSafeInteger(steps)) {
+      setStepSaveMessage("Enter a smaller step count.");
+      return;
+    }
+
+    const nextStepsByDate = {
+      ...stepsByDate,
+      [stepEntryDate]: steps,
+    };
+
+    try {
+      persistSteps(nextStepsByDate);
+      setStepsByDate(nextStepsByDate);
+      setStepSaveMessage("Steps saved.");
+    } catch {
+      setStepSaveMessage("Steps could not be saved.");
     }
   }
 
@@ -2217,6 +2358,8 @@ function App() {
   ).length;
   const completedWorkoutsThisWeek =
     getCompletedWorkoutsThisWeek(completedWorkouts);
+  const averageStepsLastSevenDays = getStepAverageForLastSevenDays(stepsByDate);
+  const recentStepEntries = getRecentStepEntries(stepsByDate);
   const latestCompletedWorkout =
     [...completedWorkouts]
       .filter((workout) =>
@@ -2502,11 +2645,88 @@ function App() {
               </article>
 
               <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-                {[
-                  "Runs This Week",
-                  "Average Daily Steps",
-                  "Progress Highlights",
-                ].map((placeholderTitle) => (
+                <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Average Daily Steps
+                  </p>
+                  {averageStepsLastSevenDays === null ? (
+                    <p className="mt-3 text-sm text-slate-400">
+                      Add steps to start tracking your 7-day average.
+                    </p>
+                  ) : (
+                    <h2 className="mt-3 text-3xl font-bold text-white">
+                      {averageStepsLastSevenDays.toLocaleString()}
+                    </h2>
+                  )}
+
+                  <form
+                    className="mt-4 grid gap-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveStepEntry();
+                    }}
+                  >
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                      <label className="text-sm font-semibold text-slate-300">
+                        Date
+                        <input
+                          type="date"
+                          value={stepEntryDate}
+                          max={getTodayDateInputValue()}
+                          onChange={(event) =>
+                            setStepEntryDate(event.target.value)
+                          }
+                          className={`${routineEditorInputClassName} mt-1`}
+                        />
+                      </label>
+                      <label className="text-sm font-semibold text-slate-300">
+                        Step Count
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          step="1"
+                          value={stepEntryValue}
+                          onChange={(event) =>
+                            setStepEntryValue(event.target.value)
+                          }
+                          className={`${routineEditorInputClassName} mt-1`}
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                    >
+                      Save Steps
+                    </button>
+                    {stepSaveMessage ? (
+                      <p className="text-sm font-semibold text-emerald-200">
+                        {stepSaveMessage}
+                      </p>
+                    ) : null}
+                  </form>
+
+                  {recentStepEntries.length > 0 ? (
+                    <ul className="mt-4 space-y-2 border-t border-slate-800 pt-4">
+                      {recentStepEntries.map((entry) => (
+                        <li
+                          key={entry.date}
+                          className="flex items-center justify-between gap-3 text-sm"
+                        >
+                          <span className="text-slate-400">
+                            {formatStepEntryDate(entry.date)}
+                          </span>
+                          <span className="font-semibold text-slate-200">
+                            {entry.steps.toLocaleString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </article>
+
+                {["Runs This Week", "Progress Highlights"].map((placeholderTitle) => (
                   <article
                     key={placeholderTitle}
                     className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4"

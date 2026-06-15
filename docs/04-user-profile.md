@@ -12,6 +12,7 @@ Implemented:
 - Google sign-in
 - Sign-out
 - App-level auth state: `currentUser` and `authLoading`
+- Authenticated UI gate
 - Firestore profile sync at `users/{uid}`
 
 Not implemented yet:
@@ -21,6 +22,10 @@ Not implemented yet:
 - Cloud schedule storage
 - User settings editor
 - Profile editing UI
+
+Signed-out users see only the NevFit sign-in screen. While auth state is
+loading, the app shows a loading screen so the main app does not flash before
+Firebase resolves the current user.
 
 ## Profile Document
 
@@ -75,6 +80,9 @@ These remain in `localStorage`:
 - Active workout
 - Completed workout history
 - Cycle settings
+- Manual steps
+- Manual runs
+- Weekly run target
 
 Future cloud-sync work should migrate those surfaces deliberately, one slice at
 a time.

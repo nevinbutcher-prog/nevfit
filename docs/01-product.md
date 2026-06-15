@@ -30,16 +30,22 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Custom programs and routines
 - Routine duplication, rename, archive, and save feedback
 - Workout mode with active workout persistence
-- Rest timer
+- Rest timer with repeated audible alarm, vibration support, and strong complete state
 - Append-only completed workout history
 - Previous performance derived from completed workout history
 - Blank workout sessions are non-destructive and are not saved as completed workouts
-- wger-native exercise search
+- Provider-neutral exercise library search
+- Dedicated Add Exercises builder flow that stays open for repeated additions
 - Selectable exercise result cards for Add and Swap flows
-- Exercise metadata display for source, muscle, equipment, and instructions where available
+- Exercise image, muscle, equipment, instruction, and image-credit display where available
+- Collapsed routine exercise cards with single-item expanded editing
 - Routine-level exercise display name overrides for variants like DB Reverse Lunge
+- Manual step entry with 7-day average dashboard metric
+- Manual run logging with configurable weekly run target
 - Firebase Google sign-in
+- Authenticated app gate with signed-out landing screen
 - Firestore `users/{uid}` profile document sync
+- Settings/About attribution for exercise data and images
 
 ## Current Product Direction
 
@@ -52,10 +58,13 @@ Users can:
 - Schedule workouts
 - Create and manage programs and routines
 - Build custom training splits
-- Search wger exercises while editing routines
-- Rename selected exercises inside a routine without changing the underlying wger ID
+- Search the NevFit exercise library while editing routines
+- Add multiple exercises in a focused builder workflow
+- Scan routines quickly with compact exercise cards and expand one exercise to edit
+- Rename selected exercises inside a routine without changing the underlying exercise ID
 - Track workout history
 - Review previous performance
+- Track manual steps and weekly runs until integrations exist
 
 Future expansion:
 
@@ -64,6 +73,6 @@ Future expansion:
 - Progression tracking
 - PR tracking
 - Custom exercise creation
-- Runs and steps integrations
+- Automatic runs and steps integrations
 - Family coaching
 - Nutrition and health tracking

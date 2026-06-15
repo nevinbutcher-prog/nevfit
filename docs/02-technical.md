@@ -39,6 +39,9 @@ Root Firebase config files:
 - `nevfit_completed_workouts`
 - `nevfit_cycle_start_date`
 - `nevfit_cycle_length_weeks`
+- `nevfit_steps`
+- `nevfit_runs`
+- `nevfit_weekly_run_target`
 
 Legacy note: older docs may mention `nevfit_routines`; the current program
 editor persists program definitions through `nevfit_programs`.
@@ -82,6 +85,15 @@ Completed workout records preserve that snapped name in `exerciseName`, so
 history keeps the name used during the workout even if the routine is renamed
 later.
 
+The routine builder is search-first and edit-on-demand:
+
+- program management is collapsed into a compact header
+- day tabs select the routine being edited
+- exercise cards are compact by default
+- only one exercise card expands at a time for editing
+- the Add Exercises modal stays open after add-mode selections and resets search for the next addition
+- swap-mode still closes after the replacement exercise is selected
+
 ## Exercise Provider
 
 Exercise search is routed through `src/services/exerciseProvider.js`.
@@ -108,6 +120,8 @@ Normalized exercise shape:
   primaryMuscle,
   secondaryMuscles,
   equipment,
+  images,
+  imageUrl,
   aliases,
   defaultSets,
   defaultRepRange,
@@ -115,6 +129,19 @@ Normalized exercise shape:
   source,
   sourceId,
   instructions,
+}
+```
+
+`images` is always an array and `imageUrl` is either the preferred display
+image or `null`. Image entries include:
+
+```js
+{
+  id,
+  url,
+  isMain,
+  license,
+  licenseAuthor,
 }
 ```
 
@@ -132,8 +159,45 @@ search results. The equipment filter is hidden for now because wger equipment
 metadata is often incomplete or too generic. Equipment is still displayed on
 result cards when available.
 
+The UI uses provider-neutral exercise-library copy. wger attribution belongs in
+Settings/About, and image credits appear only inside expanded exercise details
+when license metadata exists.
+
 There is no local catalog fallback, local taxonomy merge layer, or local result
 set.
+
+## Dashboard Health Metrics
+
+Manual steps are stored in `nevfit_steps` as a date-keyed object:
+
+```js
+{
+  "2026-06-14": 10342
+}
+```
+
+The dashboard average step metric uses saved entries from the last seven
+calendar days including today, ignoring days without saved step data. The step
+entry form defaults to yesterday and is collapsed behind the dashboard metric by
+default.
+
+Manual runs are stored in `nevfit_runs`:
+
+```js
+[
+  {
+    id,
+    date,
+    distanceKm,
+    durationMinutes,
+    notes
+  }
+]
+```
+
+Only `date` is required. The dashboard run count uses the same week-start logic
+as completed workouts. `nevfit_weekly_run_target` persists the configurable
+weekly target, currently exposed as 2 or 3.
 
 ## Firebase Identity Layer
 
@@ -147,6 +211,10 @@ Authentication is isolated in `src/services/auth.js`:
 
 The app tracks `currentUser` and `authLoading`, but signing in does not alter
 workout, program, schedule, active workout, or history persistence.
+
+When `authLoading` is true, the app shows a loading screen and does not flash
+the main app. When `currentUser` is null, the app shows only the sign-in screen.
+The authenticated app remains localStorage-backed.
 
 `src/services/userProfile.js` exports `ensureUserProfile(user)`, which creates
 or updates `users/{uid}` with `setDoc(..., { merge: true })`. This is the only
@@ -163,3 +231,15 @@ Firestore rules are intentionally narrow:
   workout storage
 - Durable selected exercise metadata if offline reload behavior becomes
   important
+
+## Static Assets
+
+Timer completion audio lives under:
+
+```text
+public/sounds/rest-complete.wav
+```
+
+The rest timer uses this file through a small sound config and plays it twice
+on completion, with mobile vibration where supported. Future timer sounds can
+be added under `public/sounds/`.

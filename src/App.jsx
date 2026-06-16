@@ -423,6 +423,19 @@ function getCompletedWorkoutsThisWeek(completedWorkouts) {
   }).length;
 }
 
+function isSameDateInputValue(dateInputValue, date) {
+  if (!dateInputValue) {
+    return false;
+  }
+
+  const candidateDate = new Date(date);
+
+  return (
+    !Number.isNaN(candidateDate.getTime()) &&
+    getDateInputValue(candidateDate) === dateInputValue
+  );
+}
+
 function isValidDateInputValue(date) {
   return /^\d{4}-\d{2}-\d{2}$/.test(date);
 }
@@ -1356,6 +1369,8 @@ function App() {
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
+  const [selectedCompletedWorkoutId, setSelectedCompletedWorkoutId] =
+    useState(null);
   const [expandedWorkoutDetailsExerciseId, setExpandedWorkoutDetailsExerciseId] =
     useState(null);
   const wakeLockRef = useRef(null);
@@ -2309,6 +2324,11 @@ function App() {
     setViewMode("workout");
   }
 
+  function openCompletedWorkoutDetails(completedWorkout) {
+    setSelectedCompletedWorkoutId(completedWorkout.id);
+    setViewMode("completed-workout");
+  }
+
   function discardWorkout() {
     setActiveWorkoutSession(null);
     setRestTimer(null);
@@ -2611,6 +2631,7 @@ function App() {
   const todayScheduleDay = schedule.find(
     (day) => day.id === todayScheduleDayId,
   );
+  const todayDateInputValue = getTodayDateInputValue();
   const todayRoutineDay = getProgramDay(
     todayScheduleDay?.routineDayId,
     programDefinitions,
@@ -2625,6 +2646,23 @@ function App() {
     Boolean(activeWorkoutSession && todayScheduleDay && todayRoutineDay) &&
     activeWorkoutSession.scheduleDayId === todayScheduleDay.id &&
     activeWorkoutSession.routineDayId === todayRoutineDay.id;
+  const todayCompletedWorkout =
+    todayRoutineDay
+      ? [...completedWorkouts]
+          .filter(
+            (workout) =>
+              workout.routineDayId === todayRoutineDay.id &&
+              isSameDateInputValue(todayDateInputValue, workout.completedAt) &&
+              workout.exercises.some((exercise) =>
+                exercise.sets.some(hasMeaningfulLoggedEffort),
+              ),
+          )
+          .sort(
+            (firstWorkout, secondWorkout) =>
+              Date.parse(secondWorkout.completedAt) -
+              Date.parse(firstWorkout.completedAt),
+          )[0] ?? null
+      : null;
   const dashboardProgram =
     programDefinitions.find(
       (program) => program.id === selectedProgramId && !program.archived,
@@ -2640,18 +2678,10 @@ function App() {
   const recentStepEntries = getRecentStepEntries(stepsByDate);
   const runsThisWeek = getRunsThisWeek(runs);
   const recentRuns = getRecentRuns(runs);
-  const latestCompletedWorkout =
-    [...completedWorkouts]
-      .filter((workout) =>
-        workout.exercises.some((exercise) =>
-          exercise.sets.some(hasMeaningfulLoggedEffort),
-        ),
-      )
-      .sort(
-        (firstWorkout, secondWorkout) =>
-          Date.parse(secondWorkout.completedAt) -
-          Date.parse(firstWorkout.completedAt),
-      )[0] ?? null;
+  const selectedCompletedWorkout =
+    completedWorkouts.find(
+      (workout) => workout.id === selectedCompletedWorkoutId,
+    ) ?? todayCompletedWorkout;
   const cycleWeekLabel = getCycleWeekLabel(cycleStartDate, cycleLengthWeeks);
 
   return (
@@ -2672,10 +2702,23 @@ function App() {
                   </p>
                 ) : currentUser ? (
                   <>
-                    <p className="max-w-full truncate text-sm font-semibold text-slate-200">
-                      Welcome,{" "}
-                      {currentUser.displayName ?? currentUser.email ?? "Athlete"}
-                    </p>
+                    <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:justify-end">
+                      <p className="min-w-0 truncate text-sm font-semibold text-slate-200">
+                        Welcome,{" "}
+                        {currentUser.displayName ??
+                          currentUser.email ??
+                          "Athlete"}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("settings")}
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-700 text-xl font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+                        aria-label="Open settings"
+                        title="Settings"
+                      >
+                        ⚙
+                      </button>
+                    </div>
                     <button
                       type="button"
                       onClick={handleSignOut}
@@ -2695,7 +2738,7 @@ function App() {
                 )}
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem]">
+            <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[26rem]">
               <button
                 type="button"
                 onClick={() => setViewMode("dashboard")}
@@ -2729,17 +2772,6 @@ function App() {
               >
                 Programs
               </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("settings")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  viewMode === "settings"
-                    ? "bg-emerald-400 text-slate-950"
-                    : "text-slate-300 hover:bg-slate-800"
-                }`}
-              >
-                Settings
-              </button>
             </div>
           </header>
         ) : null}
@@ -2752,19 +2784,41 @@ function App() {
               </p>
             ) : null}
 
-            <article className="min-w-0 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30 sm:p-6">
+            <article
+              className={`min-w-0 rounded-2xl border bg-slate-900 p-5 shadow-2xl sm:p-6 ${
+                todayCompletedWorkout
+                  ? "border-emerald-300/70 shadow-emerald-950/40"
+                  : "border-emerald-400/40 shadow-emerald-950/30"
+              }`}
+            >
               <div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-end md:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">
                     Today
                   </p>
                   <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
-                    {todayRoutineDay ? todayRoutineDay.name : "Rest Day"}
+                    {todayCompletedWorkout
+                      ? `✓ ${todayRoutineDay.name} Complete`
+                      : todayRoutineDay
+                        ? todayRoutineDay.name
+                        : "Rest Day"}
                   </h2>
+                  {todayCompletedWorkout ? (
+                    <p className="mt-3 text-base font-semibold text-emerald-200">
+                      Completed Today
+                    </p>
+                  ) : null}
                   {todayRoutineDay ? (
                     <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-slate-300">
                       <span>{todayExerciseCount} exercises</span>
                       <span>{todaySetCount} sets</span>
+                      {todayCompletedWorkout ? (
+                        <span>
+                          {formatFinishedTime(
+                            new Date(todayCompletedWorkout.completedAt),
+                          )}
+                        </span>
+                      ) : null}
                     </div>
                   ) : (
                     <p className="mt-4 text-base text-slate-300">
@@ -2777,11 +2831,17 @@ function App() {
                   <button
                     type="button"
                     onClick={() =>
-                      openWorkout(todayScheduleDay, todayRoutineDay)
+                      todayCompletedWorkout
+                        ? openCompletedWorkoutDetails(todayCompletedWorkout)
+                        : openWorkout(todayScheduleDay, todayRoutineDay)
                     }
                     className="w-full rounded-xl bg-emerald-400 px-5 py-4 text-base font-bold text-slate-950 transition hover:bg-emerald-300 md:w-auto md:min-w-52"
                   >
-                    {isTodayWorkoutActive ? "Resume Workout" : "Start Workout"}
+                    {todayCompletedWorkout
+                      ? "View Workout"
+                      : isTodayWorkoutActive
+                        ? "Resume Workout"
+                        : "Start Workout"}
                   </button>
                 ) : plannedWorkoutsThisWeek === 0 ? (
                   <button
@@ -2795,41 +2855,35 @@ function App() {
               </div>
             </article>
 
-            <div className="grid gap-4 lg:grid-cols-3">
-              <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Current Program
-                </p>
-                {dashboardProgram ? (
-                  <>
-                    <h2 className="mt-3 text-2xl font-bold text-white">
-                      {dashboardProgram.name}
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-400">
-                      {dashboardProgram.days.length} routines
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="mt-3 text-xl font-bold text-white">
-                      No Program Selected
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-400">
-                      Create a Program to get started.
-                    </p>
-                  </>
-                )}
-              </article>
-
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
               <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      Current Cycle
+                      Current Plan
                     </p>
-                    <h2 className="mt-3 text-2xl font-bold text-white">
-                      {cycleWeekLabel}
-                    </h2>
+                    {dashboardProgram ? (
+                      <>
+                        <h2 className="mt-3 text-3xl font-bold text-white">
+                          {dashboardProgram.name}
+                        </h2>
+                        <p className="mt-2 text-base font-semibold text-slate-300">
+                          {cycleWeekLabel}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {dashboardProgram.days.length} routines
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h2 className="mt-3 text-xl font-bold text-white">
+                          No Program Selected
+                        </h2>
+                        <p className="mt-2 text-sm text-slate-400">
+                          Create a Program to get started.
+                        </p>
+                      </>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -2890,59 +2944,36 @@ function App() {
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                   This Week
                 </p>
-                {plannedWorkoutsThisWeek > 0 ? (
-                  <>
-                    <p className="mt-3 text-sm font-semibold text-slate-300">
-                      Workouts Completed
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Workouts
                     </p>
-                    <h2 className="mt-1 text-3xl font-bold text-white">
+                    <p className="mt-2 text-2xl font-bold text-white">
                       {completedWorkoutsThisWeek} / {plannedWorkoutsThisWeek}
-                    </h2>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="mt-3 text-xl font-bold text-white">
-                      No Workouts Scheduled
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-400">
-                      Assign routines in Week View.
                     </p>
-                  </>
-                )}
-              </article>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-              <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Latest Workout
-                </p>
-                {latestCompletedWorkout ? (
-                  <>
-                    <h2 className="mt-3 text-2xl font-bold text-white">
-                      {latestCompletedWorkout.routineDayName}
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-400">
-                      {formatCompletedRelativeDate(
-                        latestCompletedWorkout.completedAt,
-                      )}
+                  </div>
+                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Runs
                     </p>
-                  </>
-                ) : (
-                  <p className="mt-3 text-sm text-slate-400">
-                    No workouts completed yet.
-                  </p>
-                )}
-              </article>
+                    <p className="mt-2 text-2xl font-bold text-white">
+                      {runsThisWeek} / {weeklyRunTarget}
+                    </p>
+                  </div>
+                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Avg Steps
+                    </p>
+                    <p className="mt-2 text-2xl font-bold text-white">
+                      {averageStepsLastSevenDays === null
+                        ? "-"
+                        : averageStepsLastSevenDays.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
 
-              <div className="grid gap-4 lg:grid-cols-1">
-                <article
-                  className={`min-w-0 rounded-xl border bg-slate-900 p-4 transition ${
-                    expandedDashboardEntry === "runs"
-                      ? "border-emerald-400/70"
-                      : "border-slate-800"
-                  }`}
-                >
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={() =>
@@ -2950,23 +2981,34 @@ function App() {
                         currentEntry === "runs" ? null : "runs",
                       )
                     }
-                    className="w-full rounded-lg text-left transition hover:bg-slate-800/60"
+                    className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                      expandedDashboardEntry === "runs"
+                        ? "border-emerald-400 bg-slate-800 text-white"
+                        : "border-slate-700 text-slate-200 hover:border-slate-500"
+                    }`}
                     aria-expanded={expandedDashboardEntry === "runs"}
                   >
-                    <div className="flex min-w-0 items-start justify-between gap-3 p-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                          Runs This Week
-                        </p>
-                        <h2 className="mt-3 text-3xl font-bold text-white">
-                          {runsThisWeek}/{weeklyRunTarget}
-                        </h2>
-                      </div>
-                      <span className="shrink-0 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300">
-                        {expandedDashboardEntry === "runs" ? "Hide" : "Log"}
-                      </span>
-                    </div>
+                    {expandedDashboardEntry === "runs" ? "Hide Runs" : "Log Run"}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedDashboardEntry((currentEntry) =>
+                        currentEntry === "steps" ? null : "steps",
+                      )
+                    }
+                    className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+                      expandedDashboardEntry === "steps"
+                        ? "border-emerald-400 bg-slate-800 text-white"
+                        : "border-slate-700 text-slate-200 hover:border-slate-500"
+                    }`}
+                    aria-expanded={expandedDashboardEntry === "steps"}
+                  >
+                    {expandedDashboardEntry === "steps"
+                      ? "Hide Steps"
+                      : "Add Steps"}
+                  </button>
+                </div>
 
                   {expandedDashboardEntry === "runs" ? (
                     <div className="mt-4 border-t border-slate-800 pt-4">
@@ -3078,45 +3120,6 @@ function App() {
                       ) : null}
                     </div>
                   ) : null}
-                </article>
-
-                <article
-                  className={`min-w-0 rounded-xl border bg-slate-900 p-4 transition ${
-                    expandedDashboardEntry === "steps"
-                      ? "border-emerald-400/70"
-                      : "border-slate-800"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedDashboardEntry((currentEntry) =>
-                        currentEntry === "steps" ? null : "steps",
-                      )
-                    }
-                    className="w-full rounded-lg text-left transition hover:bg-slate-800/60"
-                    aria-expanded={expandedDashboardEntry === "steps"}
-                  >
-                    <div className="flex min-w-0 items-start justify-between gap-3 p-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                          Average Daily Steps
-                        </p>
-                        {averageStepsLastSevenDays === null ? (
-                          <p className="mt-3 text-sm text-slate-400">
-                            Add steps to start tracking your 7-day average.
-                          </p>
-                        ) : (
-                          <h2 className="mt-3 text-3xl font-bold text-white">
-                            {averageStepsLastSevenDays.toLocaleString()}
-                          </h2>
-                        )}
-                      </div>
-                      <span className="shrink-0 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300">
-                        {expandedDashboardEntry === "steps" ? "Hide" : "Add"}
-                      </span>
-                    </div>
-                  </button>
 
                   {expandedDashboardEntry === "steps" ? (
                     <div className="mt-4 border-t border-slate-800 pt-4">
@@ -3187,23 +3190,90 @@ function App() {
                       ) : null}
                     </div>
                   ) : null}
-                </article>
-
-                {["Progress Highlights"].map((placeholderTitle) => (
-                  <article
-                    key={placeholderTitle}
-                    className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4"
-                  >
-                    <p className="text-sm font-semibold text-slate-300">
-                      {placeholderTitle}
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-slate-500">
-                      Coming Soon
-                    </p>
-                  </article>
-                ))}
-              </div>
+              </article>
             </div>
+
+            {["Progress Highlights"].map((placeholderTitle) => (
+              <article
+                key={placeholderTitle}
+                className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4"
+              >
+                <p className="text-sm font-semibold text-slate-300">
+                  {placeholderTitle}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  Coming Soon
+                </p>
+              </article>
+            ))}
+          </section>
+        ) : null}
+
+        {viewMode === "completed-workout" ? (
+          <section className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Completed Workout
+                </p>
+                <h2 className="mt-2 text-3xl font-bold text-white">
+                  {selectedCompletedWorkout?.routineDayName ??
+                    "Workout Not Found"}
+                </h2>
+                {selectedCompletedWorkout ? (
+                  <p className="mt-2 text-sm font-semibold text-emerald-200">
+                    {formatCompletedRelativeDate(
+                      selectedCompletedWorkout.completedAt,
+                    )}{" "}
+                    at{" "}
+                    {formatFinishedTime(
+                      new Date(selectedCompletedWorkout.completedAt),
+                    )}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-400">
+                    The selected workout is no longer available.
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewMode("dashboard")}
+                className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
+              >
+                Back To Dashboard
+              </button>
+            </div>
+
+            {selectedCompletedWorkout ? (
+              <ul className="mt-4 grid gap-3 lg:grid-cols-2">
+                {selectedCompletedWorkout.exercises.map((exercise) => (
+                  <li
+                    key={exercise.exerciseId}
+                    className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                  >
+                    <p className="font-semibold text-white">
+                      {exercise.exerciseName}
+                    </p>
+                    <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                      {exercise.sets.map((set) => (
+                        <li
+                          key={set.setNumber}
+                          className="flex items-center justify-between gap-3 rounded-lg bg-slate-900 px-3 py-2"
+                        >
+                          <span className="font-semibold">
+                            Set {set.setNumber}
+                          </span>
+                          <span>
+                            {set.weight || "-"}kg x {set.reps || "-"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </section>
         ) : null}
 

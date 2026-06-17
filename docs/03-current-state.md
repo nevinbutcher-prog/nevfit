@@ -22,10 +22,13 @@
 - Add and Swap exercise picker flows
 - Dedicated Add Exercises modal for repeated exercise additions
 - wger result dedupe and cleaned English display names
+- wger search query normalization and local aliases for common gym-language searches
 - Exercise image normalization and display when available
 - Exercise metadata display for primary muscle, secondary muscles, equipment, and instructions
-- Routine-level exercise display name overrides
+- Optional routine-level exercise display name overrides
+- Lightweight routine superset pairing
 - Workout mode
+- Supersetted exercises render in grouped workout-mode blocks
 - Active workout save/load
 - Non-destructive blank workout close
 - Append-only workout history persistence
@@ -43,6 +46,7 @@
 ## Current Known Limitations
 
 - Exercise search depends on the public wger API.
+- The local exercise alias layer is intentionally small and is not a full exercise taxonomy.
 - wger equipment metadata can be incomplete, so the equipment filter is hidden for now.
 - wger-selected exercise metadata is cached in memory for the current app session; saved routines retain stable wger IDs and can rehydrate metadata with `getExerciseById`.
 - Workout, program, schedule, active workout, and history data are still localStorage-backed.

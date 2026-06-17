@@ -34,12 +34,13 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Append-only completed workout history
 - Previous performance derived from completed workout history
 - Blank workout sessions are non-destructive and are not saved as completed workouts
-- Provider-neutral exercise library search
+- Provider-neutral exercise library search with common gym-language alias support
 - Dedicated Add Exercises builder flow that stays open for repeated additions
 - Selectable exercise result cards for Add and Swap flows
 - Exercise image, muscle, equipment, instruction, and image-credit display where available
 - Collapsed routine exercise cards with single-item expanded editing
-- Routine-level exercise display name overrides for variants like DB Reverse Lunge
+- Optional routine-level exercise display name overrides for variants like DB Reverse Lunge
+- Lightweight superset pairing in routines with grouped workout-mode display
 - Manual step entry with 7-day average dashboard metric
 - Manual run logging with configurable weekly run target
 - Firebase Google sign-in
@@ -61,7 +62,8 @@ Users can:
 - Search the NevFit exercise library while editing routines
 - Add multiple exercises in a focused builder workflow
 - Scan routines quickly with compact exercise cards and expand one exercise to edit
-- Rename selected exercises inside a routine without changing the underlying exercise ID
+- Optionally rename selected exercises inside a routine without changing the underlying exercise ID
+- Pair exercises into simple supersets and log each pair inside one workout block
 - Track workout history
 - Review previous performance
 - Track manual steps and weekly runs until integrations exist

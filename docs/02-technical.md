@@ -75,6 +75,30 @@ exercise. They can also store an optional `displayNameOverride`, allowing a
 base wger movement to be named as a practical routine variant such as
 `DB Reverse Lunge`.
 
+Routine exercises also normalize a lightweight `supersetGroupId` field:
+
+```js
+{
+  exerciseId,
+  sets,
+  repRange,
+  restSeconds,
+  displayNameOverride,
+  note,
+  supersetGroupId,
+}
+```
+
+Missing values normalize to `null`. Older `groupId` values are migrated into
+`supersetGroupId` during routine normalization for local backwards
+compatibility, but new routine data writes `supersetGroupId`.
+
+Supersets are stored as shared group IDs, not one-way exercise links. Pairing
+two ungrouped exercises creates a new `ss-*` group ID. Pairing with an exercise
+already in a group joins that group. Removing a pairing or deleting an exercise
+cleans up orphaned groups so a remaining single exercise has
+`supersetGroupId: null`.
+
 Workout sessions snapshot the effective exercise name at start time:
 
 ```js
@@ -83,7 +107,9 @@ displayNameOverride || exercise.name
 
 Completed workout records preserve that snapped name in `exerciseName`, so
 history keeps the name used during the workout even if the routine is renamed
-later.
+later. Active and completed workout exercise snapshots also preserve
+`supersetGroupId` so workout mode can group paired exercises visually without
+changing timer behavior.
 
 The routine builder is search-first and edit-on-demand:
 
@@ -91,6 +117,8 @@ The routine builder is search-first and edit-on-demand:
 - day tabs select the routine being edited
 - exercise cards are compact by default
 - only one exercise card expands at a time for editing
+- custom display names are hidden behind an explicit checkbox
+- superset pairing is lightweight and uses a simple partner selection control
 - the Add Exercises modal stays open after add-mode selections and resets search for the next addition
 - swap-mode still closes after the replacement exercise is selected
 
@@ -151,8 +179,18 @@ workout screen, and completed history snapshots during the current app session.
 
 Exercise discovery is search-first. `searchExercises(query, filters)` loads an
 English wger `exerciseinfo` pool, normalizes the result names and metadata,
-deduplicates normalized results, and ranks by name/alias relevance. It does not
-use instruction text for direct search ranking.
+deduplicates normalized results, and ranks by normalized name/alias relevance.
+It does not use instruction text for direct search ranking.
+
+Search normalization expands common gym shorthand and awkward wger naming
+variants before ranking. Examples include `db`/`dbs`/`dumbbells` to
+`dumbbell`, `bb` to `barbell`, `presses` to `press`, `benchpress` and
+`bench-press` to `bench press`, plus `pull-down` and `push-down` variants.
+
+The provider includes a small local alias layer for obvious common movements.
+For example, dumbbell and barbell bench press variants can match searches such
+as `db bench`, `dumbbell bench press`, and `flat dumbbell bench press` while
+still returning wger-backed exercises.
 
 The picker currently shows the muscle filter only when populated from current
 search results. The equipment filter is hidden for now because wger equipment
@@ -163,8 +201,8 @@ The UI uses provider-neutral exercise-library copy. wger attribution belongs in
 Settings/About, and image credits appear only inside expanded exercise details
 when license metadata exists.
 
-There is no local catalog fallback, local taxonomy merge layer, or local result
-set.
+There is no full local exercise taxonomy, local catalog fallback, or local
+result set.
 
 ## Dashboard Health Metrics
 

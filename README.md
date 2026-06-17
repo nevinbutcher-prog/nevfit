@@ -12,8 +12,9 @@ The current app supports:
 - Append-only completed workout history
 - Previous performance lookup from completed history
 - Rest timer and workout-mode feedback
-- wger-native exercise search
-- Routine-level exercise name overrides for wger variants
+- wger-native exercise search with common gym-language aliases
+- Optional routine-level exercise display names for wger variants
+- Lightweight routine superset pairing with grouped workout display
 - Firebase Google sign-in and user profile document sync
 
 ## Development

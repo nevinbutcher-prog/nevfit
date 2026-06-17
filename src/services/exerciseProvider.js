@@ -6,6 +6,38 @@ const ENGLISH_LANGUAGE_ID = 2;
 const SEARCH_POOL_LIMIT = 1500;
 let wgerExercisePoolPromise = null;
 
+const SEARCH_TOKEN_ALIASES = new Map([
+  ["db", "dumbbell"],
+  ["dbs", "dumbbell"],
+  ["dumbbells", "dumbbell"],
+  ["bb", "barbell"],
+  ["barbells", "barbell"],
+  ["presses", "press"],
+]);
+
+const LOCAL_EXERCISE_ALIAS_RULES = [
+  {
+    requiredTokens: ["bench", "press", "dumbbell"],
+    aliases: [
+      "dumbbell bench press",
+      "db bench",
+      "db bench press",
+      "flat dumbbell bench press",
+      "flat db bench",
+    ],
+  },
+  {
+    requiredTokens: ["bench", "press", "barbell"],
+    aliases: [
+      "barbell bench press",
+      "bb bench",
+      "bb bench press",
+      "flat barbell bench press",
+      "flat bb bench",
+    ],
+  },
+];
+
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -26,12 +58,30 @@ function normalizeFilterValue(value) {
     .trim();
 }
 
+function normalizeSearchValue(value) {
+  const normalizedValue = normalizeText(value)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\bbench\s*[- ]?\s*press(es)?\b/g, "bench press")
+    .replace(/\bpull\s*[- ]\s*downs?\b/g, "pulldown")
+    .replace(/\bpush\s*[- ]\s*downs?\b/g, "pushdown")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalizedValue
+    .split(" ")
+    .filter(Boolean)
+    .map((token) => SEARCH_TOKEN_ALIASES.get(token) ?? token)
+    .join(" ");
+}
+
 function getSearchTokens(value) {
-  return normalizeFilterValue(value).split(" ").filter(Boolean);
+  return normalizeSearchValue(value).split(" ").filter(Boolean);
 }
 
 function getCanonicalText(value) {
-  return normalizeFilterValue(value);
+  return normalizeSearchValue(value);
 }
 
 function hasTokenPhrase(value, queryTokens) {
@@ -421,46 +471,106 @@ function dedupeExercises(exercises) {
   return Array.from(exercisesByKey.values());
 }
 
-function getExerciseMatchScore(exercise, query) {
-  const normalizedQuery = getCanonicalText(query);
-  const queryTokens = getSearchTokens(query);
-  const normalizedName = getCanonicalText(exercise.name);
-  const aliasValues = exercise.aliases ?? [];
-  const normalizedAliases = aliasValues.map(getCanonicalText);
+function hasEveryToken(value, queryTokens) {
+  if (!queryTokens.length) {
+    return false;
+  }
 
-  if (!normalizedQuery || !normalizedName) {
+  const tokenSet = new Set(getSearchTokens(value));
+
+  return queryTokens.every((queryToken) => tokenSet.has(queryToken));
+}
+
+function getTextMatchScore(value, normalizedQuery, queryTokens) {
+  const normalizedValue = getCanonicalText(value);
+
+  if (!normalizedQuery || !normalizedValue) {
     return null;
   }
 
-  if (normalizedName === normalizedQuery) {
+  if (normalizedValue === normalizedQuery) {
     return 0;
   }
 
-  if (normalizedName.startsWith(`${normalizedQuery} `)) {
+  if (normalizedValue.startsWith(`${normalizedQuery} `)) {
     return 1;
   }
 
-  if (hasTokenPhrase(exercise.name, queryTokens)) {
+  if (hasTokenPhrase(value, queryTokens)) {
     return 2;
   }
 
-  if (hasTokenPrefix(exercise.name, queryTokens)) {
+  if (hasEveryToken(value, queryTokens)) {
     return 3;
   }
 
-  if (normalizedAliases.some((alias) => alias === normalizedQuery)) {
+  if (hasTokenPrefix(value, queryTokens)) {
     return 4;
   }
 
-  if (aliasValues.some((alias) => hasTokenPhrase(alias, queryTokens))) {
-    return 5;
+  return hasSafeSubstringMatch(value, normalizedQuery) ? 8 : null;
+}
+
+function getBestTextMatchScore(values, normalizedQuery, queryTokens, offset = 0) {
+  return values.reduce((bestScore, value) => {
+    const score = getTextMatchScore(value, normalizedQuery, queryTokens);
+
+    if (score === null) {
+      return bestScore;
+    }
+
+    const adjustedScore = score + offset;
+
+    return bestScore === null
+      ? adjustedScore
+      : Math.min(bestScore, adjustedScore);
+  }, null);
+}
+
+function getLocalExerciseAliases(exercise) {
+  const searchableValue = [
+    exercise.name,
+    exercise.originalName,
+    ...(exercise.aliases ?? []),
+    ...(exercise.equipment ?? []),
+  ].join(" ");
+  const tokenSet = new Set(getSearchTokens(searchableValue));
+
+  return LOCAL_EXERCISE_ALIAS_RULES.flatMap((rule) =>
+    rule.requiredTokens.every((token) => tokenSet.has(token))
+      ? rule.aliases
+      : [],
+  );
+}
+
+function getExerciseMatchScore(exercise, query) {
+  const normalizedQuery = getCanonicalText(query);
+  const queryTokens = getSearchTokens(query);
+  const nameScore = getBestTextMatchScore(
+    [exercise.name, exercise.originalName],
+    normalizedQuery,
+    queryTokens,
+  );
+  const localAliasScore = getBestTextMatchScore(
+    getLocalExerciseAliases(exercise),
+    normalizedQuery,
+    queryTokens,
+    0.25,
+  );
+  const sourceAliasScore = getBestTextMatchScore(
+    exercise.aliases ?? [],
+    normalizedQuery,
+    queryTokens,
+    0.5,
+  );
+
+  if (!normalizedQuery) {
+    return null;
   }
 
-  if (aliasValues.some((alias) => hasTokenPrefix(alias, queryTokens))) {
-    return 6;
-  }
-
-  return hasSafeSubstringMatch(exercise.name, normalizedQuery) ? 7 : null;
+  return [nameScore, localAliasScore, sourceAliasScore]
+    .filter((score) => score !== null)
+    .sort((firstScore, secondScore) => firstScore - secondScore)[0] ?? null;
 }
 
 function sortBySearchRelevance(firstExercise, secondExercise, query) {

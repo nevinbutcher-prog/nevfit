@@ -902,22 +902,6 @@ function getSupersetPartnerNames(exercises, exerciseIndex, exerciseLibrary) {
     .filter(Boolean);
 }
 
-function getWorkoutSupersetPartnerNames(exercises, exerciseIndex) {
-  const groupId = exercises[exerciseIndex]?.supersetGroupId;
-
-  if (!groupId) {
-    return [];
-  }
-
-  return exercises
-    .map((exercise, index) =>
-      index !== exerciseIndex && exercise.supersetGroupId === groupId
-        ? exercise.exerciseName
-        : null,
-    )
-    .filter(Boolean);
-}
-
 function createRoutineExerciseFromCatalog(exercise) {
   return {
     exerciseId: exercise.id,
@@ -926,6 +910,54 @@ function createRoutineExerciseFromCatalog(exercise) {
     restSeconds: exercise.defaultRestSeconds ?? DEFAULT_REST_SECONDS,
     supersetGroupId: null,
   };
+}
+
+function groupWorkoutExercises(exercises) {
+  const groupCounts = exercises.reduce((counts, exercise) => {
+    if (!exercise.supersetGroupId) {
+      return counts;
+    }
+
+    counts.set(
+      exercise.supersetGroupId,
+      (counts.get(exercise.supersetGroupId) ?? 0) + 1,
+    );
+
+    return counts;
+  }, new Map());
+  const renderedGroupIds = new Set();
+
+  return exercises
+    .map((exercise, index) => {
+      const groupId = exercise.supersetGroupId;
+
+      if (!groupId || (groupCounts.get(groupId) ?? 0) < 2) {
+        return {
+          type: "single",
+          key: `single-${exercise.exerciseId}-${index}`,
+          exercises: [{ exercise, index }],
+        };
+      }
+
+      if (renderedGroupIds.has(groupId)) {
+        return null;
+      }
+
+      renderedGroupIds.add(groupId);
+
+      return {
+        type: "superset",
+        key: groupId,
+        exercises: exercises
+          .map((groupExercise, groupIndex) =>
+            groupExercise.supersetGroupId === groupId
+              ? { exercise: groupExercise, index: groupIndex }
+              : null,
+          )
+          .filter(Boolean),
+      };
+    })
+    .filter(Boolean);
 }
 
 function LoadingScreen() {
@@ -2701,6 +2733,155 @@ function App() {
   const restTimerDisplay = restTimer
     ? formatTimerSeconds(restTimer.remainingSeconds)
     : "--:--";
+
+  function renderWorkoutExerciseBlock(sessionExercise, exerciseIndex, isNested = false) {
+    const exercise = getExercise(sessionExercise.exerciseId);
+    const previousPerformance = getPreviousExercisePerformance(
+      sessionExercise.exerciseId,
+      activeRoutineDay.id,
+      completedWorkouts,
+    );
+    const exerciseFeedback = getExerciseFeedback(sessionExercise);
+    const workoutDetailsKey = `${sessionExercise.exerciseId}-${exerciseIndex}`;
+    const isWorkoutDetailsExpanded =
+      expandedWorkoutDetailsExerciseId === workoutDetailsKey;
+
+    return (
+      <div
+        className={
+          isNested
+            ? "min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-3"
+            : ""
+        }
+      >
+        <div>
+          <p className="font-medium text-slate-100">
+            {sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise"}
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            Target: {sessionExercise.prescribedSets} x {sessionExercise.repRange}
+            {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
+          </p>
+          {exerciseFeedback ? (
+            <p
+              className={`mt-3 inline-flex max-w-full items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${
+                exerciseFeedbackStyles[exerciseFeedback.status]
+              }`}
+            >
+              {exerciseFeedback.label}
+            </p>
+          ) : null}
+        </div>
+
+        {exercise ? (
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/60">
+            <button
+              type="button"
+              onClick={() =>
+                setExpandedWorkoutDetailsExerciseId((currentExerciseId) =>
+                  currentExerciseId === workoutDetailsKey
+                    ? null
+                    : workoutDetailsKey,
+                )
+              }
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+              aria-expanded={isWorkoutDetailsExpanded}
+            >
+              <span>Exercise Details</span>
+              <span>{isWorkoutDetailsExpanded ? "Hide" : "Show"}</span>
+            </button>
+            {isWorkoutDetailsExpanded ? (
+              <div className="border-t border-slate-800 p-3">
+                <ExerciseMetadata exercise={exercise} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mt-4 min-w-0 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Previous Session
+          </p>
+          {previousPerformance ? (
+            <ul className="mt-2 space-y-1 text-sm text-slate-300">
+              {previousPerformance.sets.map((set) => (
+                <li key={set.setNumber}>
+                  {set.weight ? `${set.weight}kg` : "-"} &times;{" "}
+                  {set.reps || "-"}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-slate-400">
+              No previous session logged
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 min-w-0 space-y-2">
+          {sessionExercise.sets.map((set) => {
+            const repRange = parseRepRange(sessionExercise.repRange);
+            const setFeedback = getSetFeedback(set, repRange);
+
+            return (
+              <div
+                key={set.setNumber}
+                className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2"
+              >
+                <span className="text-sm font-medium text-slate-300">
+                  Set {set.setNumber}
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  placeholder="Weight"
+                  value={set.weight}
+                  onChange={(event) =>
+                    updateSetValue(
+                      sessionExercise.exerciseId,
+                      set.setNumber,
+                      "weight",
+                      event.target.value,
+                    )
+                  }
+                  className={workoutNumberInputClassName}
+                />
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  placeholder="Reps"
+                  value={set.reps}
+                  onChange={(event) =>
+                    updateSetValue(
+                      sessionExercise.exerciseId,
+                      set.setNumber,
+                      "reps",
+                      event.target.value,
+                    )
+                  }
+                  className={`${workoutNumberInputClassName} ${
+                    setFeedback ? setFeedbackStyles[setFeedback] : ""
+                  }`}
+                />
+                {setFeedback ? (
+                  <span
+                    className={`col-span-3 rounded-md border px-2.5 py-1 text-xs font-semibold ${
+                      setFeedbackStyles[setFeedback]
+                    }`}
+                  >
+                    {setFeedbackLabels[setFeedback]}
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   const activeProgramDefinitions = programDefinitions.filter(
     (program) => !program.archived,
   );
@@ -3925,7 +4106,7 @@ function App() {
 
                                 {isExpanded ? (
                                   <div className="border-t border-slate-800 p-3">
-                                    <div className="grid min-w-0 gap-3 md:grid-cols-2">
+                                    <div className="grid min-w-0 gap-3">
                                       <label className="min-w-0 text-sm font-semibold text-slate-300">
                                         Exercise
                                         <select
@@ -3966,40 +4147,6 @@ function App() {
                                                 {catalogExercise.name}
                                               </option>
                                             ),
-                                          )}
-                                        </select>
-                                      </label>
-
-                                      <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                        Superset with
-                                        <select
-                                          value={selectedSupersetValue}
-                                          onChange={(event) =>
-                                            updateExerciseSuperset(
-                                              selectedProgramDraft.id,
-                                              selectedProgramDayDraft.id,
-                                              index,
-                                              event.target.value
-                                                ? Number(event.target.value)
-                                                : null,
-                                            )
-                                          }
-                                          className={`${routineEditorSelectClassName} mt-1`}
-                                        >
-                                          <option value="">None</option>
-                                          {selectedProgramDayDraft.exercises.map(
-                                            (exerciseItem, exerciseIndex) =>
-                                              exerciseIndex === index ? null : (
-                                                <option
-                                                  key={`${exerciseItem.exerciseId}-${exerciseIndex}`}
-                                                  value={exerciseIndex}
-                                                >
-                                                  {getRoutineExerciseName(
-                                                    exerciseItem,
-                                                    exerciseLibrary,
-                                                  )}
-                                                </option>
-                                              ),
                                           )}
                                         </select>
                                       </label>
@@ -4083,6 +4230,60 @@ function App() {
                                           </span>
                                         </label>
                                       ) : null}
+                                    </div>
+
+                                    <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                                      <p className="text-sm font-semibold text-slate-300">
+                                        Superset with
+                                      </p>
+                                      <div className="mt-2 flex min-w-0 flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            updateExerciseSuperset(
+                                              selectedProgramDraft.id,
+                                              selectedProgramDayDraft.id,
+                                              index,
+                                              null,
+                                            )
+                                          }
+                                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                                            selectedSupersetValue
+                                              ? "border-slate-700 text-slate-200 hover:border-slate-500"
+                                              : "border-emerald-400 bg-emerald-400 text-slate-950"
+                                          }`}
+                                        >
+                                          None
+                                        </button>
+                                        {selectedProgramDayDraft.exercises.map(
+                                          (exerciseItem, exerciseIndex) =>
+                                            exerciseIndex === index ? null : (
+                                              <button
+                                                key={`${exerciseItem.exerciseId}-${exerciseIndex}`}
+                                                type="button"
+                                                onClick={() =>
+                                                  updateExerciseSuperset(
+                                                    selectedProgramDraft.id,
+                                                    selectedProgramDayDraft.id,
+                                                    index,
+                                                    exerciseIndex,
+                                                  )
+                                                }
+                                                className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${
+                                                  selectedSupersetValue ===
+                                                  String(exerciseIndex)
+                                                    ? "border-emerald-400 bg-emerald-400 text-slate-950"
+                                                    : "border-slate-700 text-slate-200 hover:border-slate-500"
+                                                }`}
+                                              >
+                                                {getRoutineExerciseName(
+                                                  exerciseItem,
+                                                  exerciseLibrary,
+                                                )}
+                                              </button>
+                                            ),
+                                        )}
+                                      </div>
                                     </div>
 
                                     {exercise ? (
@@ -4526,176 +4727,56 @@ function App() {
             </div>
 
             <ul className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
-              {activeWorkoutSession.exercises.map((sessionExercise, index) => {
-                const exercise = getExercise(sessionExercise.exerciseId);
-                const previousPerformance = getPreviousExercisePerformance(
-                  sessionExercise.exerciseId,
-                  activeRoutineDay.id,
-                  completedWorkouts,
-                );
-                const exerciseFeedback = getExerciseFeedback(sessionExercise);
-                const isWorkoutDetailsExpanded =
-                  expandedWorkoutDetailsExerciseId ===
-                  sessionExercise.exerciseId;
-                const supersetPartnerNames = getWorkoutSupersetPartnerNames(
-                  activeWorkoutSession.exercises,
-                  index,
-                );
+              {groupWorkoutExercises(activeWorkoutSession.exercises).map(
+                (workoutItem) => {
+                  if (workoutItem.type === "superset") {
+                    const supersetExerciseNames = workoutItem.exercises.map(
+                      ({ exercise }) =>
+                        exercise.exerciseName ?? "Unknown exercise",
+                    );
 
-                return (
-                  <li
-                    key={`${sessionExercise.exerciseId}-${index}`}
-                    className={`min-w-0 rounded-xl border p-3 sm:p-4 ${
-                      supersetPartnerNames.length
-                        ? "border-emerald-400/50 bg-emerald-400/10"
-                        : "border-transparent bg-slate-950/60"
-                    }`}
-                  >
-                    <div>
-                      {supersetPartnerNames.length ? (
-                        <p className="mb-2 inline-flex max-w-full rounded-lg border border-emerald-400/50 bg-slate-950/60 px-2.5 py-1 text-xs font-semibold text-emerald-200">
-                          Superset: {supersetPartnerNames.join(" + ")}
-                        </p>
-                      ) : null}
-                      <p className="font-medium text-slate-100">
-                        {sessionExercise.exerciseName ??
-                          exercise?.name ??
-                          "Unknown exercise"}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-400">
-                        Target: {sessionExercise.prescribedSets} x{" "}
-                        {sessionExercise.repRange}
-                        {sessionExercise.note
-                          ? `, ${sessionExercise.note}`
-                          : ""}
-                      </p>
-                      {exerciseFeedback ? (
-                        <p
-                          className={`mt-3 inline-flex max-w-full items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${
-                            exerciseFeedbackStyles[exerciseFeedback.status]
-                          }`}
-                        >
-                          {exerciseFeedback.label}
-                        </p>
-                      ) : null}
-                    </div>
+                    return (
+                      <li
+                        key={workoutItem.key}
+                        className="min-w-0 rounded-xl border border-emerald-400/50 bg-emerald-400/10 p-3 sm:p-4 lg:col-span-2"
+                      >
+                        <div className="border-b border-emerald-400/30 pb-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200">
+                            Superset
+                          </p>
+                          <h3 className="mt-1 text-lg font-bold text-white">
+                            {supersetExerciseNames.join(" + ")}
+                          </h3>
+                        </div>
+                        <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-2">
+                          {workoutItem.exercises.map(
+                            ({ exercise, index }) => (
+                              <div key={`${exercise.exerciseId}-${index}`}>
+                                {renderWorkoutExerciseBlock(
+                                  exercise,
+                                  index,
+                                  true,
+                                )}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </li>
+                    );
+                  }
 
-                    {exercise ? (
-                      <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/60">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedWorkoutDetailsExerciseId(
-                              (currentExerciseId) =>
-                                currentExerciseId ===
-                                sessionExercise.exerciseId
-                                  ? null
-                                  : sessionExercise.exerciseId,
-                            )
-                          }
-                          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
-                          aria-expanded={isWorkoutDetailsExpanded}
-                        >
-                          <span>Exercise Details</span>
-                          <span>
-                            {isWorkoutDetailsExpanded ? "Hide" : "Show"}
-                          </span>
-                        </button>
-                        {isWorkoutDetailsExpanded ? (
-                          <div className="border-t border-slate-800 p-3">
-                            <ExerciseMetadata exercise={exercise} />
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
+                  const [{ exercise, index }] = workoutItem.exercises;
 
-                    <div className="mt-4 min-w-0 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Previous Session
-                      </p>
-                      {previousPerformance ? (
-                        <ul className="mt-2 space-y-1 text-sm text-slate-300">
-                          {previousPerformance.sets.map((set) => (
-                            <li key={set.setNumber}>
-                              {set.weight ? `${set.weight}kg` : "-"} &times;{" "}
-                              {set.reps || "-"}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-2 text-sm text-slate-400">
-                          No previous session logged
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mt-4 min-w-0 space-y-2">
-                      {sessionExercise.sets.map((set) => {
-                        const repRange = parseRepRange(
-                          sessionExercise.repRange,
-                        );
-                        const setFeedback = getSetFeedback(set, repRange);
-
-                        return (
-                          <div
-                            key={set.setNumber}
-                            className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2"
-                          >
-                            <span className="text-sm font-medium text-slate-300">
-                              Set {set.setNumber}
-                            </span>
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              min="0"
-                              placeholder="Weight"
-                              value={set.weight}
-                              onChange={(event) =>
-                                updateSetValue(
-                                  sessionExercise.exerciseId,
-                                  set.setNumber,
-                                  "weight",
-                                  event.target.value,
-                                )
-                              }
-                              className={workoutNumberInputClassName}
-                            />
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              min="0"
-                              placeholder="Reps"
-                              value={set.reps}
-                              onChange={(event) =>
-                                updateSetValue(
-                                  sessionExercise.exerciseId,
-                                  set.setNumber,
-                                  "reps",
-                                  event.target.value,
-                                )
-                              }
-                              className={`${workoutNumberInputClassName} ${
-                                setFeedback
-                                  ? setFeedbackStyles[setFeedback]
-                                  : ""
-                              }`}
-                            />
-                            {setFeedback ? (
-                              <span
-                                className={`col-span-3 rounded-md border px-2.5 py-1 text-xs font-semibold ${
-                                  setFeedbackStyles[setFeedback]
-                                }`}
-                              >
-                                {setFeedbackLabels[setFeedback]}
-                              </span>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </li>
-                );
-              })}
+                  return (
+                    <li
+                      key={workoutItem.key}
+                      className="min-w-0 rounded-xl border border-transparent bg-slate-950/60 p-3 sm:p-4"
+                    >
+                      {renderWorkoutExerciseBlock(exercise, index)}
+                    </li>
+                  );
+                },
+              )}
             </ul>
 
             <div className="mt-5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-4 text-center">

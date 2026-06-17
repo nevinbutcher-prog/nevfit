@@ -132,6 +132,13 @@ function normalizeRoutineExercise(value) {
     return null;
   }
 
+  const supersetGroupId =
+    typeof value.supersetGroupId === "string" && value.supersetGroupId.trim()
+      ? value.supersetGroupId.trim()
+      : typeof value.groupId === "string" && value.groupId.trim()
+        ? value.groupId.trim()
+        : null;
+
   return {
     exerciseId: value.exerciseId.trim(),
     sets,
@@ -147,9 +154,7 @@ function normalizeRoutineExercise(value) {
     ...(typeof value.note === "string" && value.note.trim()
       ? { note: value.note.trim() }
       : {}),
-    ...(typeof value.groupId === "string" && value.groupId.trim()
-      ? { groupId: value.groupId.trim() }
-      : {}),
+    supersetGroupId,
   };
 }
 
@@ -170,9 +175,9 @@ function normalizeRoutineDay(value, fallbackDay = null) {
     return null;
   }
 
-  const exercises = value.exercises
-    .map(normalizeRoutineExercise)
-    .filter(Boolean);
+  const exercises = cleanOrphanedSupersetGroups(
+    value.exercises.map(normalizeRoutineExercise).filter(Boolean),
+  );
 
   return {
     id: fallbackDay?.id ?? value.id.trim(),
@@ -353,6 +358,37 @@ function createProgramDayId(programId, dayName, existingPrograms) {
   }
 
   return nextId;
+}
+
+function createSupersetGroupId() {
+  const suffix =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID().slice(0, 8)
+      : Date.now().toString(36);
+
+  return `ss-${suffix}`;
+}
+
+function cleanOrphanedSupersetGroups(exercises) {
+  const groupCounts = exercises.reduce((counts, exercise) => {
+    if (!exercise.supersetGroupId) {
+      return counts;
+    }
+
+    counts.set(
+      exercise.supersetGroupId,
+      (counts.get(exercise.supersetGroupId) ?? 0) + 1,
+    );
+
+    return counts;
+  }, new Map());
+
+  return exercises.map((exercise) =>
+    exercise.supersetGroupId &&
+    (groupCounts.get(exercise.supersetGroupId) ?? 0) < 2
+      ? { ...exercise, supersetGroupId: null }
+      : exercise,
+  );
 }
 
 function areRoutineDaysEqual(firstRoutineDay, secondRoutineDay) {
@@ -730,6 +766,10 @@ function normalizeCompletedWorkout(value) {
       exerciseName: exercise.exerciseName,
       restSeconds:
         typeof exercise.restSeconds === "number" ? exercise.restSeconds : null,
+      supersetGroupId:
+        typeof exercise.supersetGroupId === "string"
+          ? exercise.supersetGroupId
+          : null,
       sets,
     };
   });
@@ -820,6 +860,7 @@ function createWorkoutSession(scheduleDay, routineDay, exerciseLibrary = []) {
         repRange: exercise.repRange,
         note: exercise.note,
         restSeconds: exercise.restSeconds,
+        supersetGroupId: exercise.supersetGroupId ?? null,
         sets: Array.from({ length: exercise.sets }, (_, index) => ({
           setNumber: index + 1,
           weight: "",
@@ -838,12 +879,52 @@ function getEffectiveExerciseName(routineExercise, sourceExercise) {
   );
 }
 
+function getRoutineExerciseName(routineExercise, exerciseLibrary) {
+  return getEffectiveExerciseName(
+    routineExercise,
+    getExerciseFromLibrary(routineExercise.exerciseId, exerciseLibrary),
+  );
+}
+
+function getSupersetPartnerNames(exercises, exerciseIndex, exerciseLibrary) {
+  const groupId = exercises[exerciseIndex]?.supersetGroupId;
+
+  if (!groupId) {
+    return [];
+  }
+
+  return exercises
+    .map((exercise, index) =>
+      index !== exerciseIndex && exercise.supersetGroupId === groupId
+        ? getRoutineExerciseName(exercise, exerciseLibrary)
+        : null,
+    )
+    .filter(Boolean);
+}
+
+function getWorkoutSupersetPartnerNames(exercises, exerciseIndex) {
+  const groupId = exercises[exerciseIndex]?.supersetGroupId;
+
+  if (!groupId) {
+    return [];
+  }
+
+  return exercises
+    .map((exercise, index) =>
+      index !== exerciseIndex && exercise.supersetGroupId === groupId
+        ? exercise.exerciseName
+        : null,
+    )
+    .filter(Boolean);
+}
+
 function createRoutineExerciseFromCatalog(exercise) {
   return {
     exerciseId: exercise.id,
     sets: exercise.defaultSets ?? 3,
     repRange: exercise.defaultRepRange ?? "8-12",
     restSeconds: exercise.defaultRestSeconds ?? DEFAULT_REST_SECONDS,
+    supersetGroupId: null,
   };
 }
 
@@ -1044,6 +1125,9 @@ function isValidWorkoutSession(value) {
           typeof exercise.note === "undefined") &&
         (typeof exercise.restSeconds === "number" ||
           typeof exercise.restSeconds === "undefined") &&
+        (typeof exercise.supersetGroupId === "string" ||
+          exercise.supersetGroupId === null ||
+          typeof exercise.supersetGroupId === "undefined") &&
         Array.isArray(exercise.sets) &&
         exercise.sets.every(
           (set) =>
@@ -1114,6 +1198,7 @@ function createCompletedWorkoutRecord(
         exerciseName:
           sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise",
         restSeconds: sessionExercise.restSeconds ?? null,
+        supersetGroupId: sessionExercise.supersetGroupId ?? null,
         sets: sessionExercise.sets.map((set) => ({
           setNumber: set.setNumber,
           weight: set.weight,
@@ -1980,8 +2065,10 @@ function App() {
                 day.id === dayId
                   ? {
                       ...day,
-                      exercises: day.exercises.filter(
-                        (_, index) => index !== exerciseIndex,
+                      exercises: cleanOrphanedSupersetGroups(
+                        day.exercises.filter(
+                          (_, index) => index !== exerciseIndex,
+                        ),
                       ),
                     }
                   : day,
@@ -1989,6 +2076,63 @@ function App() {
             }
           : program,
       ),
+    );
+  }
+
+  function updateExerciseSuperset(programId, dayId, exerciseIndex, pairedIndex) {
+    setProgramSaveStatus(null);
+    setProgramDrafts((currentDrafts) =>
+      currentDrafts.map((program) => {
+        if (program.id !== programId) {
+          return program;
+        }
+
+        return {
+          ...program,
+          days: program.days.map((day) => {
+            if (day.id !== dayId) {
+              return day;
+            }
+
+            if (!day.exercises[exerciseIndex]) {
+              return day;
+            }
+
+            const nextExercises = day.exercises.map((exercise) => ({
+              ...exercise,
+            }));
+
+            if (pairedIndex === null) {
+              nextExercises[exerciseIndex].supersetGroupId = null;
+
+              return {
+                ...day,
+                exercises: cleanOrphanedSupersetGroups(nextExercises),
+              };
+            }
+
+            if (
+              pairedIndex === exerciseIndex ||
+              !nextExercises[pairedIndex]
+            ) {
+              return day;
+            }
+
+            const currentGroupId = nextExercises[exerciseIndex].supersetGroupId;
+            const pairedGroupId = nextExercises[pairedIndex].supersetGroupId;
+            const nextGroupId =
+              pairedGroupId ?? currentGroupId ?? createSupersetGroupId();
+
+            nextExercises[exerciseIndex].supersetGroupId = nextGroupId;
+            nextExercises[pairedIndex].supersetGroupId = nextGroupId;
+
+            return {
+              ...day,
+              exercises: cleanOrphanedSupersetGroups(nextExercises),
+            };
+          }),
+        };
+      }),
     );
   }
 
@@ -3646,6 +3790,30 @@ function App() {
                                 routineExercise,
                                 exercise,
                               );
+                            const supersetPartnerIndexes =
+                              selectedProgramDayDraft.exercises
+                                .map((exerciseItem, exerciseIndex) =>
+                                  exerciseIndex !== index &&
+                                  exerciseItem.supersetGroupId &&
+                                  exerciseItem.supersetGroupId ===
+                                    routineExercise.supersetGroupId
+                                    ? exerciseIndex
+                                    : null,
+                                )
+                                .filter((exerciseIndex) => exerciseIndex !== null);
+                            const supersetPartnerNames =
+                              getSupersetPartnerNames(
+                                selectedProgramDayDraft.exercises,
+                                index,
+                                exerciseLibrary,
+                              );
+                            const selectedSupersetValue =
+                              supersetPartnerIndexes.length > 0
+                                ? String(supersetPartnerIndexes[0])
+                                : "";
+                            const hasCustomDisplayName = Boolean(
+                              routineExercise.displayNameOverride?.trim(),
+                            );
 
                             return (
                               <li
@@ -3687,6 +3855,12 @@ function App() {
                                             {getCompactExerciseMetadata(
                                               exercise,
                                             )}
+                                          </p>
+                                        ) : null}
+                                        {supersetPartnerNames.length ? (
+                                          <p className="mt-1 truncate text-xs font-semibold text-emerald-300">
+                                            Superset:{" "}
+                                            {supersetPartnerNames.join(" + ")}
                                           </p>
                                         ) : null}
                                       </div>
@@ -3797,16 +3971,45 @@ function App() {
                                       </label>
 
                                       <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                        Routine Name
+                                        Superset with
+                                        <select
+                                          value={selectedSupersetValue}
+                                          onChange={(event) =>
+                                            updateExerciseSuperset(
+                                              selectedProgramDraft.id,
+                                              selectedProgramDayDraft.id,
+                                              index,
+                                              event.target.value
+                                                ? Number(event.target.value)
+                                                : null,
+                                            )
+                                          }
+                                          className={`${routineEditorSelectClassName} mt-1`}
+                                        >
+                                          <option value="">None</option>
+                                          {selectedProgramDayDraft.exercises.map(
+                                            (exerciseItem, exerciseIndex) =>
+                                              exerciseIndex === index ? null : (
+                                                <option
+                                                  key={`${exerciseItem.exerciseId}-${exerciseIndex}`}
+                                                  value={exerciseIndex}
+                                                >
+                                                  {getRoutineExerciseName(
+                                                    exerciseItem,
+                                                    exerciseLibrary,
+                                                  )}
+                                                </option>
+                                              ),
+                                          )}
+                                        </select>
+                                      </label>
+                                    </div>
+
+                                    <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                                      <label className="flex min-w-0 items-start gap-3 text-sm font-semibold text-slate-300">
                                         <input
-                                          type="text"
-                                          value={
-                                            routineExercise.displayNameOverride ??
-                                            ""
-                                          }
-                                          placeholder={
-                                            exercise?.name ?? "Exercise name"
-                                          }
+                                          type="checkbox"
+                                          checked={hasCustomDisplayName}
                                           onChange={(event) =>
                                             updateProgramDay(
                                               selectedProgramDraft.id,
@@ -3823,23 +4026,71 @@ function App() {
                                                             ...exerciseItem,
                                                             displayNameOverride:
                                                               event.target
-                                                                .value,
+                                                                .checked
+                                                                ? effectiveExerciseName
+                                                                : "",
                                                           }
                                                         : exerciseItem,
                                                   ),
                                               },
                                             )
                                           }
-                                          className={`${routineEditorInputClassName} mt-1`}
+                                          className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-950 text-emerald-400 focus:ring-emerald-400"
                                         />
+                                        <span>Use custom display name</span>
                                       </label>
+
+                                      {hasCustomDisplayName ? (
+                                        <label className="mt-3 block min-w-0 text-sm font-semibold text-slate-300">
+                                          Custom Display Name
+                                          <input
+                                            type="text"
+                                            value={
+                                              routineExercise.displayNameOverride ??
+                                              ""
+                                            }
+                                            placeholder={
+                                              exercise?.name ?? "Exercise name"
+                                            }
+                                            onChange={(event) =>
+                                              updateProgramDay(
+                                                selectedProgramDraft.id,
+                                                selectedProgramDayDraft.id,
+                                                {
+                                                  exercises:
+                                                    selectedProgramDayDraft.exercises.map(
+                                                      (
+                                                        exerciseItem,
+                                                        exerciseIndex,
+                                                      ) =>
+                                                        exerciseIndex === index
+                                                          ? {
+                                                              ...exerciseItem,
+                                                              displayNameOverride:
+                                                                event.target
+                                                                  .value,
+                                                            }
+                                                          : exerciseItem,
+                                                    ),
+                                                },
+                                              )
+                                            }
+                                            className={`${routineEditorInputClassName} mt-1`}
+                                          />
+                                          <span className="mt-1 block text-xs font-normal text-slate-500">
+                                            Optional. Changes how this exercise
+                                            appears inside this routine only.
+                                          </span>
+                                        </label>
+                                      ) : null}
                                     </div>
 
                                     {exercise ? (
                                       <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
-                                        {routineExercise.displayNameOverride ? (
+                                        {hasCustomDisplayName ? (
                                           <p className="font-semibold text-slate-300">
-                                            Routine name: {effectiveExerciseName}
+                                            Custom display name:{" "}
+                                            {effectiveExerciseName}
                                           </p>
                                         ) : null}
                                         <ExerciseMetadata
@@ -4275,7 +4526,7 @@ function App() {
             </div>
 
             <ul className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
-              {activeWorkoutSession.exercises.map((sessionExercise) => {
+              {activeWorkoutSession.exercises.map((sessionExercise, index) => {
                 const exercise = getExercise(sessionExercise.exerciseId);
                 const previousPerformance = getPreviousExercisePerformance(
                   sessionExercise.exerciseId,
@@ -4286,13 +4537,26 @@ function App() {
                 const isWorkoutDetailsExpanded =
                   expandedWorkoutDetailsExerciseId ===
                   sessionExercise.exerciseId;
+                const supersetPartnerNames = getWorkoutSupersetPartnerNames(
+                  activeWorkoutSession.exercises,
+                  index,
+                );
 
                 return (
                   <li
-                    key={sessionExercise.exerciseId}
-                    className="min-w-0 rounded-xl bg-slate-950/60 p-3 sm:p-4"
+                    key={`${sessionExercise.exerciseId}-${index}`}
+                    className={`min-w-0 rounded-xl border p-3 sm:p-4 ${
+                      supersetPartnerNames.length
+                        ? "border-emerald-400/50 bg-emerald-400/10"
+                        : "border-transparent bg-slate-950/60"
+                    }`}
                   >
                     <div>
+                      {supersetPartnerNames.length ? (
+                        <p className="mb-2 inline-flex max-w-full rounded-lg border border-emerald-400/50 bg-slate-950/60 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                          Superset: {supersetPartnerNames.join(" + ")}
+                        </p>
+                      ) : null}
                       <p className="font-medium text-slate-100">
                         {sessionExercise.exerciseName ??
                           exercise?.name ??

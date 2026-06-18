@@ -21,6 +21,7 @@ src/
     exerciseProvider.js
     firebase.js
     firebaseSmokeTest.js
+    programStore.js
     userProfile.js
   index.css
 ```
@@ -44,7 +45,7 @@ Root Firebase config files:
 - `nevfit_weekly_run_target`
 
 Legacy note: older docs may mention `nevfit_routines`; the current program
-editor persists program definitions through `nevfit_programs`.
+editor persists program definitions through `nevfit_programs` as a local cache.
 
 ## Workout History Model
 
@@ -247,26 +248,48 @@ Authentication is isolated in `src/services/auth.js`:
 - `signOutUser()`
 - `subscribeToAuthChanges(callback)`
 
-The app tracks `currentUser` and `authLoading`, but signing in does not alter
-workout, program, schedule, active workout, or history persistence.
+The app tracks `currentUser` and `authLoading`. Signing in resolves the
+cloud-backed program store before showing the authenticated app.
 
 When `authLoading` is true, the app shows a loading screen and does not flash
 the main app. When `currentUser` is null, the app shows only the sign-in screen.
-The authenticated app remains localStorage-backed.
+Program loading can also show the loading screen while local/cloud migration
+resolves.
 
 `src/services/userProfile.js` exports `ensureUserProfile(user)`, which creates
 or updates `users/{uid}` with `setDoc(..., { merge: true })`. This is the only
-application Firestore write currently implemented.
+profile Firestore write currently implemented.
+
+`src/services/programStore.js` stores program and routine definitions at:
+
+```text
+users/{uid}/programs/{programId}
+```
+
+Each document keeps the existing program shape, including `id`, `name`, `days`,
+routine exercises, archive/delete flags, optional description, and timestamps.
+The service also writes a `routines` alias from `days` for the cloud document
+while loading either shape back into the app's existing `days` model.
+
+On authenticated load, the app reads `nevfit_programs`, then reads Firestore.
+Non-empty Firestore programs are treated as the source of truth and refresh the
+local cache. If Firestore is empty and local programs exist, the local programs
+are uploaded once. If both are empty, the starter program initializes and is
+cached locally. Program edits, creation, duplication, archive actions, and
+routine exercise changes save to localStorage first, then attempt Firestore.
+Firestore failures leave local data intact and show a non-blocking sync warning.
 
 Firestore rules are intentionally narrow:
 
 - signed-in users can read/write only their own `users/{uid}` document
-- workout/program/routine data has not been migrated
+- signed-in users can read/write only their own
+  `users/{uid}/programs/{programId}` documents
+- workout history, schedule, active workouts, runs, steps, and cycle settings
+  remain local-only
 
 ## Future Storage
 
-- Cloud-backed program, routine, schedule, active workout, and completed
-  workout storage
+- Cloud-backed schedule, active workout, and completed workout storage
 - Durable selected exercise metadata if offline reload behavior becomes
   important
 

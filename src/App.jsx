@@ -5,6 +5,11 @@ import {
   subscribeToAuthChanges,
 } from "./services/auth";
 import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
+import {
+  loadCloudPrograms,
+  migrateLocalProgramsToCloud,
+  savePrograms,
+} from "./services/programStore";
 import { ensureUserProfile } from "./services/userProfile";
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
@@ -214,8 +219,20 @@ function normalizeProgram(value, fallbackProgram = null) {
   return {
     id: fallbackProgram?.id ?? value.id.trim(),
     name: fallbackProgram?.name ?? value.name.trim(),
+    ...(typeof value.description === "string" && value.description.trim()
+      ? { description: value.description.trim() }
+      : {}),
     days,
     ...(fallbackProgram ? {} : { archived: value.archived === true }),
+    ...(fallbackProgram || typeof value.deleted === "undefined"
+      ? {}
+      : { deleted: value.deleted === true }),
+    ...(typeof value.createdAt !== "undefined"
+      ? { createdAt: value.createdAt }
+      : {}),
+    ...(typeof value.updatedAt !== "undefined"
+      ? { updatedAt: value.updatedAt }
+      : {}),
   };
 }
 
@@ -248,20 +265,38 @@ function normalizeProgramDefinitions(value) {
   return null;
 }
 
-function loadStoredPrograms() {
+function loadStoredProgramCache() {
   try {
     const storedPrograms = window.localStorage.getItem(PROGRAMS_STORAGE_KEY);
 
     if (!storedPrograms) {
-      return normalizeProgramDefinitions(starterPrograms) ?? starterPrograms;
+      return null;
     }
 
     const parsedPrograms = JSON.parse(storedPrograms);
 
-    return normalizeProgramDefinitions(parsedPrograms) ?? starterPrograms;
+    return normalizeProgramDefinitions(parsedPrograms);
   } catch {
-    return starterPrograms;
+    return null;
   }
+}
+
+function loadStoredPrograms() {
+  const storedPrograms = loadStoredProgramCache();
+
+  if (storedPrograms) {
+    return storedPrograms;
+  }
+
+  return starterPrograms;
+}
+
+function getInitialPrograms(localPrograms = loadStoredProgramCache()) {
+  if (localPrograms?.length) {
+    return localPrograms;
+  }
+
+  return normalizeProgramDefinitions(starterPrograms) ?? starterPrograms;
 }
 
 function persistPrograms(programDefinitions) {
@@ -269,6 +304,75 @@ function persistPrograms(programDefinitions) {
     PROGRAMS_STORAGE_KEY,
     JSON.stringify(programDefinitions),
   );
+}
+
+function logProgramSync(actionName, uid, programs, result, error = null) {
+  const payload = {
+    uid: uid ?? null,
+    actionName,
+    programIds: programs.map((program) => program.id),
+    programNames: programs.map((program) => program.name),
+    routineCounts: programs.map((program) => ({
+      programId: program.id,
+      routines: program.days.length,
+    })),
+    result,
+  };
+
+  if (error) {
+    console.error("Program sync diagnostic", payload, error);
+    return;
+  }
+
+  console.info("Program sync diagnostic", payload);
+}
+
+async function loadUserPrograms(uid) {
+  const localPrograms = loadStoredProgramCache();
+  const cloudPrograms = normalizeProgramDefinitions(
+    await loadCloudPrograms(uid),
+  );
+
+  if (cloudPrograms?.length) {
+    persistPrograms(cloudPrograms);
+    logProgramSync("load-cloud-programs", uid, cloudPrograms, "success");
+    return cloudPrograms;
+  }
+
+  if (localPrograms?.length) {
+    await migrateLocalProgramsToCloud(uid, localPrograms);
+    logProgramSync("migrate-local-programs", uid, localPrograms, "success");
+    return localPrograms;
+  }
+
+  const initialPrograms = getInitialPrograms(localPrograms);
+  persistPrograms(initialPrograms);
+  await migrateLocalProgramsToCloud(uid, initialPrograms);
+  logProgramSync("initialize-starter-programs", uid, initialPrograms, "success");
+
+  return initialPrograms;
+}
+
+async function persistProgramDefinitions(
+  programDefinitions,
+  currentUser,
+  actionName,
+) {
+  persistPrograms(programDefinitions);
+  logProgramSync(actionName, currentUser?.uid, programDefinitions, "local");
+
+  if (currentUser) {
+    try {
+      await savePrograms(currentUser.uid, programDefinitions);
+      logProgramSync(actionName, currentUser.uid, programDefinitions, "success");
+      return true;
+    } catch (error) {
+      logProgramSync(actionName, currentUser.uid, programDefinitions, "failure", error);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function loadStoredActiveProgramId() {
@@ -1483,6 +1587,8 @@ function App() {
   );
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [programsLoading, setProgramsLoading] = useState(true);
+  const [programSyncError, setProgramSyncError] = useState("");
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
@@ -1494,6 +1600,8 @@ function App() {
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
   const lastProfileSyncUidRef = useRef(null);
+  const lastProgramLoadUidRef = useRef(null);
+  const programPersistQueueRef = useRef(Promise.resolve());
   const exerciseSearchInputRef = useRef(null);
   const isWorkoutActive =
     viewMode === "workout" && Boolean(activeWorkoutSession);
@@ -1537,6 +1645,57 @@ function App() {
       console.error("User profile sync failed:", error);
       lastProfileSyncUidRef.current = null;
     });
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      lastProgramLoadUidRef.current = null;
+      setProgramsLoading(false);
+      return undefined;
+    }
+
+    const loadUid = currentUser.uid;
+
+    if (lastProgramLoadUidRef.current === loadUid) {
+      setProgramsLoading(false);
+      return undefined;
+    }
+
+    let shouldApplyResults = true;
+    lastProgramLoadUidRef.current = loadUid;
+    setProgramsLoading(true);
+    setProgramSyncError("");
+
+    loadUserPrograms(loadUid)
+      .then((loadedPrograms) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        setProgramDefinitions(loadedPrograms);
+        setProgramDrafts(loadedPrograms);
+        setSelectedProgramDayId(loadedPrograms[0]?.days[0]?.id ?? null);
+      })
+      .catch((error) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        console.error("Program sync failed:", error);
+        lastProgramLoadUidRef.current = null;
+        setProgramSyncError(
+          "Programs are using this device cache. Cloud sync is unavailable.",
+        );
+      })
+      .finally(() => {
+        if (shouldApplyResults) {
+          setProgramsLoading(false);
+        }
+      });
+
+    return () => {
+      shouldApplyResults = false;
+    };
   }, [currentUser]);
 
   useEffect(() => {
@@ -2026,146 +2185,203 @@ function App() {
     }
   }
 
-  function updateProgramDay(programId, dayId, patch) {
+  function setProgramsAndPersist(
+    actionName,
+    nextProgramDrafts,
+    {
+      programId = selectedProgramId,
+      successMessage = "Program saved.",
+      localOnlyMessage = "Program saved locally. Cloud sync failed.",
+      invalidMessage = "Program could not be saved. Check sets, reps, and rest.",
+    } = {},
+  ) {
+    const normalizedPrograms = normalizeProgramDefinitions(nextProgramDrafts);
+
     setProgramSaveStatus(null);
-    setProgramDrafts((currentDrafts) =>
-      currentDrafts.map((program) =>
-        program.id === programId
-          ? {
-              ...program,
-              days: program.days.map((day) =>
-                day.id === dayId ? { ...day, ...patch } : day,
-              ),
-            }
-          : program,
-      ),
+    setProgramDrafts(nextProgramDrafts);
+
+    if (!normalizedPrograms) {
+      setProgramSaveStatus({
+        programId,
+        type: "error",
+        message: invalidMessage,
+      });
+      return false;
+    }
+
+    setProgramDefinitions(normalizedPrograms);
+
+    const queuedPersist = programPersistQueueRef.current.then(
+      () => persistProgramDefinitions(normalizedPrograms, currentUser, actionName),
+      () => persistProgramDefinitions(normalizedPrograms, currentUser, actionName),
     );
+
+    programPersistQueueRef.current = queuedPersist.catch(() => {});
+
+    queuedPersist
+      .then((programsSynced) => {
+        setProgramSyncError(
+          programsSynced
+            ? ""
+            : "Program changes are saved on this device. Cloud sync is unavailable.",
+        );
+        setProgramSaveStatus({
+          programId,
+          type: programsSynced ? "success" : "error",
+          message: programsSynced ? successMessage : localOnlyMessage,
+        });
+      })
+      .catch((error) => {
+        console.error("Program local persistence failed:", error);
+        setProgramSaveStatus({
+          programId,
+          type: "error",
+          message: "Program could not be saved on this device.",
+        });
+      });
+
+    return true;
+  }
+
+  function updateProgramDay(programId, dayId, patch) {
+    const nextProgramDrafts = programDrafts.map((program) =>
+      program.id === programId
+        ? {
+            ...program,
+            days: program.days.map((day) =>
+              day.id === dayId ? { ...day, ...patch } : day,
+            ),
+          }
+        : program,
+    );
+
+    setProgramsAndPersist("update-program-routine", nextProgramDrafts, {
+      programId,
+    });
   }
 
   function updateProgramName(programId, name) {
-    setProgramSaveStatus(null);
-    setProgramDrafts((currentDrafts) =>
-      currentDrafts.map((program) =>
-        program.id === programId ? { ...program, name } : program,
-      ),
+    const nextProgramDrafts = programDrafts.map((program) =>
+      program.id === programId ? { ...program, name } : program,
     );
+
+    setProgramSaveStatus(null);
+    setProgramDrafts(nextProgramDrafts);
   }
 
   function moveProgramExercise(programId, dayId, exerciseIndex, direction) {
-    setProgramSaveStatus(null);
-    setProgramDrafts((currentDrafts) =>
-      currentDrafts.map((program) => {
-        if (program.id !== programId) {
-          return program;
-        }
+    const nextProgramDrafts = programDrafts.map((program) => {
+      if (program.id !== programId) {
+        return program;
+      }
 
-        return {
-          ...program,
-          days: program.days.map((day) => {
-            if (day.id !== dayId) {
-              return day;
-            }
+      return {
+        ...program,
+        days: program.days.map((day) => {
+          if (day.id !== dayId) {
+            return day;
+          }
 
-            const nextIndex = exerciseIndex + direction;
+          const nextIndex = exerciseIndex + direction;
 
-            if (nextIndex < 0 || nextIndex >= day.exercises.length) {
-              return day;
-            }
+          if (nextIndex < 0 || nextIndex >= day.exercises.length) {
+            return day;
+          }
 
-            const nextExercises = [...day.exercises];
-            const [movedExercise] = nextExercises.splice(exerciseIndex, 1);
-            nextExercises.splice(nextIndex, 0, movedExercise);
+          const nextExercises = [...day.exercises];
+          const [movedExercise] = nextExercises.splice(exerciseIndex, 1);
+          nextExercises.splice(nextIndex, 0, movedExercise);
 
-            return {
-              ...day,
-              exercises: nextExercises,
-            };
-          }),
-        };
-      }),
-    );
+          return {
+            ...day,
+            exercises: nextExercises,
+          };
+        }),
+      };
+    });
+
+    setProgramsAndPersist("move-routine-exercise", nextProgramDrafts, {
+      programId,
+    });
   }
 
   function removeProgramExercise(programId, dayId, exerciseIndex) {
-    setProgramSaveStatus(null);
-    setProgramDrafts((currentDrafts) =>
-      currentDrafts.map((program) =>
-        program.id === programId
-          ? {
-              ...program,
-              days: program.days.map((day) =>
-                day.id === dayId
-                  ? {
-                      ...day,
-                      exercises: cleanOrphanedSupersetGroups(
-                        day.exercises.filter(
-                          (_, index) => index !== exerciseIndex,
-                        ),
-                      ),
-                    }
-                  : day,
-              ),
-            }
-          : program,
-      ),
+    const nextProgramDrafts = programDrafts.map((program) =>
+      program.id === programId
+        ? {
+            ...program,
+            days: program.days.map((day) =>
+              day.id === dayId
+                ? {
+                    ...day,
+                    exercises: cleanOrphanedSupersetGroups(
+                      day.exercises.filter((_, index) => index !== exerciseIndex),
+                    ),
+                  }
+                : day,
+            ),
+          }
+        : program,
     );
+
+    setProgramsAndPersist("remove-routine-exercise", nextProgramDrafts, {
+      programId,
+    });
   }
 
   function updateExerciseSuperset(programId, dayId, exerciseIndex, pairedIndex) {
-    setProgramSaveStatus(null);
-    setProgramDrafts((currentDrafts) =>
-      currentDrafts.map((program) => {
-        if (program.id !== programId) {
-          return program;
-        }
+    const nextProgramDrafts = programDrafts.map((program) => {
+      if (program.id !== programId) {
+        return program;
+      }
 
-        return {
-          ...program,
-          days: program.days.map((day) => {
-            if (day.id !== dayId) {
-              return day;
-            }
+      return {
+        ...program,
+        days: program.days.map((day) => {
+          if (day.id !== dayId) {
+            return day;
+          }
 
-            if (!day.exercises[exerciseIndex]) {
-              return day;
-            }
+          if (!day.exercises[exerciseIndex]) {
+            return day;
+          }
 
-            const nextExercises = day.exercises.map((exercise) => ({
-              ...exercise,
-            }));
+          const nextExercises = day.exercises.map((exercise) => ({
+            ...exercise,
+          }));
 
-            if (pairedIndex === null) {
-              nextExercises[exerciseIndex].supersetGroupId = null;
-
-              return {
-                ...day,
-                exercises: cleanOrphanedSupersetGroups(nextExercises),
-              };
-            }
-
-            if (
-              pairedIndex === exerciseIndex ||
-              !nextExercises[pairedIndex]
-            ) {
-              return day;
-            }
-
-            const currentGroupId = nextExercises[exerciseIndex].supersetGroupId;
-            const pairedGroupId = nextExercises[pairedIndex].supersetGroupId;
-            const nextGroupId =
-              pairedGroupId ?? currentGroupId ?? createSupersetGroupId();
-
-            nextExercises[exerciseIndex].supersetGroupId = nextGroupId;
-            nextExercises[pairedIndex].supersetGroupId = nextGroupId;
+          if (pairedIndex === null) {
+            nextExercises[exerciseIndex].supersetGroupId = null;
 
             return {
               ...day,
               exercises: cleanOrphanedSupersetGroups(nextExercises),
             };
-          }),
-        };
-      }),
-    );
+          }
+
+          if (pairedIndex === exerciseIndex || !nextExercises[pairedIndex]) {
+            return day;
+          }
+
+          const currentGroupId = nextExercises[exerciseIndex].supersetGroupId;
+          const pairedGroupId = nextExercises[pairedIndex].supersetGroupId;
+          const nextGroupId =
+            pairedGroupId ?? currentGroupId ?? createSupersetGroupId();
+
+          nextExercises[exerciseIndex].supersetGroupId = nextGroupId;
+          nextExercises[pairedIndex].supersetGroupId = nextGroupId;
+
+          return {
+            ...day,
+            exercises: cleanOrphanedSupersetGroups(nextExercises),
+          };
+        }),
+      };
+    });
+
+    setProgramsAndPersist("update-exercise-superset", nextProgramDrafts, {
+      programId,
+    });
   }
 
   function selectExerciseFromFinder(programId, dayId, exercise, exerciseIndex) {
@@ -2182,42 +2398,58 @@ function App() {
     });
 
     if (typeof exerciseIndex === "number") {
-      updateProgramDay(programId, dayId, {
-        exercises: selectedProgramDayDraft.exercises.map(
-          (routineExercise, index) =>
-            index === exerciseIndex
-              ? {
-                  ...routineExercise,
-                  exerciseId: exercise.id,
-                  displayNameOverride: "",
-                }
-              : routineExercise,
-        ),
+      const nextProgramDrafts = programDrafts.map((program) =>
+        program.id === programId
+          ? {
+              ...program,
+              days: program.days.map((day) =>
+                day.id === dayId
+                  ? {
+                      ...day,
+                      exercises: day.exercises.map((routineExercise, index) =>
+                        index === exerciseIndex
+                          ? {
+                              ...routineExercise,
+                              exerciseId: exercise.id,
+                              displayNameOverride: "",
+                            }
+                          : routineExercise,
+                      ),
+                    }
+                  : day,
+              ),
+            }
+          : program,
+      );
+
+      setProgramsAndPersist("swap-routine-exercise", nextProgramDrafts, {
+        programId,
       });
       setExerciseFinderOpen(false);
       setExerciseFinderMode({ type: "add", exerciseIndex: null });
     } else {
-      setProgramSaveStatus(null);
-      setProgramDrafts((currentDrafts) =>
-        currentDrafts.map((program) =>
-          program.id === programId
-            ? {
-                ...program,
-                days: program.days.map((day) =>
-                  day.id === dayId
-                    ? {
-                        ...day,
-                        exercises: [
-                          ...day.exercises,
-                          createRoutineExerciseFromCatalog(exercise),
-                        ],
-                      }
-                    : day,
-                ),
-              }
-            : program,
-        ),
+      const nextProgramDrafts = programDrafts.map((program) =>
+        program.id === programId
+          ? {
+              ...program,
+              days: program.days.map((day) =>
+                day.id === dayId
+                  ? {
+                      ...day,
+                      exercises: [
+                        ...day.exercises,
+                        createRoutineExerciseFromCatalog(exercise),
+                      ],
+                    }
+                  : day,
+              ),
+            }
+          : program,
       );
+
+      setProgramsAndPersist("add-routine-exercise", nextProgramDrafts, {
+        programId,
+      });
       setExerciseSearchTerm("");
       setExerciseEquipmentFilter("all");
       setExerciseMuscleFilter("all");
@@ -2249,30 +2481,15 @@ function App() {
       return;
     }
 
-    const nextProgramDefinitions = programDefinitions.map((program) =>
+    const nextProgramDefinitions = programDrafts.map((program) =>
       program.id === programId ? normalizedProgram : program,
     );
 
-    try {
-      persistPrograms(nextProgramDefinitions);
-      setProgramDefinitions(nextProgramDefinitions);
-      setProgramDrafts((currentDrafts) =>
-        currentDrafts.map((program) =>
-          program.id === programId ? normalizedProgram : program,
-        ),
-      );
-      setProgramSaveStatus({
-        programId,
-        type: "success",
-        message: "Program saved.",
-      });
-    } catch {
-      setProgramSaveStatus({
-        programId,
-        type: "error",
-        message: "Program could not be saved. Your edits are still on screen.",
-      });
-    }
+    setProgramsAndPersist("save-program", nextProgramDefinitions, {
+      programId,
+      successMessage: "Program saved.",
+      localOnlyMessage: "Program saved locally. Cloud sync failed.",
+    });
   }
 
   function duplicateProgram(programId) {
@@ -2287,7 +2504,7 @@ function App() {
     const duplicateName = `${sourceProgram.name} Copy`;
     const duplicateProgramId = createProgramId(
       duplicateName,
-      programDefinitions,
+      programDrafts,
     );
     const duplicateProgram = {
       id: duplicateProgramId,
@@ -2297,33 +2514,23 @@ function App() {
         id: createProgramDayId(
           duplicateProgramId,
           day.name,
-          programDefinitions,
+          programDrafts,
         ),
         exercises: day.exercises.map((exercise) => ({ ...exercise })),
       })),
       archived: false,
     };
-    const nextProgramDefinitions = [...programDefinitions, duplicateProgram];
+    const nextProgramDefinitions = [...programDrafts, duplicateProgram];
 
-    try {
-      persistPrograms(nextProgramDefinitions);
-      setProgramDefinitions(nextProgramDefinitions);
-      setProgramDrafts((currentDrafts) => [...currentDrafts, duplicateProgram]);
-      setSelectedProgramId(duplicateProgramId);
-      setSelectedProgramDayId(duplicateProgram.days[0]?.id ?? null);
-      setIsProgramEditorOpen(true);
-      setProgramSaveStatus({
-        programId: duplicateProgramId,
-        type: "success",
-        message: "Program duplicated.",
-      });
-    } catch {
-      setProgramSaveStatus({
-        programId,
-        type: "error",
-        message: "Program could not be duplicated.",
-      });
-    }
+    setProgramsAndPersist("duplicate-program", nextProgramDefinitions, {
+      programId: duplicateProgramId,
+      successMessage: "Program duplicated.",
+      localOnlyMessage: "Program duplicated locally. Cloud sync failed.",
+      invalidMessage: "Program could not be duplicated.",
+    });
+    setSelectedProgramId(duplicateProgramId);
+    setSelectedProgramDayId(duplicateProgram.days[0]?.id ?? null);
+    setIsProgramEditorOpen(true);
   }
 
   function archiveProgram(programId) {
@@ -2336,7 +2543,7 @@ function App() {
       return;
     }
 
-    const programToArchive = programDefinitions.find(
+    const programToArchive = programDrafts.find(
       (program) => program.id === programId,
     );
 
@@ -2344,7 +2551,7 @@ function App() {
       return;
     }
 
-    const nextProgramDefinitions = programDefinitions.map((program) =>
+    const nextProgramDefinitions = programDrafts.map((program) =>
       program.id === programId ? { ...program, archived: true } : program,
     );
     const nextSelectedProgramId =
@@ -2353,29 +2560,15 @@ function App() {
       programDrafts.find((program) => program.id === nextSelectedProgramId) ??
       null;
 
-    try {
-      persistPrograms(nextProgramDefinitions);
-      setProgramDefinitions(nextProgramDefinitions);
-      setProgramDrafts((currentDrafts) =>
-        currentDrafts.map((program) =>
-          program.id === programId ? { ...program, archived: true } : program,
-        ),
-      );
-      setSelectedProgramId(nextSelectedProgramId);
-      setSelectedProgramDayId(nextSelectedProgram?.days[0]?.id ?? null);
-      setIsProgramEditorOpen(false);
-      setProgramSaveStatus({
-        programId: nextSelectedProgramId,
-        type: "success",
-        message: `${programToArchive.name} archived.`,
-      });
-    } catch {
-      setProgramSaveStatus({
-        programId,
-        type: "error",
-        message: "Program could not be archived.",
-      });
-    }
+    setProgramsAndPersist("archive-program", nextProgramDefinitions, {
+      programId: nextSelectedProgramId,
+      successMessage: `${programToArchive.name} archived.`,
+      localOnlyMessage: `${programToArchive.name} archived locally. Cloud sync failed.`,
+      invalidMessage: "Program could not be archived.",
+    });
+    setSelectedProgramId(nextSelectedProgramId);
+    setSelectedProgramDayId(nextSelectedProgram?.days[0]?.id ?? null);
+    setIsProgramEditorOpen(false);
   }
 
   function createCustomProgram() {
@@ -2390,36 +2583,26 @@ function App() {
       return;
     }
 
-    const programId = createProgramId(programName, programDefinitions);
+    const programId = createProgramId(programName, programDrafts);
     const customProgram = {
       id: programId,
       name: programName,
       days: [],
       archived: false,
     };
-    const nextProgramDefinitions = [...programDefinitions, customProgram];
+    const nextProgramDefinitions = [...programDrafts, customProgram];
 
-    try {
-      persistPrograms(nextProgramDefinitions);
-      setProgramDefinitions(nextProgramDefinitions);
-      setProgramDrafts((currentDrafts) => [...currentDrafts, customProgram]);
-      setSelectedProgramId(programId);
-      setSelectedProgramDayId(null);
-      setIsProgramCreatorOpen(false);
-      setIsProgramEditorOpen(true);
-      setNewProgramName("");
-      setProgramSaveStatus({
-        programId,
-        type: "success",
-        message: "Program created.",
-      });
-    } catch {
-      setProgramSaveStatus({
-        programId: selectedProgramId,
-        type: "error",
-        message: "Program could not be created. Try again.",
-      });
-    }
+    setProgramsAndPersist("create-program", nextProgramDefinitions, {
+      programId,
+      successMessage: "Program created.",
+      localOnlyMessage: "Program created locally. Cloud sync failed.",
+      invalidMessage: "Program could not be created. Try again.",
+    });
+    setSelectedProgramId(programId);
+    setSelectedProgramDayId(null);
+    setIsProgramCreatorOpen(false);
+    setIsProgramEditorOpen(true);
+    setNewProgramName("");
   }
 
   function addProgramRoutine(programId) {
@@ -2434,23 +2617,26 @@ function App() {
       id: createProgramDayId(
         programId,
         `Routine ${routineIndex}`,
-        programDefinitions,
+        programDrafts,
       ),
       name: `Routine ${routineIndex}`,
       exercises: [],
     };
 
-    setProgramSaveStatus(null);
-    setProgramDrafts((currentDrafts) =>
-      currentDrafts.map((item) =>
-        item.id === programId
-          ? {
-              ...item,
-              days: [...item.days, newRoutine],
-            }
-          : item,
-      ),
+    const nextProgramDrafts = programDrafts.map((item) =>
+      item.id === programId
+        ? {
+            ...item,
+            days: [...item.days, newRoutine],
+          }
+        : item,
     );
+
+    setProgramsAndPersist("add-routine", nextProgramDrafts, {
+      programId,
+      successMessage: "Routine added.",
+      localOnlyMessage: "Routine added locally. Cloud sync failed.",
+    });
     setSelectedProgramDayId(newRoutine.id);
     setIsProgramEditorOpen(true);
     setExerciseFinderOpen(false);
@@ -2709,6 +2895,10 @@ function App() {
 
   if (!currentUser) {
     return <SignInScreen onSignIn={handleSignInWithGoogle} />;
+  }
+
+  if (programsLoading) {
+    return <LoadingScreen />;
   }
 
   const activeWorkoutDay = schedule.find(
@@ -3099,6 +3289,12 @@ function App() {
               </button>
             </div>
           </header>
+        ) : null}
+
+        {programSyncError ? (
+          <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100">
+            {programSyncError}
+          </p>
         ) : null}
 
         {viewMode === "dashboard" ? (

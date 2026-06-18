@@ -2,7 +2,8 @@
 
 ## Current Scope
 
-NevFit has Firebase identity wired, but workout data remains local.
+NevFit has Firebase identity wired. Workout history and session data remain
+local; program and routine definitions are cloud-backed with a local cache.
 
 Implemented:
 
@@ -14,11 +15,11 @@ Implemented:
 - App-level auth state: `currentUser` and `authLoading`
 - Authenticated UI gate
 - Firestore profile sync at `users/{uid}`
+- Firestore program/routine sync at `users/{uid}/programs/{programId}`
 
 Not implemented yet:
 
 - Cloud workout storage
-- Cloud program or routine storage
 - Cloud schedule storage
 - User settings editor
 - Profile editing UI
@@ -56,10 +57,15 @@ profile sync.
 
 ## Firestore Rules
 
-Current rules intentionally expose only each user's own profile:
+Current rules intentionally expose only each user's own profile and programs:
 
 ```js
 match /users/{userId} {
+  allow read, write: if request.auth != null
+    && request.auth.uid == userId;
+}
+
+match /users/{userId}/programs/{programId} {
   allow read, write: if request.auth != null
     && request.auth.uid == userId;
 }
@@ -70,13 +76,20 @@ paths for each new data shape.
 
 ## Data Boundary
 
-The profile document is currently the only application Firestore write.
+Current application Firestore writes are:
+
+- `users/{uid}` for the profile document
+- `users/{uid}/programs/{programId}` for program and routine definitions
+
+Programs and routines also remain cached locally in `nevfit_programs` for the
+first migration phase. Firestore is the source of truth when cloud programs
+already exist; local programs upload only when the user's cloud program
+collection is empty.
 
 These remain in `localStorage`:
 
-- Programs
-- Routines
 - Schedule
+- Active program selection
 - Active workout
 - Completed workout history
 - Cycle settings

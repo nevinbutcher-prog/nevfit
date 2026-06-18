@@ -49,6 +49,8 @@
 - Local cache fallback for schedule, active program, cycle, runs, steps, and weekly run target
 - Firestore-backed active workout state at `users/{uid}/appState/activeWorkout`
 - Firestore-backed completed workout history at `users/{uid}/completedWorkouts/{workoutId}`
+- JSON backup export from Settings
+- Confirmed JSON backup import that replaces Firestore-backed account data
 - Settings/About attribution for exercise data and images
 
 ## Current Known Limitations

@@ -19,6 +19,7 @@ src/
   services/
     activeWorkoutStore.js
     auth.js
+    backupService.js
     exerciseProvider.js
     firebase.js
     firebaseSmokeTest.js
@@ -249,6 +250,49 @@ Manual runs are stored in `nevfit_runs`:
 Only `date` is required. The dashboard run count uses the same week-start logic
 as completed workouts. `nevfit_weekly_run_target` persists the configurable
 weekly target, currently exposed as 2 or 3.
+
+## Backup And Restore
+
+Settings includes Data Management controls for JSON backup export and import.
+
+`src/services/backupService.js` exports:
+
+- `createBackup(data)`
+- `exportBackupFile(backup)`
+- `validateBackup(value)`
+- `importBackup(uid, backup)`
+
+Export uses the current React state rather than querying Firestore directly and
+downloads:
+
+```text
+nevfit-backup-YYYY-MM-DD.json
+```
+
+Backup shape:
+
+```js
+{
+  exportedAt,
+  version: 1,
+  programs,
+  planning,
+  activeWorkout,
+  completedWorkouts,
+  health,
+}
+```
+
+Import validates JSON parsing, version, and expected top-level sections before
+asking for explicit confirmation. A confirmed import replaces the current
+Firestore-backed account data instead of merging:
+
+- program documents are deleted and recreated from the backup
+- planning, active workout, and health app-state documents are overwritten
+- completed workout documents are deleted and recreated from the backup
+
+After a successful import, React state and localStorage caches are refreshed
+from the imported backup.
 
 ## Firebase Identity Layer
 

@@ -9,6 +9,12 @@ import {
   loadActiveWorkout,
   saveActiveWorkout,
 } from "./services/activeWorkoutStore";
+import {
+  createBackup,
+  exportBackupFile,
+  importBackup,
+  validateBackup,
+} from "./services/backupService";
 import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
 import {
   loadHealthState,
@@ -1964,6 +1970,8 @@ function App() {
   const [programSyncError, setProgramSyncError] = useState("");
   const [appStateSyncError, setAppStateSyncError] = useState("");
   const [workoutSyncError, setWorkoutSyncError] = useState("");
+  const [backupMessage, setBackupMessage] = useState("");
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
@@ -1985,6 +1993,7 @@ function App() {
   const healthPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutLoadedRef = useRef(false);
+  const backupFileInputRef = useRef(null);
   const exerciseSearchInputRef = useRef(null);
   const isWorkoutActive =
     viewMode === "workout" && Boolean(activeWorkoutSession);
@@ -2749,6 +2758,143 @@ function App() {
 
     setSelectedProgramDayId(selectedProgram.days[0]?.id ?? null);
   }, [programDrafts, selectedProgramDayId, selectedProgramId]);
+
+  function buildCurrentBackup() {
+    return createBackup({
+      programs: programDefinitions,
+      planning: getCurrentPlanningState({
+        schedule,
+        selectedProgramId,
+        cycleStartDate,
+        cycleLengthWeeks,
+      }),
+      activeWorkout: activeWorkoutSession,
+      completedWorkouts,
+      health: getCurrentHealthState({
+        stepsByDate,
+        runs,
+        weeklyRunTarget,
+      }),
+    });
+  }
+
+  function normalizeBackupForImport(backup) {
+    const backupValidation = validateBackup(backup);
+
+    if (!backupValidation.valid) {
+      throw new Error(backupValidation.message);
+    }
+
+    const importedPrograms = normalizeProgramDefinitions(backup.programs);
+
+    if (!importedPrograms) {
+      throw new Error("Backup programs could not be restored.");
+    }
+
+    const importedPlanning = normalizePlanningState(backup.planning);
+    const importedActiveWorkout =
+      backup.activeWorkout && isValidWorkoutSession(backup.activeWorkout)
+        ? backup.activeWorkout
+        : null;
+
+    if (backup.activeWorkout && !importedActiveWorkout) {
+      throw new Error("Backup active workout could not be restored.");
+    }
+
+    const importedCompletedWorkouts = backup.completedWorkouts.map(
+      normalizeCompletedWorkout,
+    );
+
+    if (importedCompletedWorkouts.some((workout) => !workout)) {
+      throw new Error("Backup workout history could not be restored.");
+    }
+
+    return {
+      exportedAt: backup.exportedAt,
+      version: backup.version,
+      programs: importedPrograms,
+      planning: importedPlanning,
+      activeWorkout: importedActiveWorkout,
+      completedWorkouts: importedCompletedWorkouts,
+      health: normalizeHealthState(backup.health),
+    };
+  }
+
+  function applyImportedBackupToLocalState(backup) {
+    const restoredProgram =
+      backup.programs.find(
+        (program) => program.id === backup.planning.activeProgramId,
+      ) ?? backup.programs[0];
+
+    persistPrograms(backup.programs);
+    persistPlanningCache(backup.planning);
+    persistActiveWorkoutSession(backup.activeWorkout);
+    persistCompletedWorkouts(backup.completedWorkouts);
+    persistHealthCache(backup.health);
+
+    setProgramDefinitions(backup.programs);
+    setProgramDrafts(backup.programs);
+    setSchedule(backup.planning.schedule);
+    setSelectedProgramId(backup.planning.activeProgramId);
+    setSelectedProgramDayId(restoredProgram?.days[0]?.id ?? null);
+    setCycleStartDate(backup.planning.cycleStartDate);
+    setCycleLengthWeeks(backup.planning.cycleLengthWeeks);
+    setActiveWorkoutSession(backup.activeWorkout);
+    setCompletedWorkouts(backup.completedWorkouts);
+    setStepsByDate(backup.health.steps);
+    setRuns(backup.health.runs);
+    setWeeklyRunTarget(backup.health.weeklyRunTarget);
+    setSelectedCompletedWorkoutId(null);
+    setExpandedWorkoutDetailsExerciseId(null);
+    setRestTimer(null);
+    setViewMode(backup.activeWorkout ? "workout" : "dashboard");
+  }
+
+  function handleExportBackup() {
+    try {
+      exportBackupFile(buildCurrentBackup());
+      setBackupMessage("Backup exported.");
+    } catch (error) {
+      console.error("Backup export failed:", error);
+      setBackupMessage("Backup could not be exported.");
+    }
+  }
+
+  async function handleImportBackupFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !currentUser) {
+      return;
+    }
+
+    try {
+      const parsedBackup = JSON.parse(await file.text());
+      const importedBackup = normalizeBackupForImport(parsedBackup);
+      const shouldImport = window.confirm(
+        "This will replace your current NevFit data with the contents of the backup file.",
+      );
+
+      if (!shouldImport) {
+        setBackupMessage("Backup import cancelled.");
+        return;
+      }
+
+      setIsImportingBackup(true);
+      await importBackup(currentUser.uid, importedBackup);
+      applyImportedBackupToLocalState(importedBackup);
+      setBackupMessage("Backup imported. NevFit data restored.");
+    } catch (error) {
+      console.error("Backup import failed:", error);
+      setBackupMessage(
+        error instanceof SyntaxError
+          ? "Backup file is not valid JSON."
+          : error.message || "Backup could not be imported.",
+      );
+    } finally {
+      setIsImportingBackup(false);
+    }
+  }
 
   function applyRoutineAssignment(dayId, routineDayId) {
     setSchedule((currentSchedule) => {
@@ -4626,6 +4772,44 @@ function App() {
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 Exercise data and images provided by wger and its contributors.
               </p>
+            </div>
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <h2 className="text-2xl font-bold text-white">
+                Data Management
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Download a backup of your NevFit data. Backups can be imported
+                later to restore your account.
+              </p>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleExportBackup}
+                  className="rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                >
+                  Export Backup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => backupFileInputRef.current?.click()}
+                  disabled={isImportingBackup}
+                  className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isImportingBackup ? "Importing..." : "Import Backup"}
+                </button>
+                <input
+                  ref={backupFileInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={handleImportBackupFile}
+                  className="hidden"
+                />
+              </div>
+              {backupMessage ? (
+                <p className="mt-3 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200">
+                  {backupMessage}
+                </p>
+              ) : null}
             </div>
           </section>
         ) : null}

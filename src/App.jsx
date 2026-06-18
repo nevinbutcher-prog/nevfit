@@ -3090,9 +3090,8 @@ function App() {
         : program,
     );
 
-    setProgramsAndPersist("update-program-routine", nextProgramDrafts, {
-      programId,
-    });
+    setProgramSaveStatus(null);
+    setProgramDrafts(nextProgramDrafts);
   }
 
   function updateProgramName(programId, name) {

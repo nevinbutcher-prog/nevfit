@@ -2,8 +2,9 @@
 
 ## Current Scope
 
-NevFit has Firebase identity wired. Workout history and session data remain
-local; program and routine definitions are cloud-backed with a local cache.
+NevFit has Firebase identity wired. Program/routine, planning, health, active
+workout, and completed workout history state are cloud-backed with local
+caches.
 
 Implemented:
 
@@ -16,11 +17,13 @@ Implemented:
 - Authenticated UI gate
 - Firestore profile sync at `users/{uid}`
 - Firestore program/routine sync at `users/{uid}/programs/{programId}`
+- Firestore planning sync at `users/{uid}/appState/planning`
+- Firestore health sync at `users/{uid}/appState/health`
+- Firestore active workout sync at `users/{uid}/appState/activeWorkout`
+- Firestore completed workout sync at `users/{uid}/completedWorkouts/{workoutId}`
 
 Not implemented yet:
 
-- Cloud workout storage
-- Cloud schedule storage
 - User settings editor
 - Profile editing UI
 
@@ -57,7 +60,8 @@ profile sync.
 
 ## Firestore Rules
 
-Current rules intentionally expose only each user's own profile and programs:
+Current rules intentionally expose only each user's own profile, programs, and
+app-state documents:
 
 ```js
 match /users/{userId} {
@@ -66,6 +70,16 @@ match /users/{userId} {
 }
 
 match /users/{userId}/programs/{programId} {
+  allow read, write: if request.auth != null
+    && request.auth.uid == userId;
+}
+
+match /users/{userId}/completedWorkouts/{workoutId} {
+  allow read, write: if request.auth != null
+    && request.auth.uid == userId;
+}
+
+match /users/{userId}/appState/{docId} {
   allow read, write: if request.auth != null
     && request.auth.uid == userId;
 }
@@ -80,25 +94,28 @@ Current application Firestore writes are:
 
 - `users/{uid}` for the profile document
 - `users/{uid}/programs/{programId}` for program and routine definitions
+- `users/{uid}/appState/planning` for schedule, active program selection, and cycle settings
+- `users/{uid}/appState/health` for manual steps, manual runs, and weekly run target
+- `users/{uid}/appState/activeWorkout` for the resumable active workout session
+- `users/{uid}/completedWorkouts/{workoutId}` for append-only completed workout snapshots
 
 Programs and routines also remain cached locally in `nevfit_programs` for the
 first migration phase. Firestore is the source of truth when cloud programs
 already exist; local programs upload only when the user's cloud program
 collection is empty.
 
-These remain in `localStorage`:
+Planning and health state also keep localStorage caches. When cloud app-state
+documents exist, Firestore is the source of truth and refreshes those caches.
+When a document is missing, NevFit initializes it from the current cache/default
+state and saves it to Firestore.
 
-- Schedule
-- Active program selection
-- Active workout
-- Completed workout history
-- Cycle settings
-- Manual steps
-- Manual runs
-- Weekly run target
+Active workout and completed workout history also keep localStorage caches.
+Firestore is the source of truth when cloud workout state exists. If cloud
+history is empty and local completed workouts exist, NevFit uploads the local
+snapshots once during migration.
 
-Future cloud-sync work should migrate those surfaces deliberately, one slice at
-a time.
+Future identity work should add user-facing profile and settings editing without
+broadening these data paths.
 
 ## Primary Training Profile
 

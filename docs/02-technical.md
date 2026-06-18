@@ -17,12 +17,16 @@ src/
     routineDays.js
     weekSchedule.js
   services/
+    activeWorkoutStore.js
     auth.js
     exerciseProvider.js
     firebase.js
     firebaseSmokeTest.js
+    healthStore.js
+    planningStore.js
     programStore.js
     userProfile.js
+    workoutHistoryStore.js
   index.css
 ```
 
@@ -46,11 +50,19 @@ Root Firebase config files:
 
 Legacy note: older docs may mention `nevfit_routines`; the current program
 editor persists program definitions through `nevfit_programs` as a local cache.
+Planning and health keys remain as local caches for their Firestore app-state
+documents. Active workout and completed workout history keys also remain as
+local caches for their Firestore-backed workout state.
 
 ## Workout History Model
 
-Completed workouts are append-only historical snapshots stored in
-`nevfit_completed_workouts`.
+Completed workouts are append-only historical snapshots stored at:
+
+```text
+users/{uid}/completedWorkouts/{workoutId}
+```
+
+`nevfit_completed_workouts` remains a local cache.
 
 Previous performance is derived from completed workout history, not from active
 or blank sessions.
@@ -248,13 +260,13 @@ Authentication is isolated in `src/services/auth.js`:
 - `signOutUser()`
 - `subscribeToAuthChanges(callback)`
 
-The app tracks `currentUser` and `authLoading`. Signing in resolves the
-cloud-backed program store before showing the authenticated app.
+The app tracks `currentUser` and `authLoading`. Signing in resolves cloud-backed
+program, planning, and health state before showing the authenticated app.
 
 When `authLoading` is true, the app shows a loading screen and does not flash
 the main app. When `currentUser` is null, the app shows only the sign-in screen.
-Program loading can also show the loading screen while local/cloud migration
-resolves.
+Program, planning, health, active workout, and completed workout history loading
+can also show the loading screen while local/cloud migration resolves.
 
 `src/services/userProfile.js` exports `ensureUserProfile(user)`, which creates
 or updates `users/{uid}` with `setDoc(..., { merge: true })`. This is the only
@@ -279,17 +291,94 @@ cached locally. Program edits, creation, duplication, archive actions, and
 routine exercise changes save to localStorage first, then attempt Firestore.
 Firestore failures leave local data intact and show a non-blocking sync warning.
 
+`src/services/planningStore.js` stores planning state at:
+
+```text
+users/{uid}/appState/planning
+```
+
+The document contains:
+
+```js
+{
+  schedule,
+  activeProgramId,
+  cycleStartDate,
+  cycleLengthWeeks,
+  updatedAt,
+}
+```
+
+`src/services/healthStore.js` stores dashboard health state at:
+
+```text
+users/{uid}/appState/health
+```
+
+The document contains:
+
+```js
+{
+  steps,
+  runs,
+  weeklyRunTarget,
+  updatedAt,
+}
+```
+
+Firestore is the source of truth for these app-state documents. If a document
+exists, the app normalizes it into React state and refreshes the localStorage
+cache. If a document does not exist, the app initializes it from the current
+local cache/default state and saves it. Planning and health saves are queued so
+rapid UI updates persist in order. Failures leave the local cache intact and
+show a non-blocking sync warning.
+
+`src/services/activeWorkoutStore.js` stores the resumable active workout at:
+
+```text
+users/{uid}/appState/activeWorkout
+```
+
+The document contains:
+
+```js
+{
+  activeWorkoutSession,
+  updatedAt,
+}
+```
+
+The active workout session uses the existing in-progress workout snapshot
+shape, including exercise IDs, snapped exercise names, prescribed sets,
+`repRange`, rest timing, `supersetGroupId`, and logged set strings. Starting or
+editing a workout saves the active session. Closing a blank workout or
+completing a workout clears the active session.
+
+`src/services/workoutHistoryStore.js` stores completed workout snapshots at:
+
+```text
+users/{uid}/completedWorkouts/{workoutId}
+```
+
+Completed workout records preserve the existing append-only snapshot model:
+`completedAt`, schedule and routine IDs, routine name, exercise IDs, snapped
+exercise names, rest seconds, `supersetGroupId`, and set values. If the cloud
+collection is empty and local completed workouts exist, the local snapshots are
+uploaded once during first migration. Previous performance continues to derive
+from the cloud-loaded completed workout state.
+
 Firestore rules are intentionally narrow:
 
 - signed-in users can read/write only their own `users/{uid}` document
 - signed-in users can read/write only their own
   `users/{uid}/programs/{programId}` documents
-- workout history, schedule, active workouts, runs, steps, and cycle settings
-  remain local-only
+- signed-in users can read/write only their own
+  `users/{uid}/completedWorkouts/{workoutId}` documents
+- signed-in users can read/write only their own
+  `users/{uid}/appState/{docId}` documents
 
 ## Future Storage
 
-- Cloud-backed schedule, active workout, and completed workout storage
 - Durable selected exercise metadata if offline reload behavior becomes
   important
 

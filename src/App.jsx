@@ -4,13 +4,30 @@ import {
   signOutUser,
   subscribeToAuthChanges,
 } from "./services/auth";
+import {
+  clearActiveWorkout,
+  loadActiveWorkout,
+  saveActiveWorkout,
+} from "./services/activeWorkoutStore";
 import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
+import {
+  loadHealthState,
+  saveHealthState,
+} from "./services/healthStore";
+import {
+  loadPlanningState,
+  savePlanningState,
+} from "./services/planningStore";
 import {
   loadCloudPrograms,
   migrateLocalProgramsToCloud,
   savePrograms,
 } from "./services/programStore";
 import { ensureUserProfile } from "./services/userProfile";
+import {
+  loadCompletedWorkouts as loadCloudCompletedWorkouts,
+  saveCompletedWorkout,
+} from "./services/workoutHistoryStore";
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
 import { getExerciseById, searchExercises } from "./services/exerciseProvider";
@@ -724,6 +741,222 @@ function persistWeeklyRunTarget(target) {
   window.localStorage.setItem(WEEKLY_RUN_TARGET_STORAGE_KEY, String(target));
 }
 
+function getCurrentPlanningState({
+  schedule,
+  selectedProgramId,
+  cycleStartDate,
+  cycleLengthWeeks,
+}) {
+  return {
+    schedule,
+    activeProgramId: selectedProgramId || defaultProgramId,
+    cycleStartDate: cycleStartDate || "",
+    cycleLengthWeeks: cycleLengthWeeks || "",
+  };
+}
+
+function normalizePlanningState(value, fallbackState = null) {
+  const fallback =
+    fallbackState ??
+    getCurrentPlanningState({
+      schedule: loadStoredSchedule(),
+      selectedProgramId: loadStoredActiveProgramId(),
+      cycleStartDate: loadStoredCycleStartDate(),
+      cycleLengthWeeks: loadStoredCycleLengthWeeks(),
+    });
+
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const cycleLengthWeeks = Number(value.cycleLengthWeeks);
+
+  return {
+    schedule: isValidSchedule(value.schedule) ? value.schedule : fallback.schedule,
+    activeProgramId:
+      typeof value.activeProgramId === "string" && value.activeProgramId.trim()
+        ? value.activeProgramId
+        : fallback.activeProgramId,
+    cycleStartDate:
+      typeof value.cycleStartDate === "string" &&
+      (value.cycleStartDate === "" || isValidDateInputValue(value.cycleStartDate))
+        ? value.cycleStartDate
+        : fallback.cycleStartDate,
+    cycleLengthWeeks:
+      Number.isInteger(cycleLengthWeeks) && cycleLengthWeeks > 0
+        ? cycleLengthWeeks
+        : value.cycleLengthWeeks === ""
+          ? ""
+          : fallback.cycleLengthWeeks,
+  };
+}
+
+function persistPlanningCache(planningState) {
+  persistSchedule(planningState.schedule);
+
+  if (planningState.activeProgramId) {
+    window.localStorage.setItem(
+      ACTIVE_PROGRAM_STORAGE_KEY,
+      planningState.activeProgramId,
+    );
+  } else {
+    window.localStorage.removeItem(ACTIVE_PROGRAM_STORAGE_KEY);
+  }
+
+  if (planningState.cycleStartDate) {
+    window.localStorage.setItem(
+      CYCLE_START_DATE_STORAGE_KEY,
+      planningState.cycleStartDate,
+    );
+  } else {
+    window.localStorage.removeItem(CYCLE_START_DATE_STORAGE_KEY);
+  }
+
+  if (planningState.cycleLengthWeeks) {
+    window.localStorage.setItem(
+      CYCLE_LENGTH_WEEKS_STORAGE_KEY,
+      String(planningState.cycleLengthWeeks),
+    );
+  } else {
+    window.localStorage.removeItem(CYCLE_LENGTH_WEEKS_STORAGE_KEY);
+  }
+}
+
+function getCurrentHealthState({ stepsByDate, runs, weeklyRunTarget }) {
+  return {
+    steps: stepsByDate,
+    runs,
+    weeklyRunTarget,
+  };
+}
+
+function normalizeHealthState(value, fallbackState = null) {
+  const fallback =
+    fallbackState ??
+    getCurrentHealthState({
+      stepsByDate: loadStoredSteps(),
+      runs: loadStoredRuns(),
+      weeklyRunTarget: loadStoredWeeklyRunTarget(),
+    });
+  const weeklyRunTarget = Number(value?.weeklyRunTarget);
+
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  return {
+    steps: normalizeStoredSteps(value.steps),
+    runs: normalizeStoredRuns(value.runs),
+    weeklyRunTarget: [2, 3].includes(weeklyRunTarget)
+      ? weeklyRunTarget
+      : fallback.weeklyRunTarget,
+  };
+}
+
+function persistHealthCache(healthState) {
+  persistSteps(healthState.steps);
+  persistRuns(healthState.runs);
+  persistWeeklyRunTarget(healthState.weeklyRunTarget);
+}
+
+function logPlanningSync(actionName, uid, planningState, result, error = null) {
+  const payload = {
+    uid: uid ?? null,
+    actionName,
+    scheduleCount: planningState.schedule.length,
+    result,
+  };
+
+  if (error) {
+    console.error("Planning sync diagnostic", payload, error);
+    return;
+  }
+
+  console.info("Planning sync diagnostic", payload);
+}
+
+function logHealthSync(actionName, uid, healthState, result, error = null) {
+  const payload = {
+    uid: uid ?? null,
+    actionName,
+    runsCount: healthState.runs.length,
+    stepEntryCount: Object.keys(healthState.steps).length,
+    result,
+  };
+
+  if (error) {
+    console.error("Health sync diagnostic", payload, error);
+    return;
+  }
+
+  console.info("Health sync diagnostic", payload);
+}
+
+async function loadUserPlanningState(uid) {
+  const defaultPlanningState = normalizePlanningState(null);
+  const cloudPlanningState = await loadPlanningState(uid);
+
+  if (cloudPlanningState) {
+    const planningState = normalizePlanningState(
+      cloudPlanningState,
+      defaultPlanningState,
+    );
+    persistPlanningCache(planningState);
+    logPlanningSync("planning-load", uid, planningState, "success");
+    return planningState;
+  }
+
+  persistPlanningCache(defaultPlanningState);
+  await savePlanningState(uid, defaultPlanningState);
+  logPlanningSync("planning-initialize", uid, defaultPlanningState, "success");
+  return defaultPlanningState;
+}
+
+async function persistPlanningStateForUser(uid, planningState, actionName) {
+  persistPlanningCache(planningState);
+  logPlanningSync(actionName, uid, planningState, "local");
+
+  try {
+    await savePlanningState(uid, planningState);
+    logPlanningSync(actionName, uid, planningState, "success");
+    return true;
+  } catch (error) {
+    logPlanningSync(actionName, uid, planningState, "failure", error);
+    return false;
+  }
+}
+
+async function loadUserHealthState(uid) {
+  const defaultHealthState = normalizeHealthState(null);
+  const cloudHealthState = await loadHealthState(uid);
+
+  if (cloudHealthState) {
+    const healthState = normalizeHealthState(cloudHealthState, defaultHealthState);
+    persistHealthCache(healthState);
+    logHealthSync("health-load", uid, healthState, "success");
+    return healthState;
+  }
+
+  persistHealthCache(defaultHealthState);
+  await saveHealthState(uid, defaultHealthState);
+  logHealthSync("health-initialize", uid, defaultHealthState, "success");
+  return defaultHealthState;
+}
+
+async function persistHealthStateForUser(uid, healthState, actionName) {
+  persistHealthCache(healthState);
+  logHealthSync(actionName, uid, healthState, "local");
+
+  try {
+    await saveHealthState(uid, healthState);
+    logHealthSync(actionName, uid, healthState, "success");
+    return true;
+  } catch (error) {
+    logHealthSync(actionName, uid, healthState, "failure", error);
+    return false;
+  }
+}
+
 function getRunsThisWeek(runs) {
   const startOfWeek = getStartOfWeek(new Date());
   const endOfWeek = new Date(startOfWeek);
@@ -918,10 +1151,6 @@ function parseStoredCompletedWorkouts({ throwOnError = false } = {}) {
 
 function loadCompletedWorkouts() {
   return parseStoredCompletedWorkouts();
-}
-
-function readPersistedCompletedWorkoutsForSave() {
-  return parseStoredCompletedWorkouts({ throwOnError: true });
 }
 
 function persistCompletedWorkouts(completedWorkouts) {
@@ -1306,6 +1535,146 @@ function persistActiveWorkoutSession(workoutSession) {
   );
 }
 
+function logActiveWorkoutSync(actionName, uid, session, result, error = null) {
+  const payload = {
+    uid: uid ?? null,
+    actionName,
+    hasActiveWorkout: Boolean(session),
+    result,
+  };
+
+  if (error) {
+    console.error("Active workout sync diagnostic", payload, error);
+    return;
+  }
+
+  console.info("Active workout sync diagnostic", payload);
+}
+
+function logCompletedWorkoutSync(actionName, uid, workouts, result, error = null) {
+  const payload = {
+    uid: uid ?? null,
+    actionName,
+    workoutCount: workouts.length,
+    result,
+  };
+
+  if (error) {
+    console.error("Completed workout sync diagnostic", payload, error);
+    return;
+  }
+
+  console.info("Completed workout sync diagnostic", payload);
+}
+
+async function loadUserActiveWorkout(uid) {
+  const cloudSession = await loadActiveWorkout(uid);
+
+  if (typeof cloudSession !== "undefined") {
+    const activeSession = isValidWorkoutSession(cloudSession) ? cloudSession : null;
+    persistActiveWorkoutSession(activeSession);
+    logActiveWorkoutSync("active-workout-load", uid, activeSession, "success");
+    return activeSession;
+  }
+
+  const localSession = loadStoredActiveWorkoutSession();
+
+  if (localSession) {
+    await saveActiveWorkout(uid, localSession);
+    logActiveWorkoutSync(
+      "active-workout-migrate-local",
+      uid,
+      localSession,
+      "success",
+    );
+    return localSession;
+  }
+
+  persistActiveWorkoutSession(null);
+  logActiveWorkoutSync("active-workout-load-empty", uid, null, "success");
+  return null;
+}
+
+async function persistActiveWorkoutForUser(uid, session, actionName) {
+  persistActiveWorkoutSession(session);
+  logActiveWorkoutSync(actionName, uid, session, "local");
+
+  try {
+    if (session) {
+      await saveActiveWorkout(uid, session);
+    } else {
+      await clearActiveWorkout(uid);
+    }
+
+    logActiveWorkoutSync(actionName, uid, session, "success");
+    return true;
+  } catch (error) {
+    logActiveWorkoutSync(actionName, uid, session, "failure", error);
+    return false;
+  }
+}
+
+async function loadUserCompletedWorkouts(uid) {
+  const cloudWorkouts = (await loadCloudCompletedWorkouts(uid))
+    .map(normalizeCompletedWorkout)
+    .filter(Boolean);
+
+  if (cloudWorkouts.length) {
+    persistCompletedWorkouts(cloudWorkouts);
+    logCompletedWorkoutSync(
+      "completed-workouts-load",
+      uid,
+      cloudWorkouts,
+      "success",
+    );
+    return cloudWorkouts;
+  }
+
+  const localWorkouts = loadCompletedWorkouts();
+
+  if (localWorkouts.length) {
+    await Promise.all(
+      localWorkouts.map((workout) => saveCompletedWorkout(uid, workout)),
+    );
+    logCompletedWorkoutSync(
+      "completed-workouts-migrate-local",
+      uid,
+      localWorkouts,
+      "success",
+    );
+    return localWorkouts;
+  }
+
+  persistCompletedWorkouts([]);
+  logCompletedWorkoutSync("completed-workouts-load-empty", uid, [], "success");
+  return [];
+}
+
+async function persistCompletedWorkoutForUser(uid, workout, nextWorkouts) {
+  persistCompletedWorkouts(nextWorkouts);
+  logCompletedWorkoutSync("completed-workout-save", uid, nextWorkouts, "local");
+
+  try {
+    await saveCompletedWorkout(uid, workout);
+    logCompletedWorkoutSync(
+      "completed-workout-save",
+      uid,
+      nextWorkouts,
+      "success",
+    );
+    return true;
+  } catch (error) {
+    logCompletedWorkoutSync(
+      "completed-workout-save",
+      uid,
+      nextWorkouts,
+      "failure",
+      error,
+    );
+    return false;
+  }
+}
+
 function createCompletedWorkoutRecord(
   workoutSession,
   routineDay,
@@ -1588,7 +1957,13 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [programsLoading, setProgramsLoading] = useState(true);
+  const [planningLoading, setPlanningLoading] = useState(true);
+  const [healthLoading, setHealthLoading] = useState(true);
+  const [activeWorkoutLoading, setActiveWorkoutLoading] = useState(true);
+  const [workoutHistoryLoading, setWorkoutHistoryLoading] = useState(true);
   const [programSyncError, setProgramSyncError] = useState("");
+  const [appStateSyncError, setAppStateSyncError] = useState("");
+  const [workoutSyncError, setWorkoutSyncError] = useState("");
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
   const [pendingWorkoutAction, setPendingWorkoutAction] = useState(null);
@@ -1601,7 +1976,15 @@ function App() {
   const selectedDayCardRef = useRef(null);
   const lastProfileSyncUidRef = useRef(null);
   const lastProgramLoadUidRef = useRef(null);
+  const lastPlanningLoadUidRef = useRef(null);
+  const lastHealthLoadUidRef = useRef(null);
+  const lastActiveWorkoutLoadUidRef = useRef(null);
+  const lastWorkoutHistoryLoadUidRef = useRef(null);
   const programPersistQueueRef = useRef(Promise.resolve());
+  const planningPersistQueueRef = useRef(Promise.resolve());
+  const healthPersistQueueRef = useRef(Promise.resolve());
+  const activeWorkoutPersistQueueRef = useRef(Promise.resolve());
+  const activeWorkoutLoadedRef = useRef(false);
   const exerciseSearchInputRef = useRef(null);
   const isWorkoutActive =
     viewMode === "workout" && Boolean(activeWorkoutSession);
@@ -1690,6 +2073,212 @@ function App() {
       .finally(() => {
         if (shouldApplyResults) {
           setProgramsLoading(false);
+        }
+      });
+
+    return () => {
+      shouldApplyResults = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      lastPlanningLoadUidRef.current = null;
+      setPlanningLoading(false);
+      return undefined;
+    }
+
+    const loadUid = currentUser.uid;
+
+    if (lastPlanningLoadUidRef.current === loadUid) {
+      setPlanningLoading(false);
+      return undefined;
+    }
+
+    let shouldApplyResults = true;
+    lastPlanningLoadUidRef.current = loadUid;
+    setPlanningLoading(true);
+    setAppStateSyncError("");
+
+    loadUserPlanningState(loadUid)
+      .then((loadedPlanningState) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        setSchedule(loadedPlanningState.schedule);
+        setSelectedProgramId(loadedPlanningState.activeProgramId);
+        setCycleStartDate(loadedPlanningState.cycleStartDate);
+        setCycleLengthWeeks(loadedPlanningState.cycleLengthWeeks);
+      })
+      .catch((error) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        console.error("Planning state sync failed:", error);
+        lastPlanningLoadUidRef.current = null;
+        setAppStateSyncError(
+          "Planning data is using this device cache. Cloud sync is unavailable.",
+        );
+      })
+      .finally(() => {
+        if (shouldApplyResults) {
+          setPlanningLoading(false);
+        }
+      });
+
+    return () => {
+      shouldApplyResults = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      lastHealthLoadUidRef.current = null;
+      setHealthLoading(false);
+      return undefined;
+    }
+
+    const loadUid = currentUser.uid;
+
+    if (lastHealthLoadUidRef.current === loadUid) {
+      setHealthLoading(false);
+      return undefined;
+    }
+
+    let shouldApplyResults = true;
+    lastHealthLoadUidRef.current = loadUid;
+    setHealthLoading(true);
+    setAppStateSyncError("");
+
+    loadUserHealthState(loadUid)
+      .then((loadedHealthState) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        setStepsByDate(loadedHealthState.steps);
+        setRuns(loadedHealthState.runs);
+        setWeeklyRunTarget(loadedHealthState.weeklyRunTarget);
+      })
+      .catch((error) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        console.error("Health state sync failed:", error);
+        lastHealthLoadUidRef.current = null;
+        setAppStateSyncError(
+          "Health data is using this device cache. Cloud sync is unavailable.",
+        );
+      })
+      .finally(() => {
+        if (shouldApplyResults) {
+          setHealthLoading(false);
+        }
+      });
+
+    return () => {
+      shouldApplyResults = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      lastActiveWorkoutLoadUidRef.current = null;
+      activeWorkoutLoadedRef.current = false;
+      setActiveWorkoutLoading(false);
+      return undefined;
+    }
+
+    const loadUid = currentUser.uid;
+
+    if (lastActiveWorkoutLoadUidRef.current === loadUid) {
+      setActiveWorkoutLoading(false);
+      return undefined;
+    }
+
+    let shouldApplyResults = true;
+    lastActiveWorkoutLoadUidRef.current = loadUid;
+    activeWorkoutLoadedRef.current = false;
+    setActiveWorkoutLoading(true);
+    setWorkoutSyncError("");
+
+    loadUserActiveWorkout(loadUid)
+      .then((loadedSession) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        setActiveWorkoutSession(loadedSession);
+        setViewMode(loadedSession ? "workout" : "dashboard");
+        activeWorkoutLoadedRef.current = true;
+      })
+      .catch((error) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        console.error("Active workout sync failed:", error);
+        lastActiveWorkoutLoadUidRef.current = null;
+        activeWorkoutLoadedRef.current = true;
+        setWorkoutSyncError(
+          "Active workout is using this device cache. Cloud sync is unavailable.",
+        );
+      })
+      .finally(() => {
+        if (shouldApplyResults) {
+          setActiveWorkoutLoading(false);
+        }
+      });
+
+    return () => {
+      shouldApplyResults = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      lastWorkoutHistoryLoadUidRef.current = null;
+      setWorkoutHistoryLoading(false);
+      return undefined;
+    }
+
+    const loadUid = currentUser.uid;
+
+    if (lastWorkoutHistoryLoadUidRef.current === loadUid) {
+      setWorkoutHistoryLoading(false);
+      return undefined;
+    }
+
+    let shouldApplyResults = true;
+    lastWorkoutHistoryLoadUidRef.current = loadUid;
+    setWorkoutHistoryLoading(true);
+    setWorkoutSyncError("");
+
+    loadUserCompletedWorkouts(loadUid)
+      .then((loadedWorkouts) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        setCompletedWorkouts(loadedWorkouts);
+      })
+      .catch((error) => {
+        if (!shouldApplyResults) {
+          return;
+        }
+
+        console.error("Completed workout sync failed:", error);
+        lastWorkoutHistoryLoadUidRef.current = null;
+        setWorkoutSyncError(
+          "Workout history is using this device cache. Cloud sync is unavailable.",
+        );
+      })
+      .finally(() => {
+        if (shouldApplyResults) {
+          setWorkoutHistoryLoading(false);
         }
       });
 
@@ -1859,8 +2448,36 @@ function App() {
   }, [exerciseLibrary, programDrafts]);
 
   useEffect(() => {
-    persistActiveWorkoutSession(activeWorkoutSession);
-  }, [activeWorkoutSession]);
+    if (!currentUser || activeWorkoutLoading || !activeWorkoutLoadedRef.current) {
+      persistActiveWorkoutSession(activeWorkoutSession);
+      return;
+    }
+
+    const queuedPersist = activeWorkoutPersistQueueRef.current.then(
+      () =>
+        persistActiveWorkoutForUser(
+          currentUser.uid,
+          activeWorkoutSession,
+          activeWorkoutSession ? "active-workout-save" : "active-workout-clear",
+        ),
+      () =>
+        persistActiveWorkoutForUser(
+          currentUser.uid,
+          activeWorkoutSession,
+          activeWorkoutSession ? "active-workout-save" : "active-workout-clear",
+        ),
+    );
+
+    activeWorkoutPersistQueueRef.current = queuedPersist.catch(() => {});
+
+    queuedPersist.then((activeWorkoutSynced) => {
+      setWorkoutSyncError(
+        activeWorkoutSynced
+          ? ""
+          : "Active workout is saved on this device. Cloud sync is unavailable.",
+      );
+    });
+  }, [activeWorkoutLoading, activeWorkoutSession, currentUser]);
 
   useEffect(() => {
     if (!selectedProgramId) {
@@ -1891,6 +2508,78 @@ function App() {
       String(cycleLengthWeeks),
     );
   }, [cycleLengthWeeks]);
+
+  useEffect(() => {
+    if (!currentUser || planningLoading) {
+      return;
+    }
+
+    const planningState = getCurrentPlanningState({
+      schedule,
+      selectedProgramId,
+      cycleStartDate,
+      cycleLengthWeeks,
+    });
+    const queuedPersist = planningPersistQueueRef.current.then(
+      () =>
+        persistPlanningStateForUser(
+          currentUser.uid,
+          planningState,
+          "planning-save",
+        ),
+      () =>
+        persistPlanningStateForUser(
+          currentUser.uid,
+          planningState,
+          "planning-save",
+        ),
+    );
+
+    planningPersistQueueRef.current = queuedPersist.catch(() => {});
+
+    queuedPersist.then((planningSynced) => {
+      setAppStateSyncError(
+        planningSynced
+          ? ""
+          : "Planning data is saved on this device. Cloud sync is unavailable.",
+      );
+    });
+  }, [
+    currentUser,
+    planningLoading,
+    schedule,
+    selectedProgramId,
+    cycleStartDate,
+    cycleLengthWeeks,
+  ]);
+
+  useEffect(() => {
+    if (!currentUser || healthLoading) {
+      return;
+    }
+
+    const healthState = getCurrentHealthState({
+      stepsByDate,
+      runs,
+      weeklyRunTarget,
+    });
+    const queuedPersist = healthPersistQueueRef.current.then(
+      () =>
+        persistHealthStateForUser(currentUser.uid, healthState, "health-save"),
+      () =>
+        persistHealthStateForUser(currentUser.uid, healthState, "health-save"),
+    );
+
+    healthPersistQueueRef.current = queuedPersist.catch(() => {});
+
+    queuedPersist.then((healthSynced) => {
+      setAppStateSyncError(
+        healthSynced
+          ? ""
+          : "Health data is saved on this device. Cloud sync is unavailable.",
+      );
+    });
+  }, [currentUser, healthLoading, stepsByDate, runs, weeklyRunTarget]);
 
   useEffect(() => {
     if (
@@ -2705,7 +3394,7 @@ function App() {
     setPendingWorkoutAction({ type: "finish-workout" });
   }
 
-  function finishWorkout() {
+  async function finishWorkout() {
     if (!activeWorkoutSession || !activeRoutineDay) {
       return;
     }
@@ -2727,23 +3416,36 @@ function App() {
     );
 
     try {
-      const storedWorkouts = readPersistedCompletedWorkoutsForSave();
       const nextWorkouts = [
         completedWorkout,
-        ...storedWorkouts.filter(
+        ...completedWorkouts.filter(
           (workout) => workout.id !== completedWorkout.id,
         ),
       ];
+      const workoutSynced = currentUser
+        ? await persistCompletedWorkoutForUser(
+            currentUser.uid,
+            completedWorkout,
+            nextWorkouts,
+          )
+        : (persistCompletedWorkouts(nextWorkouts), true);
 
-      persistCompletedWorkouts(nextWorkouts);
       setCompletedWorkouts(nextWorkouts);
       setSaveMessage(
-        `Workout finished at ${formatFinishedTime(finishedAt)}. All logged sets saved.`,
+        workoutSynced
+          ? `Workout finished at ${formatFinishedTime(finishedAt)}. All logged sets saved.`
+          : `Workout finished at ${formatFinishedTime(finishedAt)}. Saved locally; cloud sync failed.`,
+      );
+      setWorkoutSyncError(
+        workoutSynced
+          ? ""
+          : "Workout history is saved on this device. Cloud sync is unavailable.",
       );
       setActiveWorkoutSession(null);
       setRestTimer(null);
       setViewMode("planner");
-    } catch {
+    } catch (error) {
+      console.error("Completed workout local save failed:", error);
       setSaveMessage(
         "Workout could not be saved. Your active workout is still open.",
       );
@@ -2775,10 +3477,10 @@ function App() {
     }
   }
 
-  function finishPendingWorkoutAction() {
+  async function finishPendingWorkoutAction() {
     const action = pendingWorkoutAction;
 
-    finishWorkout();
+    await finishWorkout();
     setPendingWorkoutAction(null);
     window.setTimeout(() => completePendingWorkoutAction(action), 0);
   }
@@ -2897,7 +3599,13 @@ function App() {
     return <SignInScreen onSignIn={handleSignInWithGoogle} />;
   }
 
-  if (programsLoading) {
+  if (
+    programsLoading ||
+    planningLoading ||
+    healthLoading ||
+    activeWorkoutLoading ||
+    workoutHistoryLoading
+  ) {
     return <LoadingScreen />;
   }
 
@@ -3294,6 +4002,18 @@ function App() {
         {programSyncError ? (
           <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100">
             {programSyncError}
+          </p>
+        ) : null}
+
+        {appStateSyncError ? (
+          <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100">
+            {appStateSyncError}
+          </p>
+        ) : null}
+
+        {workoutSyncError ? (
+          <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100">
+            {workoutSyncError}
           </p>
         ) : null}
 

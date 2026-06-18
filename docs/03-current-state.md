@@ -44,6 +44,11 @@
 - Firestore-backed custom programs and routines at `users/{uid}/programs/{programId}`
 - Safe first-load program migration from `nevfit_programs` to Firestore
 - Local program cache fallback with non-blocking cloud sync warnings
+- Firestore-backed planning state at `users/{uid}/appState/planning`
+- Firestore-backed health state at `users/{uid}/appState/health`
+- Local cache fallback for schedule, active program, cycle, runs, steps, and weekly run target
+- Firestore-backed active workout state at `users/{uid}/appState/activeWorkout`
+- Firestore-backed completed workout history at `users/{uid}/completedWorkouts/{workoutId}`
 - Settings/About attribution for exercise data and images
 
 ## Current Known Limitations
@@ -52,8 +57,7 @@
 - The local exercise alias layer is intentionally small and is not a full exercise taxonomy.
 - wger equipment metadata can be incomplete, so the equipment filter is hidden for now.
 - wger-selected exercise metadata is cached in memory for the current app session; saved routines retain stable wger IDs and can rehydrate metadata with `getExerciseById`.
-- Workout history, schedule, active workout, runs, steps, weekly run target, and cycle settings are still localStorage-backed.
-- Program Firestore sync is limited to definitions only; active program selection remains local in `nevfit_active_program`.
+- Previous performance lookup is derived from cloud-loaded completed workout history state.
 - Timer completion alarm still needs real-device validation with workout music and mobile browser audio policies.
 - Minor mobile viewport movement has been reported on some devices when editing inputs.
 

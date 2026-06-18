@@ -46,6 +46,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Firebase Google sign-in
 - Authenticated app gate with signed-out landing screen
 - Firestore `users/{uid}` profile document sync
+- Firestore-backed programs, planning, health state, active workout, and workout history
 - Settings/About attribution for exercise data and images
 
 ## Current Product Direction
@@ -71,7 +72,6 @@ Users can:
 Future expansion:
 
 - Workout history screen
-- Migrate workout/program data from localStorage to Firestore
 - Progression tracking
 - PR tracking
 - Custom exercise creation

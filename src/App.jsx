@@ -3284,11 +3284,6 @@ function App() {
       setProgramsAndPersist("add-routine-exercise", nextProgramDrafts, {
         programId,
       });
-      setExerciseSearchTerm("");
-      setExerciseEquipmentFilter("all");
-      setExerciseMuscleFilter("all");
-      setExerciseSearchResults([]);
-      setExerciseSearchStatus("idle");
       window.setTimeout(() => {
         exerciseSearchInputRef.current?.focus();
       }, 0);

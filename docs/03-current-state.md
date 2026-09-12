@@ -30,6 +30,8 @@
 - Optional routine-level exercise display name overrides
 - Lightweight routine superset pairing
 - Focused superset partner selection with compact grouped-row labels
+- Versioned, validated routine proposal contract for future coaching integrations
+- Pure proposal-to-draft application with stable routine-row targeting and no persistence side effects
 - Workout mode
 - Supersetted exercises render in grouped workout-mode blocks
 - Faster workout logging with automatic weight carry-forward, compact prior-session summaries, clear set states, and collapsible completed exercises

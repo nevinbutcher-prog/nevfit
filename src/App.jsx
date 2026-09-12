@@ -130,7 +130,7 @@ function persistSchedule(schedule) {
   window.localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
 }
 
-function normalizeRoutineExercise(value) {
+function normalizeRoutineExercise(value, fallbackRoutineExerciseId) {
   if (
     !(
       value &&
@@ -169,6 +169,11 @@ function normalizeRoutineExercise(value) {
         : null;
 
   return {
+    routineExerciseId:
+      typeof value.routineExerciseId === "string" &&
+      value.routineExerciseId.trim()
+        ? value.routineExerciseId.trim()
+        : fallbackRoutineExerciseId,
     exerciseId: value.exerciseId.trim(),
     sets,
     repRange:
@@ -205,7 +210,14 @@ function normalizeRoutineDay(value, fallbackDay = null) {
   }
 
   const exercises = cleanOrphanedSupersetGroups(
-    value.exercises.map(normalizeRoutineExercise).filter(Boolean),
+    value.exercises
+      .map((exercise, index) =>
+        normalizeRoutineExercise(
+          exercise,
+          `ri-${value.id.trim()}-${index + 1}`,
+        ),
+      )
+      .filter(Boolean),
   );
 
   return {
@@ -495,6 +507,15 @@ function createSupersetGroupId() {
       : Date.now().toString(36);
 
   return `ss-${suffix}`;
+}
+
+function createRoutineExerciseId() {
+  const suffix =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+  return `ri-${suffix}`;
 }
 
 function cleanOrphanedSupersetGroups(exercises) {
@@ -1244,6 +1265,7 @@ function getSupersetPartnerNames(exercises, exerciseIndex, exerciseLibrary) {
 
 function createRoutineExerciseFromCatalog(exercise) {
   return {
+    routineExerciseId: createRoutineExerciseId(),
     exerciseId: exercise.id,
     sets: exercise.defaultSets ?? 3,
     repRange: exercise.defaultRepRange ?? "8-12",
@@ -3551,7 +3573,10 @@ function App() {
       id: createProgramDayId(programId, `${sourceRoutine.name} Copy`, programDrafts),
       name: `${sourceRoutine.name} Copy`,
       archived: false,
-      exercises: sourceRoutine.exercises.map((exercise) => ({ ...exercise })),
+      exercises: sourceRoutine.exercises.map((exercise) => ({
+        ...exercise,
+        routineExerciseId: createRoutineExerciseId(),
+      })),
     };
     const sourceIndex = program.days.findIndex((day) => day.id === routineId);
     const nextProgramDrafts = programDrafts.map((item) =>

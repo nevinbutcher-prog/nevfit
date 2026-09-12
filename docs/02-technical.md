@@ -96,6 +96,7 @@ Routine exercises also normalize a lightweight `supersetGroupId` field:
 
 ```js
 {
+  routineExerciseId,
   exerciseId,
   sets,
   repRange,
@@ -105,6 +106,13 @@ Routine exercises also normalize a lightweight `supersetGroupId` field:
   supersetGroupId,
 }
 ```
+
+`routineExerciseId` is the stable identity of a particular row inside a
+routine. It is separate from provider-backed `exerciseId`, so two instances of
+the same movement can be targeted independently. New rows receive a generated
+`ri-*` ID. Legacy rows receive a deterministic `ri-{routineId}-{position}` ID
+during normalization; the ID is then retained through edits, reordering, and
+persistence. Duplicating a routine generates fresh row IDs for the copy.
 
 Missing values normalize to `null`. Older `groupId` values are migrated into
 `supersetGroupId` during routine normalization for local backwards
@@ -132,6 +140,57 @@ history keeps the name used during the workout even if the routine is renamed
 later. Active and completed workout exercise snapshots also preserve
 `supersetGroupId` so workout mode can group paired exercises visually without
 changing timer behavior.
+
+## Routine Proposal Contract
+
+`src/services/routineProposal.js` defines the provider-neutral boundary for
+future coaching proposals. Version 1 supports `create_routine` and
+`modify_routine`; it does not call an AI provider or expose an approval UI.
+
+All proposals identify a target program, and modification proposals also
+identify a target routine. Modification operations are an ordered `changes`
+array supporting:
+
+- `add_exercise`
+- `remove_exercise`
+- `replace_exercise`
+- `move_exercise`
+- `update_exercise`
+- `set_superset`
+- `clear_superset`
+- `rename_routine`
+
+Exercise operations target `routineExerciseId`, never a display name or array
+index. Adds include their future stable row ID, while replacements preserve the
+target row ID and current superset membership but replace the full exercise
+prescription. Moves and insertions use an explicit `afterRoutineExerciseId`;
+`null` means the start of the routine.
+
+Create proposals describe an ordered routine directly. Supersets use local
+`proposalGroupKey` values on its exercise definitions. Modify proposals use a
+`set_superset` operation containing a local group key and stable member row
+IDs. Application deterministically translates each valid local key into a
+shared `ss-proposal-*` ID, avoids collisions, and removes orphaned groups.
+
+The public boundary is:
+
+```js
+validateRoutineProposal(proposal, currentProgram)
+// { valid, errors: [{ code, path, message }], normalizedProposal }
+
+applyRoutineProposal(currentProgram, proposal)
+// success: { applied: true, errors: [], program, routineId, review }
+// failure: { applied: false, errors, program: null, review: null }
+```
+
+Validation accepts supplied in-memory program context and performs no reads.
+It rejects unsupported versions, unexpected targets, malformed IDs and
+prescriptions, missing rows, invalid anchors/grouping, and ambiguous operation
+combinations. Application validates first, clones the full program graph, and
+returns draft data plus review metadata. It imports no Firebase or storage
+services and performs no Firestore, localStorage, workout-history, or active
+workout writes. The existing Save Program path remains the only persistence
+commit for any future approved draft.
 
 The routine builder is search-first and edit-on-demand:
 

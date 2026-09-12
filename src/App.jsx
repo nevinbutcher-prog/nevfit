@@ -1803,6 +1803,10 @@ function getExerciseFeedback(sessionExercise) {
   const enteredReps = sessionExercise.sets.map(getSetReps);
   const enteredCount = enteredReps.filter((reps) => reps !== null).length;
 
+  if (enteredCount === 0) {
+    return null;
+  }
+
   if (enteredCount < sessionExercise.sets.length) {
     return {
       status: "incomplete",
@@ -3521,10 +3525,6 @@ function App() {
     setViewMode("planner");
   }
 
-  function requestCloseWorkout() {
-    setPendingWorkoutAction({ type: "close-workout" });
-  }
-
   function requestFooterFinishWorkout() {
     setPendingWorkoutAction({ type: "finish-workout" });
   }
@@ -3853,7 +3853,7 @@ function App() {
               new Set(currentIds).add(workoutDetailsKey),
             )
           }
-          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-left transition hover:border-emerald-300"
+          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2.5 text-left transition hover:border-emerald-300"
           aria-expanded="false"
         >
           <span className="min-w-0">
@@ -3908,8 +3908,10 @@ function App() {
         </div>
         {exerciseFeedback ? (
           <p
-            className={`mt-3 inline-flex max-w-full items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${
-              exerciseFeedbackStyles[exerciseFeedback.status]
+            className={`mt-2 text-xs font-semibold ${
+              exerciseFeedback.status === "incomplete"
+                ? "text-slate-400"
+                : exerciseFeedbackStyles[exerciseFeedback.status]
             }`}
           >
             {exerciseFeedback.label}
@@ -3928,7 +3930,13 @@ function App() {
           </p>
         ) : null}
 
-        <div className="mt-4 min-w-0 space-y-2">
+        <div className="mt-3 min-w-0">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <span>Set</span>
+            <span>Weight</span>
+            <span>Reps</span>
+            <span aria-hidden="true" />
+          </div>
           {sessionExercise.sets.map((set) => {
             const repRange = parseRepRange(sessionExercise.repRange);
             const setFeedback = getSetFeedback(set, repRange);
@@ -3948,15 +3956,9 @@ function App() {
             return (
               <div
                 key={set.setNumber}
-                className={`grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border p-2 transition ${
-                  isSetComplete
-                    ? "border-emerald-400/30 bg-emerald-400/10"
-                    : isCurrentSet
-                      ? "border-emerald-400/70 bg-slate-900"
-                      : "border-slate-800 bg-slate-950/40"
-                }`}
+                className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate-800 px-2 py-2 last:border-b-0"
               >
-                <span className={`text-sm font-semibold ${isSetComplete ? "text-emerald-200" : "text-slate-300"}`}>
+                <span className={`text-sm font-semibold ${isSetComplete || isCurrentSet ? "text-emerald-300" : "text-slate-400"}`}>
                   {isSetComplete ? "✓" : "○"} <span className="sr-only">Set </span>{set.setNumber}
                 </span>
                 <input
@@ -3974,7 +3976,11 @@ function App() {
                       exerciseIndex,
                     )
                   }
-                  className={workoutNumberInputClassName}
+                  className={`${workoutNumberInputClassName} ${
+                    isSetComplete
+                      ? "border-emerald-400/30 bg-emerald-400/10"
+                      : ""
+                  }`}
                 />
                 <input
                   type="number"
@@ -3992,7 +3998,11 @@ function App() {
                     )
                   }
                   className={`${workoutNumberInputClassName} ${
-                    setFeedback ? setFeedbackStyles[setFeedback] : ""
+                    setFeedback
+                      ? setFeedbackStyles[setFeedback]
+                      : isSetComplete
+                        ? "border-emerald-400/30 bg-emerald-400/10"
+                        : ""
                   }`}
                 />
                 {canCopyPreviousSet ? (
@@ -4005,7 +4015,7 @@ function App() {
                         exerciseIndex,
                       )
                     }
-                    className="rounded-md px-1.5 py-2 text-xs font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+                    className="rounded-md px-1 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
                     title="Copy the previous set"
                     aria-label={`Copy set ${set.setNumber - 1}`}
                   >
@@ -4016,7 +4026,7 @@ function App() {
                 )}
                 {setFeedback ? (
                   <span
-                    className={`col-span-4 rounded-md border px-2.5 py-1 text-xs font-semibold ${
+                    className={`col-span-4 px-1 pb-1 text-xs font-semibold ${
                       setFeedbackStyles[setFeedback]
                     }`}
                   >
@@ -5892,7 +5902,7 @@ function App() {
         activeWorkoutSession &&
         activeWorkoutDay &&
         activeRoutineDay ? (
-          <section className="mt-4 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-3 sm:p-4">
+          <section className="mt-3 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-2.5 sm:p-3">
             <button
               type="button"
               onClick={() => setViewMode("planner")}
@@ -5917,21 +5927,14 @@ function App() {
                 <button
                   type="button"
                   onClick={requestFooterFinishWorkout}
-                  className="rounded-lg border border-emerald-400/60 px-4 py-2 font-semibold text-emerald-200 transition hover:border-emerald-300 hover:text-emerald-100"
+                  className="rounded-lg border border-red-400/50 px-3 py-2 font-semibold text-red-200 transition hover:border-red-300 hover:text-red-100"
                 >
-                  Finish
-                </button>
-                <button
-                  type="button"
-                  onClick={requestCloseWorkout}
-                  className="rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
-                >
-                  Close Workout
+                  End
                 </button>
               </div>
             </div>
 
-            <ul className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
+            <ul className="mt-3 grid min-w-0 gap-3 lg:grid-cols-2">
               {groupWorkoutExercises(activeWorkoutSession.exercises).map(
                 (workoutItem) => {
                   if (workoutItem.type === "superset") {
@@ -5943,7 +5946,7 @@ function App() {
                     return (
                       <li
                         key={workoutItem.key}
-                        className="min-w-0 rounded-xl border border-emerald-400/50 bg-emerald-400/10 p-3 sm:p-4 lg:col-span-2"
+                        className="min-w-0 rounded-xl border border-emerald-400/50 bg-emerald-400/10 p-2.5 sm:p-3 lg:col-span-2"
                       >
                         <div className="border-b border-emerald-400/30 pb-3">
                           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200">
@@ -5953,7 +5956,7 @@ function App() {
                             {supersetExerciseNames.join(" + ")}
                           </h3>
                         </div>
-                        <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-2">
+                        <div className="mt-2.5 grid min-w-0 gap-2.5 lg:grid-cols-2">
                           {workoutItem.exercises.map(
                             ({ exercise, index }) => (
                               <div key={`${exercise.exerciseId}-${index}`}>
@@ -5975,7 +5978,7 @@ function App() {
                   return (
                     <li
                       key={workoutItem.key}
-                      className="min-w-0 rounded-xl border border-transparent bg-slate-950/60 p-3 sm:p-4"
+                      className="min-w-0 rounded-xl border border-transparent bg-slate-950/60 p-2.5 sm:p-3"
                     >
                       {renderWorkoutExerciseBlock(exercise, index)}
                     </li>
@@ -5990,13 +5993,13 @@ function App() {
 
       {isWorkoutActive ? (
         <div
-          className={`workout-footer fixed inset-x-0 bottom-0 z-30 border-t px-3 pt-3 shadow-2xl backdrop-blur sm:px-4 ${
+          className={`workout-footer fixed inset-x-0 bottom-0 z-30 border-t px-3 pt-2 shadow-2xl backdrop-blur sm:px-4 ${
             restTimer?.status === "complete"
               ? "rest-timer-complete border-yellow-200 bg-yellow-300 text-slate-950"
               : "border-slate-700 bg-slate-950/95 text-white"
           }`}
         >
-          <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p
                 className={`text-xs font-semibold uppercase tracking-wide ${

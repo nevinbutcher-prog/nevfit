@@ -399,7 +399,9 @@ The active workout session uses the existing in-progress workout snapshot
 shape, including exercise IDs, snapped exercise names, prescribed sets,
 `repRange`, rest timing, `supersetGroupId`, and logged set strings. Starting or
 editing a workout saves the active session. Closing a blank workout or
-completing a workout clears the active session.
+completing a workout clears the active session. Workout-mode weight
+carry-forward writes the next set's existing `weight` field through this same
+active-session persistence path; it adds no history or Firestore schema.
 
 `src/services/workoutHistoryStore.js` stores completed workout snapshots at:
 

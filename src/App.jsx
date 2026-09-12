@@ -1971,6 +1971,8 @@ function App() {
     useState(null);
   const [expandedWorkoutDetailsExerciseId, setExpandedWorkoutDetailsExerciseId] =
     useState(null);
+  const [expandedCompletedExerciseIds, setExpandedCompletedExerciseIds] =
+    useState(() => new Set());
   const wakeLockRef = useRef(null);
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
@@ -1985,6 +1987,7 @@ function App() {
   const healthPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutLoadedRef = useRef(false);
+  const manuallyEnteredWeightSetKeysRef = useRef(new Set());
   const backupFileInputRef = useRef(null);
   const exerciseSearchInputRef = useRef(null);
   const isWorkoutActive =
@@ -3680,14 +3683,12 @@ function App() {
     setRestTimer(null);
   }
 
-  function updateSetValue(exerciseId, setNumber, field, value) {
+  function updateSetValue(exerciseId, setNumber, field, value, exerciseIndex) {
     if (field !== "weight" && field !== "reps") {
       return;
     }
 
-    const currentExercise = activeWorkoutSession?.exercises.find(
-      (exercise) => exercise.exerciseId === exerciseId,
-    );
+    const currentExercise = activeWorkoutSession?.exercises[exerciseIndex];
     const currentSet = currentExercise?.sets.find(
       (set) => set.setNumber === setNumber,
     );
@@ -3700,6 +3701,16 @@ function App() {
       startRestTimer(currentExercise);
     }
 
+    const setKey = `${exerciseId}-${exerciseIndex}-${setNumber}`;
+
+    if (field === "weight") {
+      if (value.trim()) {
+        manuallyEnteredWeightSetKeysRef.current.add(setKey);
+      } else {
+        manuallyEnteredWeightSetKeysRef.current.delete(setKey);
+      }
+    }
+
     setActiveWorkoutSession((currentSession) => {
       if (!currentSession) {
         return currentSession;
@@ -3707,20 +3718,64 @@ function App() {
 
       return {
         ...currentSession,
-        exercises: currentSession.exercises.map((exercise) =>
-          exercise.exerciseId === exerciseId
-            ? {
-                ...exercise,
-                sets: exercise.sets.map((set) =>
-                  set.setNumber === setNumber
-                    ? { ...set, [field]: value }
-                    : set,
-                ),
+        exercises: currentSession.exercises.map((exercise, index) => {
+          if (index !== exerciseIndex || exercise.exerciseId !== exerciseId) {
+            return exercise;
+          }
+
+          const currentSetIndex = exercise.sets.findIndex(
+            (set) => set.setNumber === setNumber,
+          );
+          const nextSet = exercise.sets[currentSetIndex + 1];
+          const nextSetKey = nextSet
+            ? `${exerciseId}-${exerciseIndex}-${nextSet.setNumber}`
+            : null;
+          const shouldCarryWeight =
+            field === "weight" &&
+            Number(value) > 0 &&
+            nextSet &&
+            !nextSet.weight.trim() &&
+            !manuallyEnteredWeightSetKeysRef.current.has(nextSetKey);
+
+          return {
+            ...exercise,
+            sets: exercise.sets.map((set) => {
+              if (set.setNumber === setNumber) {
+                return { ...set, [field]: value };
               }
-            : exercise,
-        ),
+
+              if (shouldCarryWeight && set.setNumber === nextSet.setNumber) {
+                return { ...set, weight: value };
+              }
+
+              return set;
+            }),
+          };
+        }),
       };
     });
+
+    if (field === "reps" && hasMeaningfulLoggedEffort({ ...currentSet, reps: value })) {
+      setExpandedCompletedExerciseIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.delete(`${exerciseId}-${exerciseIndex}`);
+        return nextIds;
+      });
+    }
+  }
+
+  function copyPreviousSet(exerciseId, setNumber, exerciseIndex) {
+    const currentExercise = activeWorkoutSession?.exercises[exerciseIndex];
+    const previousSet = currentExercise?.sets.find(
+      (set) => set.setNumber === setNumber - 1,
+    );
+
+    if (!previousSet || !hasMeaningfulLoggedEffort(previousSet)) {
+      return;
+    }
+
+    updateSetValue(exerciseId, setNumber, "weight", previousSet.weight, exerciseIndex);
+    updateSetValue(exerciseId, setNumber, "reps", previousSet.reps, exerciseIndex);
   }
 
   if (authLoading) {
@@ -3753,6 +3808,12 @@ function App() {
       (total, exercise) => total + exercise.sets.length,
       0,
     ) ?? 0;
+  const activeWorkoutCompletedSetCount =
+    activeWorkoutSession?.exercises.reduce(
+      (total, exercise) =>
+        total + exercise.sets.filter(hasMeaningfulLoggedEffort).length,
+      0,
+    ) ?? 0;
   const restTimerStatusLabel = !restTimer
     ? "Ready"
     : restTimer.status === "complete"
@@ -3772,8 +3833,43 @@ function App() {
     );
     const exerciseFeedback = getExerciseFeedback(sessionExercise);
     const workoutDetailsKey = `${sessionExercise.exerciseId}-${exerciseIndex}`;
+    const isExerciseComplete = sessionExercise.sets.every(
+      hasMeaningfulLoggedEffort,
+    );
+    const isExerciseExpanded =
+      !isExerciseComplete || expandedCompletedExerciseIds.has(workoutDetailsKey);
+    const completedSetCount = sessionExercise.sets.filter(
+      hasMeaningfulLoggedEffort,
+    ).length;
     const isWorkoutDetailsExpanded =
       expandedWorkoutDetailsExerciseId === workoutDetailsKey;
+
+    if (!isExerciseExpanded) {
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            setExpandedCompletedExerciseIds((currentIds) =>
+              new Set(currentIds).add(workoutDetailsKey),
+            )
+          }
+          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-left transition hover:border-emerald-300"
+          aria-expanded="false"
+        >
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-white">
+              {sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise"}
+            </span>
+            <span className="mt-1 block text-sm text-emerald-100">
+              ✓ {completedSetCount}/{sessionExercise.sets.length} sets completed
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-emerald-200">
+            Edit
+          </span>
+        </button>
+      );
+    }
 
     return (
       <div
@@ -3783,27 +3879,17 @@ function App() {
             : ""
         }
       >
-        <div>
-          <p className="font-medium text-slate-100">
-            {sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise"}
-          </p>
-          <p className="mt-1 text-sm text-slate-400">
-            Target: {sessionExercise.prescribedSets} x {sessionExercise.repRange}
-            {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
-          </p>
-          {exerciseFeedback ? (
-            <p
-              className={`mt-3 inline-flex max-w-full items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${
-                exerciseFeedbackStyles[exerciseFeedback.status]
-              }`}
-            >
-              {exerciseFeedback.label}
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-100">
+              {sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise"}
             </p>
-          ) : null}
-        </div>
-
-        {exercise ? (
-          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/60">
+            <p className="mt-1 text-sm text-slate-400">
+              {completedSetCount}/{sessionExercise.sets.length} sets completed · {sessionExercise.repRange} reps
+              {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
+            </p>
+          </div>
+          {exercise ? (
             <button
               type="button"
               onClick={() =>
@@ -3813,52 +3899,65 @@ function App() {
                     : workoutDetailsKey,
                 )
               }
-              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+              className="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500"
               aria-expanded={isWorkoutDetailsExpanded}
             >
-              <span>Exercise Details</span>
-              <span>{isWorkoutDetailsExpanded ? "Hide" : "Show"}</span>
+              ⓘ Details
             </button>
-            {isWorkoutDetailsExpanded ? (
-              <div className="border-t border-slate-800 p-3">
-                <ExerciseMetadata exercise={exercise} />
-              </div>
-            ) : null}
+          ) : null}
+        </div>
+        {exerciseFeedback ? (
+          <p
+            className={`mt-3 inline-flex max-w-full items-center rounded-lg border px-3 py-1.5 text-sm font-semibold ${
+              exerciseFeedbackStyles[exerciseFeedback.status]
+            }`}
+          >
+            {exerciseFeedback.label}
+          </p>
+        ) : null}
+        {exercise && isWorkoutDetailsExpanded ? (
+          <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+            <ExerciseMetadata exercise={exercise} />
           </div>
         ) : null}
-
-        <div className="mt-4 min-w-0 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Previous Session
+        {previousPerformance ? (
+          <p className="mt-3 min-w-0 text-sm leading-6 text-slate-400">
+            Previous: {previousPerformance.sets
+              .map((set) => `${set.weight || "-"}kg × ${set.reps || "-"}`)
+              .join(" · ")}
           </p>
-          {previousPerformance ? (
-            <ul className="mt-2 space-y-1 text-sm text-slate-300">
-              {previousPerformance.sets.map((set) => (
-                <li key={set.setNumber}>
-                  {set.weight ? `${set.weight}kg` : "-"} &times;{" "}
-                  {set.reps || "-"}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm text-slate-400">
-              No previous session logged
-            </p>
-          )}
-        </div>
+        ) : null}
 
         <div className="mt-4 min-w-0 space-y-2">
           {sessionExercise.sets.map((set) => {
             const repRange = parseRepRange(sessionExercise.repRange);
             const setFeedback = getSetFeedback(set, repRange);
+            const isSetComplete = hasMeaningfulLoggedEffort(set);
+            const isCurrentSet =
+              !isSetComplete &&
+              sessionExercise.sets.findIndex(
+                (candidateSet) => !hasMeaningfulLoggedEffort(candidateSet),
+              ) ===
+                sessionExercise.sets.indexOf(set);
+            const previousSet = sessionExercise.sets.find(
+              (candidateSet) => candidateSet.setNumber === set.setNumber - 1,
+            );
+            const canCopyPreviousSet =
+              set.setNumber > 1 && hasMeaningfulLoggedEffort(previousSet);
 
             return (
               <div
                 key={set.setNumber}
-                className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2"
+                className={`grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border p-2 transition ${
+                  isSetComplete
+                    ? "border-emerald-400/30 bg-emerald-400/10"
+                    : isCurrentSet
+                      ? "border-emerald-400/70 bg-slate-900"
+                      : "border-slate-800 bg-slate-950/40"
+                }`}
               >
-                <span className="text-sm font-medium text-slate-300">
-                  Set {set.setNumber}
+                <span className={`text-sm font-semibold ${isSetComplete ? "text-emerald-200" : "text-slate-300"}`}>
+                  {isSetComplete ? "✓" : "○"} <span className="sr-only">Set </span>{set.setNumber}
                 </span>
                 <input
                   type="number"
@@ -3872,6 +3971,7 @@ function App() {
                       set.setNumber,
                       "weight",
                       event.target.value,
+                      exerciseIndex,
                     )
                   }
                   className={workoutNumberInputClassName}
@@ -3888,15 +3988,35 @@ function App() {
                       set.setNumber,
                       "reps",
                       event.target.value,
+                      exerciseIndex,
                     )
                   }
                   className={`${workoutNumberInputClassName} ${
                     setFeedback ? setFeedbackStyles[setFeedback] : ""
                   }`}
                 />
+                {canCopyPreviousSet ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      copyPreviousSet(
+                        sessionExercise.exerciseId,
+                        set.setNumber,
+                        exerciseIndex,
+                      )
+                    }
+                    className="rounded-md px-1.5 py-2 text-xs font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+                    title="Copy the previous set"
+                    aria-label={`Copy set ${set.setNumber - 1}`}
+                  >
+                    ↥
+                  </button>
+                ) : (
+                  <span aria-hidden="true" />
+                )}
                 {setFeedback ? (
                   <span
-                    className={`col-span-3 rounded-md border px-2.5 py-1 text-xs font-semibold ${
+                    className={`col-span-4 rounded-md border px-2.5 py-1 text-xs font-semibold ${
                       setFeedbackStyles[setFeedback]
                     }`}
                   >
@@ -5796,10 +5916,10 @@ function App() {
               <div className="flex min-w-0 flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={finishWorkout}
-                  className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-emerald-300"
+                  onClick={requestFooterFinishWorkout}
+                  className="rounded-lg border border-emerald-400/60 px-4 py-2 font-semibold text-emerald-200 transition hover:border-emerald-300 hover:text-emerald-100"
                 >
-                  Finish Workout
+                  Finish
                 </button>
                 <button
                   type="button"
@@ -5864,18 +5984,6 @@ function App() {
               )}
             </ul>
 
-            <div className="mt-5 rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-4 text-center">
-              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
-                End of workout
-              </p>
-              <button
-                type="button"
-                onClick={finishWorkout}
-                className="mt-3 w-full rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 sm:w-auto sm:min-w-56"
-              >
-                Finish Workout
-              </button>
-            </div>
           </section>
         ) : null}
       </div>
@@ -5917,7 +6025,7 @@ function App() {
               </div>
             </div>
 
-            <div className="grid w-full shrink-0 grid-cols-4 gap-2 sm:w-auto">
+            <div className="grid w-full shrink-0 grid-cols-3 gap-2 sm:w-auto">
               {restTimer?.paused ? (
                 <button
                   type="button"
@@ -5952,13 +6060,6 @@ function App() {
               >
                 Skip
               </button>
-              <button
-                type="button"
-                onClick={requestFooterFinishWorkout}
-                className="w-full rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-              >
-                Finish
-              </button>
             </div>
           </div>
         </div>
@@ -5971,6 +6072,9 @@ function App() {
             <p className="mt-2 text-sm text-slate-300">
               You have an active workout. Finish it, discard it, or cancel and
               keep logging.
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              {activeWorkoutCompletedSetCount} of {activeWorkoutSetCount} sets logged.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               <button

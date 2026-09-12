@@ -29,6 +29,7 @@
 - Lightweight routine superset pairing
 - Workout mode
 - Supersetted exercises render in grouped workout-mode blocks
+- Faster workout logging with automatic weight carry-forward, compact prior-session summaries, clear set states, and collapsible completed exercises
 - Active workout save/load
 - Non-destructive blank workout close
 - Append-only workout history persistence

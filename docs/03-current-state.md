@@ -18,6 +18,7 @@
 - Multi-routine programs with stable routine IDs and safe routine selection
 - Compact routine builder with collapsed program management and day tabs
 - Collapsed exercise cards with single-item expanded editing
+- Focused bottom-sheet exercise configuration with draft-only prescription, display-name, swap, and remove controls
 - Exercise search and filtering
 - Provider-neutral selectable exercise results
 - Add and Swap exercise picker flows

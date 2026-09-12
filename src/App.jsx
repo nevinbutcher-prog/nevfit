@@ -5435,7 +5435,12 @@ function App() {
                                 </div>
 
                                 {isExpanded ? (
-                                  <div className="border-t border-slate-800 p-3">
+                                  <div className="fixed inset-0 z-50 flex items-end bg-slate-950/80 p-0 sm:items-center sm:justify-center sm:p-4">
+                                  <div className="max-h-[88dvh] w-full overflow-y-auto rounded-t-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:max-w-xl sm:rounded-2xl">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                      <div><h3 className="text-2xl font-bold text-white">Edit Exercise</h3><p className="mt-1 text-sm text-slate-400">{effectiveExerciseName}</p></div>
+                                      <button type="button" onClick={() => setExpandedExerciseIndex(null)} className="rounded-lg border border-slate-700 px-3 py-2 text-slate-200">Close</button>
+                                    </div>
                                     <div className="grid min-w-0 gap-3">
                                       <label className="min-w-0 text-sm font-semibold text-slate-300">
                                         Exercise
@@ -5482,7 +5487,7 @@ function App() {
                                       </label>
                                     </div>
 
-                                    <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                                    {exerciseFinderOpen ? <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
                                       <label className="flex min-w-0 items-start gap-3 text-sm font-semibold text-slate-300">
                                         <input
                                           type="checkbox"
@@ -5560,7 +5565,7 @@ function App() {
                                           </span>
                                         </label>
                                       ) : null}
-                                    </div>
+                                    </div> : null}
 
                                     <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
                                       <p className="text-sm font-semibold text-slate-300">
@@ -5616,7 +5621,7 @@ function App() {
                                       </div>
                                     </div>
 
-                                    {exercise ? (
+                                    {exerciseFinderOpen && exercise ? (
                                       <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">
                                         {hasCustomDisplayName ? (
                                           <p className="font-semibold text-slate-300">
@@ -5737,7 +5742,7 @@ function App() {
                                       </label>
                                     </div>
 
-                                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -5766,6 +5771,8 @@ function App() {
                                         Remove
                                       </button>
                                     </div>
+                                    <button type="button" onClick={() => setExpandedExerciseIndex(null)} className="mt-4 w-full rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950">Done</button>
+                                  </div>
                                   </div>
                                 ) : null}
                               </li>

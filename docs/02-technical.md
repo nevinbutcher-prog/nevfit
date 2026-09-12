@@ -383,6 +383,13 @@ from the imported backup.
 
 ## Firebase Identity Layer
 
+Top-level navigation is transient UI state. A normal app launch starts at the
+Dashboard and does not restore the last Programs/Routines or Settings view.
+Selected program/routine IDs remain persisted domain context and are available
+when the user explicitly opens the builder. During authenticated active-workout
+hydration, a valid resumable workout still promotes the view to Workout; a
+normal launch without one remains on Dashboard.
+
 Firebase is initialized in `src/services/firebase.js`.
 
 Authentication is isolated in `src/services/auth.js`:

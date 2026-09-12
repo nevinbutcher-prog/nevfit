@@ -50,6 +50,10 @@ import {
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
 import { getExerciseById, searchExercises } from "./services/exerciseProvider";
+import {
+  getInitialViewMode,
+  getViewModeForLoadedActiveWorkout,
+} from "./utils/navigation";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -1857,9 +1861,7 @@ function App() {
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
   );
-  const [viewMode, setViewMode] = useState(() =>
-    loadStoredActiveWorkoutSession() ? "workout" : "dashboard",
-  );
+  const [viewMode, setViewMode] = useState(getInitialViewMode);
   const [saveMessage, setSaveMessage] = useState("");
   const [programSaveStatus, setProgramSaveStatus] = useState(null);
   const [cycleStartDate, setCycleStartDate] = useState(
@@ -2132,7 +2134,7 @@ function App() {
         }
 
         setActiveWorkoutSession(loadedSession);
-        setViewMode(loadedSession ? "workout" : "dashboard");
+        setViewMode(getViewModeForLoadedActiveWorkout(loadedSession));
         activeWorkoutLoadedRef.current = true;
       })
       .catch((error) => {
@@ -2143,6 +2145,9 @@ function App() {
         console.error("Active workout sync failed:", error);
         lastActiveWorkoutLoadUidRef.current = null;
         activeWorkoutLoadedRef.current = true;
+        setViewMode(
+          getViewModeForLoadedActiveWorkout(loadStoredActiveWorkoutSession()),
+        );
         setWorkoutSyncError(
           "Active workout is using this device cache. Cloud sync is unavailable.",
         );

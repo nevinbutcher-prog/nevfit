@@ -3,6 +3,7 @@
 ## Implemented
 
 - Dashboard default landing screen
+- Normal authenticated launches default to Dashboard without restoring builder navigation
 - Today workout summary with Start/Resume action
 - Current Program dashboard summary
 - Configurable Current Cycle MVP

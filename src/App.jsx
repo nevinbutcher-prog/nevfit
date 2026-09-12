@@ -2761,11 +2761,17 @@ function App() {
       return;
     }
 
-    if (selectedProgram.days.some((day) => day.id === selectedProgramDayId)) {
+    if (
+      selectedProgram.days.some(
+        (day) => day.id === selectedProgramDayId && !day.archived,
+      )
+    ) {
       return;
     }
 
-    setSelectedProgramDayId(selectedProgram.days[0]?.id ?? null);
+    setSelectedProgramDayId(
+      selectedProgram.days.find((day) => !day.archived)?.id ?? null,
+    );
   }, [programDrafts, selectedProgramDayId, selectedProgramId]);
 
   function buildCurrentBackup() {
@@ -3524,6 +3530,74 @@ function App() {
     setViewMode("workout");
   }
 
+  function duplicateProgramRoutine(programId, routineId) {
+    const program = programDrafts.find((item) => item.id === programId);
+    const sourceRoutine = program?.days.find((day) => day.id === routineId);
+
+    if (!program || !sourceRoutine) {
+      return;
+    }
+
+    const duplicateRoutine = {
+      ...sourceRoutine,
+      id: createProgramDayId(programId, `${sourceRoutine.name} Copy`, programDrafts),
+      name: `${sourceRoutine.name} Copy`,
+      archived: false,
+      exercises: sourceRoutine.exercises.map((exercise) => ({ ...exercise })),
+    };
+    const sourceIndex = program.days.findIndex((day) => day.id === routineId);
+    const nextProgramDrafts = programDrafts.map((item) =>
+      item.id === programId
+        ? {
+            ...item,
+            days: [
+              ...item.days.slice(0, sourceIndex + 1),
+              duplicateRoutine,
+              ...item.days.slice(sourceIndex + 1),
+            ],
+          }
+        : item,
+    );
+
+    setProgramsAndPersist("duplicate-routine", nextProgramDrafts, {
+      programId,
+      successMessage: "Routine duplicated.",
+      localOnlyMessage: "Routine duplicated locally. Cloud sync failed.",
+    });
+    setSelectedProgramDayId(duplicateRoutine.id);
+  }
+
+  function archiveProgramRoutine(programId, routineId) {
+    const program = programDrafts.find((item) => item.id === programId);
+    const routine = program?.days.find((day) => day.id === routineId);
+
+    if (!program || !routine) {
+      return;
+    }
+
+    const nextProgramDrafts = programDrafts.map((item) =>
+      item.id === programId
+        ? {
+            ...item,
+            days: item.days.map((day) =>
+              day.id === routineId ? { ...day, archived: true } : day,
+            ),
+          }
+        : item,
+    );
+    const nextRoutineId = program.days.find(
+      (day) => day.id !== routineId && !day.archived,
+    )?.id ?? null;
+
+    setProgramsAndPersist("archive-routine", nextProgramDrafts, {
+      programId,
+      successMessage: `${routine.name} archived.`,
+      localOnlyMessage: `${routine.name} archived locally. Cloud sync failed.`,
+    });
+    setSelectedProgramDayId(nextRoutineId);
+    setExerciseFinderOpen(false);
+  }
+
   function openCompletedWorkoutDetails(completedWorkout) {
     setSelectedCompletedWorkoutId(completedWorkout.id);
     setViewMode("completed-workout");
@@ -4064,7 +4138,7 @@ function App() {
     (program) => program.id === selectedProgramId,
   );
   const selectedProgramDayDraft = selectedProgramDraft?.days.find(
-    (day) => day.id === selectedProgramDayId,
+    (day) => day.id === selectedProgramDayId && !day.archived,
   );
   const normalizedSelectedProgramDraft = selectedProgramDraft
     ? normalizeProgram(selectedProgramDraft)
@@ -5120,7 +5194,7 @@ function App() {
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedProgramDraft.days.map((day) => {
+                    {selectedProgramDraft.days.filter((day) => !day.archived).map((day) => {
                       const isSelected = day.id === selectedProgramDayId;
 
                       return (
@@ -5138,6 +5212,13 @@ function App() {
                         </button>
                       );
                     })}
+                    <button
+                      type="button"
+                      onClick={() => addProgramRoutine(selectedProgramDraft.id)}
+                      className="rounded-lg border border-dashed border-emerald-400/60 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:border-emerald-300"
+                    >
+                      + Add Routine
+                    </button>
                   </div>
 
                   {selectedProgramDayDraft ? (
@@ -5177,6 +5258,30 @@ function App() {
                           className="rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
                         >
                           + Add Exercise
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            duplicateProgramRoutine(
+                              selectedProgramDraft.id,
+                              selectedProgramDayDraft.id,
+                            )
+                          }
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
+                        >
+                          Duplicate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            archiveProgramRoutine(
+                              selectedProgramDraft.id,
+                              selectedProgramDayDraft.id,
+                            )
+                          }
+                          className="rounded-lg border border-red-400/60 px-3 py-2 text-sm font-semibold text-red-200 transition hover:border-red-300"
+                        >
+                          Archive
                         </button>
                       </div>
 

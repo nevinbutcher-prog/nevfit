@@ -338,6 +338,11 @@ cached locally. Program edits, creation, duplication, archive actions, and
 routine exercise changes save to localStorage first, then attempt Firestore.
 Firestore failures leave local data intact and show a non-blocking sync warning.
 
+Routine lifecycle operations use stable routine IDs inside each program. Active
+routines preserve their stored order; adding, duplicating, or archiving a
+routine updates the full program document through the existing persistence path.
+Routine field edits remain draft-only until the explicit Save Program action.
+
 `src/services/planningStore.js` stores planning state at:
 
 ```text

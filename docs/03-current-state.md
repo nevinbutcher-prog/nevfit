@@ -15,6 +15,7 @@
 - Program editor
 - Custom programs and routines
 - Routine management: rename, duplicate, archive, add routine
+- Multi-routine programs with stable routine IDs and safe routine selection
 - Compact routine builder with collapsed program management and day tabs
 - Collapsed exercise cards with single-item expanded editing
 - Exercise search and filtering

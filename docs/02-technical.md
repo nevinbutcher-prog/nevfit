@@ -141,6 +141,21 @@ later. Active and completed workout exercise snapshots also preserve
 `supersetGroupId` so workout mode can group paired exercises visually without
 changing timer behavior.
 
+## In-Workout Exercise Swaps
+
+`src/services/activeWorkoutSwap.js` provides the single deterministic swap
+boundary used by manual workout actions and future AI approval flows. A swap
+changes only the active workout slot. Before any meaningful reps or weight are
+logged, it replaces `exerciseId` and `exerciseName` while preserving prescribed
+sets, rep range, rest, logged-set structure, and `supersetGroupId`. It records
+the original movement as optional `originalExerciseId` and
+`originalExerciseName` fields.
+
+Once a slot contains meaningful logged effort, swapping is rejected with a
+clear instruction to clear the sets first. No logged values are destroyed or
+reinterpreted. Undo is available for an unlogged swap and removes the optional
+original fields. The saved routine is never changed.
+
 ## Routine Proposal Contract
 
 `src/services/routineProposal.js` defines the provider-neutral boundary for
@@ -494,7 +509,9 @@ The document contains:
 
 The active workout session uses the existing in-progress workout snapshot
 shape, including exercise IDs, snapped exercise names, prescribed sets,
-`repRange`, rest timing, `supersetGroupId`, and logged set strings. Starting or
+`repRange`, rest timing, `supersetGroupId`, and logged set strings. Swapped
+slots additionally retain `originalExerciseId` and `originalExerciseName`.
+Starting or
 editing a workout saves the active session. Closing a blank workout or
 completing a workout clears the active session. Workout-mode weight
 carry-forward writes the next set's existing `weight` field through this same
@@ -511,8 +528,9 @@ users/{uid}/completedWorkouts/{workoutId}
 ```
 
 Completed workout records preserve the existing append-only snapshot model:
-`completedAt`, schedule and routine IDs, routine name, exercise IDs, snapped
-exercise names, rest seconds, `supersetGroupId`, and set values. If the cloud
+`completedAt`, schedule and routine IDs, routine name, performed exercise IDs,
+snapped exercise names, rest seconds, `supersetGroupId`, and set values. Swapped
+records also preserve the optional original exercise ID/name. If the cloud
 collection is empty and local completed workouts exist, the local snapshots are
 uploaded once during first migration. Previous performance continues to derive
 from the cloud-loaded completed workout state.

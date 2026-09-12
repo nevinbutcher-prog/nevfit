@@ -50,6 +50,7 @@
 - Wake lock during active workouts
 - Rep-range feedback and progression indicators
 - Workout completion workflow improvements
+- Safe in-workout exercise swaps with original-exercise traceability
 - Firebase Google sign-in gate
 - Firestore user profile document sync at `users/{uid}`
 - Firestore-backed custom programs and routines at `users/{uid}/programs/{programId}`

@@ -30,6 +30,15 @@ import {
   migrateLocalProgramsToCloud,
   savePrograms,
 } from "./services/programStore";
+import {
+  hasMeaningfulWorkoutSet,
+  restoreSwappedWorkoutExercise,
+  swapActiveWorkoutExercise,
+} from "./services/activeWorkoutSwap";
+import {
+  createCompletedWorkoutSnapshot,
+  getPreviousExercisePerformance as getPreviousExercisePerformanceData,
+} from "./services/workoutSnapshots";
 import { persistProgramDrafts } from "./services/programPersistence";
 import {
   addRoutineExercise,
@@ -992,6 +1001,10 @@ function normalizeCompletedWorkout(value) {
         exercise &&
         typeof exercise.exerciseId === "string" &&
         typeof exercise.exerciseName === "string" &&
+        (typeof exercise.originalExerciseId === "string" ||
+          typeof exercise.originalExerciseId === "undefined") &&
+        (typeof exercise.originalExerciseName === "string" ||
+          typeof exercise.originalExerciseName === "undefined") &&
         Array.isArray(exercise.sets)
       )
     ) {
@@ -1024,6 +1037,12 @@ function normalizeCompletedWorkout(value) {
     return {
       exerciseId: exercise.exerciseId,
       exerciseName: exercise.exerciseName,
+      ...(typeof exercise.originalExerciseId === "string"
+        ? { originalExerciseId: exercise.originalExerciseId }
+        : {}),
+      ...(typeof exercise.originalExerciseName === "string"
+        ? { originalExerciseName: exercise.originalExerciseName }
+        : {}),
       restSeconds:
         typeof exercise.restSeconds === "number" ? exercise.restSeconds : null,
       supersetGroupId:
@@ -1605,60 +1624,27 @@ function createCompletedWorkoutRecord(
       ? crypto.randomUUID()
       : `workout-${completedAt.getTime()}`;
 
-  return {
-    id: workoutId,
-    completedAt: completedAt.toISOString(),
-    scheduleDayId: workoutSession.scheduleDayId,
-    routineDayId: workoutSession.routineDayId,
-    routineDayName: routineDay.name,
-    exercises: workoutSession.exercises.map((sessionExercise) => {
+  return createCompletedWorkoutSnapshot(
+    workoutSession,
+    routineDay.name,
+    completedAt,
+    workoutId,
+    (sessionExercise) => {
       const exercise = getExerciseFromLibrary(
         sessionExercise.exerciseId,
         exerciseLibrary,
       );
-
-      return {
-        exerciseId: sessionExercise.exerciseId,
-        exerciseName:
-          sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise",
-        restSeconds: sessionExercise.restSeconds ?? null,
-        supersetGroupId: sessionExercise.supersetGroupId ?? null,
-        sets: sessionExercise.sets.map((set) => ({
-          setNumber: set.setNumber,
-          weight: set.weight,
-          reps: set.reps,
-        })),
-      };
-    }),
-  };
+      return sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise";
+    },
+  );
 }
 
 function getPreviousExercisePerformance(exerciseId, completedWorkouts) {
-  return completedWorkouts.reduce((latestPerformance, completedWorkout) => {
-    const exercisePerformance = completedWorkout.exercises.find(
-      (exercise) => exercise.exerciseId === exerciseId,
-    );
-
-    if (
-      !exercisePerformance ||
-      !exercisePerformance.sets.some(hasMeaningfulLoggedEffort)
-    ) {
-      return latestPerformance;
-    }
-
-    if (
-      !latestPerformance ||
-      Date.parse(completedWorkout.completedAt) >
-        Date.parse(latestPerformance.completedAt)
-    ) {
-      return {
-        completedAt: completedWorkout.completedAt,
-        sets: exercisePerformance.sets,
-      };
-    }
-
-    return latestPerformance;
-  }, null);
+  return getPreviousExercisePerformanceData(
+    exerciseId,
+    completedWorkouts,
+    hasMeaningfulLoggedEffort,
+  );
 }
 
 function parseRepRange(repRange) {
@@ -3114,6 +3100,25 @@ function App() {
       return;
     }
 
+    if (exerciseFinderMode.type === "workout-swap") {
+      const swapResult = swapActiveWorkoutExercise(
+        activeWorkoutSession,
+        exerciseFinderMode.exerciseIndex,
+        exercise,
+      );
+
+      if (!swapResult.swapped) {
+        setSaveMessage(swapResult.message);
+        return;
+      }
+
+      setActiveWorkoutSession(swapResult.workout);
+      setSaveMessage(`${exercise.name} swapped in for this workout.`);
+      setExerciseFinderOpen(false);
+      setExerciseFinderMode({ type: "add", exerciseIndex: null });
+      return;
+    }
+
     setExerciseLibrary((currentLibrary) => {
       if (getExerciseFromLibrary(exercise.id, currentLibrary)) {
         return currentLibrary;
@@ -3589,6 +3594,27 @@ function App() {
     setPendingWorkoutAction(null);
   }
 
+  function openWorkoutExerciseSwap(exerciseIndex) {
+    const sessionExercise = activeWorkoutSession?.exercises[exerciseIndex];
+
+    if (!sessionExercise) {
+      return;
+    }
+
+    if (sessionExercise.sets.some(hasMeaningfulWorkoutSet)) {
+      setSaveMessage(
+        "You’ve already logged sets for this exercise. Clear those sets before swapping.",
+      );
+      return;
+    }
+
+    setExerciseFinderMode({ type: "workout-swap", exerciseIndex });
+    setExerciseSearchTerm("");
+    setExerciseSearchResults([]);
+    setExerciseSearchStatus("idle");
+    setExerciseFinderOpen(true);
+  }
+
   function startRestTimer(sessionExercise) {
     const totalSeconds = sessionExercise.restSeconds ?? DEFAULT_REST_SECONDS;
 
@@ -3862,7 +3888,37 @@ function App() {
               ⓘ Details
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => openWorkoutExerciseSwap(exerciseIndex)}
+            className="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500"
+          >
+            Swap
+          </button>
         </div>
+        {sessionExercise.originalExerciseId ? (
+          <p className="mt-2 text-xs font-semibold text-sky-300">
+            Swapped from {sessionExercise.originalExerciseName ?? "original exercise"}
+          </p>
+        ) : null}
+        {sessionExercise.originalExerciseId && !sessionExercise.sets.some(hasMeaningfulWorkoutSet) ? (
+          <button
+            type="button"
+            onClick={() => {
+              const restoreResult = restoreSwappedWorkoutExercise(
+                activeWorkoutSession,
+                exerciseIndex,
+              );
+              if (restoreResult.restored) {
+                setActiveWorkoutSession(restoreResult.workout);
+                setSaveMessage("Original exercise restored for this workout.");
+              }
+            }}
+            className="mt-2 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500"
+          >
+            Undo swap
+          </button>
+        ) : null}
         {exerciseFeedback ? (
           <p
             className={`mt-2 text-xs font-semibold ${
@@ -4711,14 +4767,19 @@ function App() {
 
             {selectedCompletedWorkout ? (
               <ul className="mt-4 grid gap-3 lg:grid-cols-2">
-                {selectedCompletedWorkout.exercises.map((exercise) => (
+                {selectedCompletedWorkout.exercises.map((exercise, exerciseIndex) => (
                   <li
-                    key={exercise.exerciseId}
+                    key={`${exercise.exerciseId}-${exerciseIndex}`}
                     className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
                   >
                     <p className="font-semibold text-white">
                       {exercise.exerciseName}
                     </p>
+                    {exercise.originalExerciseId ? (
+                      <p className="mt-1 text-xs font-semibold text-sky-300">
+                        Swapped from {exercise.originalExerciseName ?? "original exercise"}
+                      </p>
+                    ) : null}
                     <ul className="mt-3 space-y-2 text-sm text-slate-300">
                       {exercise.sets.map((set) => (
                         <li
@@ -5678,18 +5739,24 @@ function App() {
           </section>
         ) : null}
 
-        {exerciseFinderOpen && selectedProgramDraft && selectedProgramDayDraft ? (
+        {exerciseFinderOpen &&
+        ((selectedProgramDraft && selectedProgramDayDraft) ||
+          (exerciseFinderMode.type === "workout-swap" &&
+            activeWorkoutSession)) ? (
           <div className="fixed inset-0 z-50 flex bg-slate-950/90 p-3 sm:p-4">
             <section className="mx-auto flex h-full max-h-[100dvh] w-full max-w-6xl min-w-0 flex-col rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-2xl sm:p-4">
               <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    {exerciseFinderMode.type === "swap"
+                    {exerciseFinderMode.type === "swap" ||
+                    exerciseFinderMode.type === "workout-swap"
                       ? "Swap Exercise"
                       : "Add Exercises"}
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-white">
-                    {selectedProgramDayDraft.name}
+                    {exerciseFinderMode.type === "workout-swap"
+                      ? activeRoutineDay?.name ?? "Current workout"
+                      : selectedProgramDayDraft.name}
                   </h2>
                 </div>
                 <button
@@ -5833,8 +5900,8 @@ function App() {
                         type="button"
                         onClick={() =>
                           selectExerciseFromFinder(
-                            selectedProgramDraft.id,
-                            selectedProgramDayDraft.id,
+                            selectedProgramDraft?.id ?? null,
+                            selectedProgramDayDraft?.id ?? null,
                             exercise,
                             exerciseFinderMode.type === "swap"
                               ? exerciseFinderMode.exerciseIndex
@@ -5846,7 +5913,8 @@ function App() {
                           isExerciseAlreadyAdded(exercise.id)
                         }
                         aria-label={
-                          exerciseFinderMode.type === "swap"
+                          exerciseFinderMode.type === "swap" ||
+                          exerciseFinderMode.type === "workout-swap"
                             ? `Use ${exercise.name}`
                             : isExerciseAlreadyAdded(exercise.id)
                               ? `${exercise.name} already added`
@@ -5854,7 +5922,8 @@ function App() {
                         }
                         className="shrink-0 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-default disabled:bg-emerald-200"
                       >
-                        {exerciseFinderMode.type === "swap"
+                        {exerciseFinderMode.type === "swap" ||
+                        exerciseFinderMode.type === "workout-swap"
                           ? "Use"
                           : isExerciseAlreadyAdded(exercise.id)
                             ? "Added ✓"

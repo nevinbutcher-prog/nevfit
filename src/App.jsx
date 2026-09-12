@@ -30,6 +30,18 @@ import {
   migrateLocalProgramsToCloud,
   savePrograms,
 } from "./services/programStore";
+import { persistProgramDrafts } from "./services/programPersistence";
+import {
+  addRoutineExercise,
+  createWorkoutSessionSnapshot,
+  duplicateRoutineExercises,
+  hasRoutineExercise,
+  moveRoutineExercise,
+  normalizeRoutineDay as normalizeRoutineDayData,
+  removeRoutineExercise,
+  replaceRoutineExercise,
+  updateRoutineExerciseSuperset,
+} from "./services/routineBuilder";
 import { ensureUserProfile } from "./services/userProfile";
 import {
   loadCompletedWorkouts as loadCloudCompletedWorkouts,
@@ -130,102 +142,8 @@ function persistSchedule(schedule) {
   window.localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
 }
 
-function normalizeRoutineExercise(value, fallbackRoutineExerciseId) {
-  if (
-    !(
-      value &&
-      typeof value.exerciseId === "string" &&
-      value.exerciseId.trim() &&
-      isWgerExerciseId(value.exerciseId.trim())
-    )
-  ) {
-    return null;
-  }
-
-  const sets = Number(value.sets);
-  const restSeconds =
-    value.restSeconds === null ||
-    value.restSeconds === "" ||
-    typeof value.restSeconds === "undefined"
-      ? null
-      : Number(value.restSeconds);
-
-  if (!Number.isInteger(sets) || sets < 1 || sets > 12) {
-    return null;
-  }
-
-  if (
-    restSeconds !== null &&
-    (!Number.isInteger(restSeconds) || restSeconds < 0 || restSeconds > 600)
-  ) {
-    return null;
-  }
-
-  const supersetGroupId =
-    typeof value.supersetGroupId === "string" && value.supersetGroupId.trim()
-      ? value.supersetGroupId.trim()
-      : typeof value.groupId === "string" && value.groupId.trim()
-        ? value.groupId.trim()
-        : null;
-
-  return {
-    routineExerciseId:
-      typeof value.routineExerciseId === "string" &&
-      value.routineExerciseId.trim()
-        ? value.routineExerciseId.trim()
-        : fallbackRoutineExerciseId,
-    exerciseId: value.exerciseId.trim(),
-    sets,
-    repRange:
-      typeof value.repRange === "string" && value.repRange.trim()
-        ? value.repRange.trim()
-        : "8-12",
-    restSeconds,
-    ...(typeof value.displayNameOverride === "string" &&
-    value.displayNameOverride.trim()
-      ? { displayNameOverride: value.displayNameOverride.trim() }
-      : {}),
-    ...(typeof value.note === "string" && value.note.trim()
-      ? { note: value.note.trim() }
-      : {}),
-    supersetGroupId,
-  };
-}
-
 function normalizeRoutineDay(value, fallbackDay = null) {
-  if (
-    !(
-      value &&
-      typeof value.id === "string" &&
-      value.id.trim() &&
-      typeof value.name === "string" &&
-      value.name.trim()
-    )
-  ) {
-    return null;
-  }
-
-  if (!Array.isArray(value.exercises)) {
-    return null;
-  }
-
-  const exercises = cleanOrphanedSupersetGroups(
-    value.exercises
-      .map((exercise, index) =>
-        normalizeRoutineExercise(
-          exercise,
-          `ri-${value.id.trim()}-${index + 1}`,
-        ),
-      )
-      .filter(Boolean),
-  );
-
-  return {
-    id: fallbackDay?.id ?? value.id.trim(),
-    name: fallbackDay?.name ?? value.name.trim(),
-    exercises,
-    ...(fallbackDay ? {} : { archived: value.archived === true }),
-  };
+  return normalizeRoutineDayData(value, fallbackDay, isWgerExerciseId);
 }
 
 function normalizeProgram(value, fallbackProgram = null) {
@@ -394,21 +312,16 @@ async function persistProgramDefinitions(
   currentUser,
   actionName,
 ) {
-  persistPrograms(programDefinitions);
-  logProgramSync(actionName, currentUser?.uid, programDefinitions, "local");
-
-  if (currentUser) {
-    try {
-      await savePrograms(currentUser.uid, programDefinitions);
-      logProgramSync(actionName, currentUser.uid, programDefinitions, "success");
-      return true;
-    } catch (error) {
-      logProgramSync(actionName, currentUser.uid, programDefinitions, "failure", error);
-      return false;
-    }
-  }
-
-  return true;
+  return persistProgramDrafts(
+    programDefinitions,
+    currentUser,
+    actionName,
+    {
+      persistLocal: persistPrograms,
+      saveCloud: savePrograms,
+      logSync: logProgramSync,
+    },
+  );
 }
 
 function loadStoredActiveProgramId() {
@@ -516,28 +429,6 @@ function createRoutineExerciseId() {
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
   return `ri-${suffix}`;
-}
-
-function cleanOrphanedSupersetGroups(exercises) {
-  const groupCounts = exercises.reduce((counts, exercise) => {
-    if (!exercise.supersetGroupId) {
-      return counts;
-    }
-
-    counts.set(
-      exercise.supersetGroupId,
-      (counts.get(exercise.supersetGroupId) ?? 0) + 1,
-    );
-
-    return counts;
-  }, new Map());
-
-  return exercises.map((exercise) =>
-    exercise.supersetGroupId &&
-    (groupCounts.get(exercise.supersetGroupId) ?? 0) < 2
-      ? { ...exercise, supersetGroupId: null }
-      : exercise,
-  );
 }
 
 function areRoutineDaysEqual(firstRoutineDay, secondRoutineDay) {
@@ -1205,31 +1096,17 @@ function hasWorkoutLoggedEffort(workoutSession) {
 }
 
 function createWorkoutSession(scheduleDay, routineDay, exerciseLibrary = []) {
-  return {
-    scheduleDayId: scheduleDay.id,
-    routineDayId: routineDay.id,
-    exercises: routineDay.exercises.map((exercise) => {
+  return createWorkoutSessionSnapshot(
+    scheduleDay,
+    routineDay,
+    (exercise) => {
       const sourceExercise = getExerciseFromLibrary(
         exercise.exerciseId,
         exerciseLibrary,
       );
-
-      return {
-        exerciseId: exercise.exerciseId,
-        exerciseName: getEffectiveExerciseName(exercise, sourceExercise),
-        prescribedSets: exercise.sets,
-        repRange: exercise.repRange,
-        note: exercise.note,
-        restSeconds: exercise.restSeconds,
-        supersetGroupId: exercise.supersetGroupId ?? null,
-        sets: Array.from({ length: exercise.sets }, (_, index) => ({
-          setNumber: index + 1,
-          weight: "",
-          reps: "",
-        })),
-      };
-    }),
-  };
+      return getEffectiveExerciseName(exercise, sourceExercise);
+    },
+  );
 }
 
 function getEffectiveExerciseName(routineExercise, sourceExercise) {
@@ -1953,9 +1830,7 @@ function App() {
   const [exerciseLibrary, setExerciseLibrary] = useState([]);
   const [exerciseSearchResults, setExerciseSearchResults] = useState([]);
   const [exerciseSearchStatus, setExerciseSearchStatus] = useState("idle");
-  const [recentlyAddedExerciseIds, setRecentlyAddedExerciseIds] = useState(
-    () => new Set(),
-  );
+  const [exerciseSearchRetryKey, setExerciseSearchRetryKey] = useState(0);
   const [expandedExerciseIndex, setExpandedExerciseIndex] = useState(null);
   const [supersetPairingExerciseIndex, setSupersetPairingExerciseIndex] =
     useState(null);
@@ -2439,6 +2314,7 @@ function App() {
     exerciseFinderOpen,
     exerciseMuscleFilter,
     exerciseSearchTerm,
+    exerciseSearchRetryKey,
   ]);
 
   useEffect(() => {
@@ -3158,27 +3034,20 @@ function App() {
             return day;
           }
 
-          const nextIndex = exerciseIndex + direction;
-
-          if (nextIndex < 0 || nextIndex >= day.exercises.length) {
-            return day;
-          }
-
-          const nextExercises = [...day.exercises];
-          const [movedExercise] = nextExercises.splice(exerciseIndex, 1);
-          nextExercises.splice(nextIndex, 0, movedExercise);
-
           return {
             ...day,
-            exercises: nextExercises,
+            exercises: moveRoutineExercise(
+              day.exercises,
+              exerciseIndex,
+              direction,
+            ),
           };
         }),
       };
     });
 
-    setProgramsAndPersist("move-routine-exercise", nextProgramDrafts, {
-      programId,
-    });
+    setProgramSaveStatus(null);
+    setProgramDrafts(nextProgramDrafts);
   }
 
   function removeProgramExercise(programId, dayId, exerciseIndex) {
@@ -3190,8 +3059,9 @@ function App() {
               day.id === dayId
                 ? {
                     ...day,
-                    exercises: cleanOrphanedSupersetGroups(
-                      day.exercises.filter((_, index) => index !== exerciseIndex),
+                    exercises: removeRoutineExercise(
+                      day.exercises,
+                      exerciseIndex,
                     ),
                   }
                 : day,
@@ -3200,9 +3070,8 @@ function App() {
         : program,
     );
 
-    setProgramsAndPersist("remove-routine-exercise", nextProgramDrafts, {
-      programId,
-    });
+    setProgramSaveStatus(null);
+    setProgramDrafts(nextProgramDrafts);
   }
 
   function updateExerciseSuperset(programId, dayId, exerciseIndex, pairedIndex) {
@@ -3218,46 +3087,21 @@ function App() {
             return day;
           }
 
-          if (!day.exercises[exerciseIndex]) {
-            return day;
-          }
-
-          const nextExercises = day.exercises.map((exercise) => ({
-            ...exercise,
-          }));
-
-          if (pairedIndex === null) {
-            nextExercises[exerciseIndex].supersetGroupId = null;
-
-            return {
-              ...day,
-              exercises: cleanOrphanedSupersetGroups(nextExercises),
-            };
-          }
-
-          if (pairedIndex === exerciseIndex || !nextExercises[pairedIndex]) {
-            return day;
-          }
-
-          const pairedGroupId = nextExercises[pairedIndex].supersetGroupId;
-          nextExercises[exerciseIndex].supersetGroupId = null;
-          const cleanedExercises = cleanOrphanedSupersetGroups(nextExercises);
-          const nextGroupId = pairedGroupId ?? createSupersetGroupId();
-
-          cleanedExercises[exerciseIndex].supersetGroupId = nextGroupId;
-          cleanedExercises[pairedIndex].supersetGroupId = nextGroupId;
-
           return {
             ...day,
-            exercises: cleanOrphanedSupersetGroups(cleanedExercises),
+            exercises: updateRoutineExerciseSuperset(
+              day.exercises,
+              exerciseIndex,
+              pairedIndex,
+              createSupersetGroupId,
+            ),
           };
         }),
       };
     });
 
-    setProgramsAndPersist("update-exercise-superset", nextProgramDrafts, {
-      programId,
-    });
+    setProgramSaveStatus(null);
+    setProgramDrafts(nextProgramDrafts);
   }
 
   function selectExerciseFromFinder(programId, dayId, exercise, exerciseIndex) {
@@ -3282,14 +3126,10 @@ function App() {
                 day.id === dayId
                   ? {
                       ...day,
-                      exercises: day.exercises.map((routineExercise, index) =>
-                        index === exerciseIndex
-                          ? {
-                              ...routineExercise,
-                              exerciseId: exercise.id,
-                              displayNameOverride: "",
-                            }
-                          : routineExercise,
+                      exercises: replaceRoutineExercise(
+                        day.exercises,
+                        exerciseIndex,
+                        exercise.id,
                       ),
                     }
                   : day,
@@ -3298,9 +3138,8 @@ function App() {
           : program,
       );
 
-      setProgramsAndPersist("swap-routine-exercise", nextProgramDrafts, {
-        programId,
-      });
+      setProgramSaveStatus(null);
+      setProgramDrafts(nextProgramDrafts);
       setExerciseFinderOpen(false);
       setExerciseFinderMode({ type: "add", exerciseIndex: null });
     } else {
@@ -3312,10 +3151,10 @@ function App() {
                 day.id === dayId
                   ? {
                       ...day,
-                      exercises: [
-                        ...day.exercises,
+                      exercises: addRoutineExercise(
+                        day.exercises,
                         createRoutineExerciseFromCatalog(exercise),
-                      ],
+                      ).exercises,
                     }
                   : day,
               ),
@@ -3323,12 +3162,8 @@ function App() {
           : program,
       );
 
-      setProgramsAndPersist("add-routine-exercise", nextProgramDrafts, {
-        programId,
-      });
-      setRecentlyAddedExerciseIds((currentIds) =>
-        new Set(currentIds).add(exercise.id),
-      );
+      setProgramSaveStatus(null);
+      setProgramDrafts(nextProgramDrafts);
       window.setTimeout(() => {
         exerciseSearchInputRef.current?.focus();
       }, 0);
@@ -3573,10 +3408,10 @@ function App() {
       id: createProgramDayId(programId, `${sourceRoutine.name} Copy`, programDrafts),
       name: `${sourceRoutine.name} Copy`,
       archived: false,
-      exercises: sourceRoutine.exercises.map((exercise) => ({
-        ...exercise,
-        routineExerciseId: createRoutineExerciseId(),
-      })),
+      exercises: duplicateRoutineExercises(
+        sourceRoutine.exercises,
+        createRoutineExerciseId,
+      ),
     };
     const sourceIndex = program.days.findIndex((day) => day.id === routineId);
     const nextProgramDrafts = programDrafts.map((item) =>
@@ -4173,6 +4008,11 @@ function App() {
   const selectedProgramDayDraft = selectedProgramDraft?.days.find(
     (day) => day.id === selectedProgramDayId && !day.archived,
   );
+  const isExerciseAlreadyAdded = (exerciseId) =>
+    Boolean(
+      selectedProgramDayDraft &&
+        hasRoutineExercise(selectedProgramDayDraft.exercises, exerciseId),
+    );
   const normalizedSelectedProgramDraft = selectedProgramDraft
     ? normalizeProgram(selectedProgramDraft)
     : null;
@@ -5351,7 +5191,7 @@ function App() {
 
                             return (
                               <li
-                                key={`${selectedProgramDayDraft.id}-${index}`}
+                                key={routineExercise.routineExerciseId}
                                 className={`min-w-0 rounded-xl border bg-slate-950/60 transition ${
                                   isExpanded
                                     ? "border-emerald-400/70"
@@ -5613,7 +5453,7 @@ function App() {
                                           <div className="flex items-center justify-between"><h4 className="text-xl font-bold">Select Superset Partner</h4><button type="button" onClick={() => setSupersetPairingExerciseIndex(null)} className="px-3 py-2 text-slate-300">Close</button></div>
                                           <div className="mt-3 space-y-2">
                                             {selectedProgramDayDraft.exercises.map((candidate, candidateIndex) => candidateIndex === index ? null : (
-                                              <button key={`${candidate.exerciseId}-${candidateIndex}`} type="button" onClick={() => { updateExerciseSuperset(selectedProgramDraft.id, selectedProgramDayDraft.id, index, candidateIndex); setSupersetPairingExerciseIndex(null); }} className="w-full rounded-lg border border-slate-700 px-3 py-3 text-left hover:border-emerald-400">
+                                              <button key={candidate.routineExerciseId} type="button" onClick={() => { updateExerciseSuperset(selectedProgramDraft.id, selectedProgramDayDraft.id, index, candidateIndex); setSupersetPairingExerciseIndex(null); }} className="w-full rounded-lg border border-slate-700 px-3 py-3 text-left hover:border-emerald-400">
                                                 <span className="block font-semibold text-white">{getRoutineExerciseName(candidate, exerciseLibrary)}</span>
                                                 <span className="mt-1 block text-sm text-slate-400">{candidate.sets} sets · {candidate.repRange} reps{candidate.supersetGroupId ? " · Already grouped (join group)" : ""}</span>
                                               </button>
@@ -5677,6 +5517,7 @@ function App() {
                                         Reps
                                         <input
                                           type="text"
+                                          inputMode="numeric"
                                           value={routineExercise.repRange}
                                           onChange={(event) =>
                                             updateProgramDay(
@@ -5834,11 +5675,13 @@ function App() {
 
         {exerciseFinderOpen && selectedProgramDraft && selectedProgramDayDraft ? (
           <div className="fixed inset-0 z-50 flex bg-slate-950/90 p-3 sm:p-4">
-            <section className="mx-auto flex h-full w-full max-w-6xl min-w-0 flex-col rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-2xl sm:p-4">
+            <section className="mx-auto flex h-full max-h-[100dvh] w-full max-w-6xl min-w-0 flex-col rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-2xl sm:p-4">
               <div className="flex min-w-0 flex-col gap-3 border-b border-slate-800 pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Add Exercises
+                    {exerciseFinderMode.type === "swap"
+                      ? "Swap Exercise"
+                      : "Add Exercises"}
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-white">
                     {selectedProgramDayDraft.name}
@@ -5924,17 +5767,27 @@ function App() {
               <p className="pb-3 text-sm text-slate-400">
                 {exerciseSearchStatus === "loading"
                   ? "Searching exercises..."
-                  : exerciseSearchTerm.trim()
-                    ? `${exerciseSearchResults.length} exercise${
-                        exerciseSearchResults.length === 1 ? "" : "s"
-                      } found`
-                    : "Type an exercise name to search"}
+                  : exerciseSearchStatus === "error"
+                    ? "Exercise search is temporarily unavailable"
+                    : exerciseSearchTerm.trim()
+                      ? `${exerciseSearchResults.length} exercise${
+                          exerciseSearchResults.length === 1 ? "" : "s"
+                        } found`
+                      : "Type an exercise name to search"}
               </p>
               {exerciseSearchStatus === "error" ? (
-                <p className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-100">
-                  Could not load exercise results. Check your connection and try
-                  another search.
-                </p>
+                <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+                  <p className="font-semibold">
+                    Could not load exercise results. Your routine is unchanged.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setExerciseSearchRetryKey((key) => key + 1)}
+                    className="shrink-0 rounded-lg border border-amber-300/60 px-3 py-2 font-bold transition hover:border-amber-200"
+                  >
+                    Retry
+                  </button>
+                </div>
               ) : null}
 
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
@@ -5942,7 +5795,7 @@ function App() {
                   <p className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-3 text-sm text-slate-300">
                     Searching exercises...
                   </p>
-                ) : exerciseSearchResults.length ? (
+                ) : exerciseSearchStatus === "error" ? null : exerciseSearchResults.length ? (
                   exerciseSearchResults.map((exercise) => (
                     <article
                       key={exercise.id}
@@ -5983,10 +5836,24 @@ function App() {
                               : null,
                           )
                         }
-                        disabled={exerciseFinderMode.type === "add" && recentlyAddedExerciseIds.has(exercise.id)}
+                        disabled={
+                          exerciseFinderMode.type === "add" &&
+                          isExerciseAlreadyAdded(exercise.id)
+                        }
+                        aria-label={
+                          exerciseFinderMode.type === "swap"
+                            ? `Use ${exercise.name}`
+                            : isExerciseAlreadyAdded(exercise.id)
+                              ? `${exercise.name} already added`
+                              : `Add ${exercise.name}`
+                        }
                         className="shrink-0 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-default disabled:bg-emerald-200"
                       >
-                        {exerciseFinderMode.type === "swap" ? "Use" : recentlyAddedExerciseIds.has(exercise.id) ? "Added ✓" : "Add"}
+                        {exerciseFinderMode.type === "swap"
+                          ? "Use"
+                          : isExerciseAlreadyAdded(exercise.id)
+                            ? "Added ✓"
+                            : "Add"}
                       </button>
                     </article>
                   ))

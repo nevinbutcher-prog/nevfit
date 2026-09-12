@@ -23,6 +23,8 @@
 - Provider-neutral selectable exercise results
 - Add and Swap exercise picker flows
 - Dedicated Add Exercises modal for repeated exercise additions
+- Routine-aware Added state with duplicate prevention scoped to one routine
+- Recoverable exercise-provider error state with explicit retry
 - wger result dedupe and cleaned English display names
 - wger search query normalization and local aliases for common gym-language searches
 - Exercise image normalization and display when available
@@ -32,6 +34,7 @@
 - Focused superset partner selection with compact grouped-row labels
 - Versioned, validated routine proposal contract for future coaching integrations
 - Pure proposal-to-draft application with stable routine-row targeting and no persistence side effects
+- Automated builder regression coverage for normalization, add/swap/remove/reorder, supersets, duplication, persistence fallback, and workout snapshots
 - Workout mode
 - Supersetted exercises render in grouped workout-mode blocks
 - Faster workout logging with automatic weight carry-forward, compact prior-session summaries, clear set states, and collapsible completed exercises

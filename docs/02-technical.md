@@ -201,7 +201,27 @@ The routine builder is search-first and edit-on-demand:
 - custom display names are hidden behind an explicit checkbox
 - superset pairing is lightweight and uses a simple partner selection control
 - the Add Exercises modal stays open after add-mode selections and resets search for the next addition
+- Added state is derived from the selected routine draft, so it remains correct after closing, reopening, or switching routines
+- a provider failure keeps the picker open and exposes an explicit Retry action without changing the draft
 - swap-mode still closes after the replacement exercise is selected
+
+Duplicate provider exercise IDs are intentionally prevented within one
+routine. The same provider exercise remains addable to a different routine.
+Every accepted row still has its own `routineExerciseId`, which keeps editing,
+reordering, and superset targeting deterministic.
+
+Exercise add, swap, remove, reorder, configuration, and superset changes update
+`programDrafts` only. They do not invoke local or cloud persistence directly;
+Save Program normalizes and commits the complete draft. Routine creation,
+duplication, and archive actions retain their existing structural-action save
+behavior.
+
+Regression-prone builder transformations are isolated in
+`src/services/routineBuilder.js`. This includes legacy routine normalization,
+duplicate-safe adding, swap/remove/reorder, superset cleanup, independent
+routine duplication, and workout snapshot creation. Persistence serialization
+and the local-first/cloud-fallback boundary are independently testable through
+`programData.js` and `programPersistence.js`.
 
 ## Exercise Provider
 
@@ -398,8 +418,9 @@ On authenticated load, the app reads `nevfit_programs`, then reads Firestore.
 Non-empty Firestore programs are treated as the source of truth and refresh the
 local cache. If Firestore is empty and local programs exist, the local programs
 are uploaded once. If both are empty, the starter program initializes and is
-cached locally. Program edits, creation, duplication, archive actions, and
-routine exercise changes save to localStorage first, then attempt Firestore.
+cached locally. Explicit program saves, program creation, duplication, and
+archive actions save to localStorage first, then attempt Firestore. Routine
+exercise edits stay in the program draft until Save Program is selected.
 Firestore failures leave local data intact and show a non-blocking sync warning.
 
 Routine lifecycle operations use stable routine IDs inside each program. Active

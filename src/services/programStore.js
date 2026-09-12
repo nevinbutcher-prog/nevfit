@@ -7,6 +7,12 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import {
+  maybeNormalizeCloudProgram,
+  toProgramDocument,
+} from "./programData";
+
+export { maybeNormalizeCloudProgram } from "./programData";
 
 function programsCollection(uid) {
   return collection(db, "users", uid, "programs");
@@ -14,51 +20,6 @@ function programsCollection(uid) {
 
 function programDocument(uid, programId) {
   return doc(db, "users", uid, "programs", programId);
-}
-
-function serializeTimestamp(value) {
-  if (value && typeof value.toDate === "function") {
-    return value.toDate().toISOString();
-  }
-
-  return value;
-}
-
-export function maybeNormalizeCloudProgram(program) {
-  if (!program || typeof program !== "object") {
-    return null;
-  }
-
-  const routines = Array.isArray(program.routines) ? program.routines : null;
-  const days = Array.isArray(program.days) ? program.days : routines;
-
-  if (!days) {
-    return null;
-  }
-
-  return {
-    ...program,
-    days,
-    ...(typeof program.createdAt !== "undefined"
-      ? { createdAt: serializeTimestamp(program.createdAt) }
-      : {}),
-    ...(typeof program.updatedAt !== "undefined"
-      ? { updatedAt: serializeTimestamp(program.updatedAt) }
-      : {}),
-  };
-}
-
-function toProgramDocument(program) {
-  const { days, routines, ...programFields } = program;
-  const nextRoutines = Array.isArray(routines) ? routines : days;
-
-  return {
-    ...programFields,
-    ...(Array.isArray(days) ? { days } : {}),
-    ...(Array.isArray(nextRoutines) ? { routines: nextRoutines } : {}),
-    updatedAt: serverTimestamp(),
-    createdAt: program.createdAt ?? serverTimestamp(),
-  };
 }
 
 export async function loadCloudPrograms(uid) {
@@ -75,18 +36,22 @@ export async function loadCloudPrograms(uid) {
 }
 
 export async function saveProgram(uid, program) {
-  await setDoc(programDocument(uid, program.id), toProgramDocument(program), {
-    merge: true,
-  });
+  await setDoc(
+    programDocument(uid, program.id),
+    toProgramDocument(program, serverTimestamp),
+    { merge: true },
+  );
 }
 
 export async function savePrograms(uid, programs) {
   const batch = writeBatch(db);
 
   programs.forEach((program) => {
-    batch.set(programDocument(uid, program.id), toProgramDocument(program), {
-      merge: true,
-    });
+    batch.set(
+      programDocument(uid, program.id),
+      toProgramDocument(program, serverTimestamp),
+      { merge: true },
+    );
   });
 
   await batch.commit();

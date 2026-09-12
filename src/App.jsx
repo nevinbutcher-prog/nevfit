@@ -1931,6 +1931,9 @@ function App() {
   const [exerciseLibrary, setExerciseLibrary] = useState([]);
   const [exerciseSearchResults, setExerciseSearchResults] = useState([]);
   const [exerciseSearchStatus, setExerciseSearchStatus] = useState("idle");
+  const [recentlyAddedExerciseIds, setRecentlyAddedExerciseIds] = useState(
+    () => new Set(),
+  );
   const [expandedExerciseIndex, setExpandedExerciseIndex] = useState(null);
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
@@ -3299,6 +3302,9 @@ function App() {
       setProgramsAndPersist("add-routine-exercise", nextProgramDrafts, {
         programId,
       });
+      setRecentlyAddedExerciseIds((currentIds) =>
+        new Set(currentIds).add(exercise.id),
+      );
       window.setTimeout(() => {
         exerciseSearchInputRef.current?.focus();
       }, 0);
@@ -5944,20 +5950,15 @@ function App() {
                   exerciseSearchResults.map((exercise) => (
                     <article
                       key={exercise.id}
-                      className="flex min-w-0 flex-col gap-3 rounded-lg border border-slate-800 bg-slate-950/80 p-3 sm:flex-row sm:items-start sm:justify-between"
+                      className="flex min-w-0 items-center gap-3 border-b border-slate-800 px-2 py-3 last:border-b-0"
                     >
-                      <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
-                        <ExerciseImage
-                          exercise={exercise}
-                          className="h-28 w-full rounded-lg border border-slate-800 object-cover sm:w-32"
-                        />
-                        <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
                             <h3 className="font-semibold text-white">
                               {exercise.name}
                             </h3>
                           </div>
-                          <div className="mt-2 space-y-1 text-sm text-slate-400">
+                          <div className="mt-1 text-sm text-slate-400">
                             {exercise.primaryMuscle ? (
                               <p>
                                 <span className="font-semibold text-slate-300">
@@ -5966,29 +5967,13 @@ function App() {
                                 {exercise.primaryMuscle}
                               </p>
                             ) : null}
-                            {exercise.secondaryMuscles?.length ? (
-                              <p>
-                                <span className="font-semibold text-slate-300">
-                                  Secondary:
-                                </span>{" "}
-                                {exercise.secondaryMuscles.join(", ")}
-                              </p>
-                            ) : null}
                             {exercise.equipment?.length ? (
-                              <p>
-                                <span className="font-semibold text-slate-300">
-                                  Equipment:
-                                </span>{" "}
+                              <p className="inline">
+                                {exercise.primaryMuscle ? " · " : ""}
                                 {exercise.equipment.join(", ")}
                               </p>
                             ) : null}
                           </div>
-                          {exercise.instructions ? (
-                            <p className="mt-2 line-clamp-2 text-sm text-slate-500">
-                              {getInstructionExcerpt(exercise.instructions)}
-                            </p>
-                          ) : null}
-                        </div>
                       </div>
                       <button
                         type="button"
@@ -6002,9 +5987,10 @@ function App() {
                               : null,
                           )
                         }
-                        className="shrink-0 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300"
+                        disabled={exerciseFinderMode.type === "add" && recentlyAddedExerciseIds.has(exercise.id)}
+                        className="shrink-0 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-default disabled:bg-emerald-200"
                       >
-                        {exerciseFinderMode.type === "swap" ? "Use" : "Add"}
+                        {exerciseFinderMode.type === "swap" ? "Use" : recentlyAddedExerciseIds.has(exercise.id) ? "Added ✓" : "Add"}
                       </button>
                     </article>
                   ))

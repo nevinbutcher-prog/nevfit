@@ -6,6 +6,7 @@ import {
 } from "./services/auth";
 import {
   clearActiveWorkout,
+  getActiveWorkoutPath,
   loadActiveWorkout,
   saveActiveWorkout,
 } from "./services/activeWorkoutStore";
@@ -1542,15 +1543,24 @@ function persistActiveWorkoutSession(workoutSession) {
 }
 
 function logActiveWorkoutSync(actionName, uid, session, result, error = null) {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
   const payload = {
-    uid: uid ?? null,
     actionName,
     hasActiveWorkout: Boolean(session),
+    hasAuthenticatedUid: Boolean(uid),
+    documentPath: uid ? getActiveWorkoutPath(uid) : null,
     result,
   };
 
   if (error) {
-    console.error("Active workout sync diagnostic", payload, error);
+    console.error("Active workout sync diagnostic", {
+      ...payload,
+      errorCode: error.code ?? "unknown",
+      errorMessage: error.message ?? String(error),
+    });
     return;
   }
 

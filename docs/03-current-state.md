@@ -50,6 +50,7 @@
 - Firestore-backed health state at `users/{uid}/appState/health`
 - Local cache fallback for schedule, active program, cycle, runs, steps, and weekly run target
 - Firestore-backed active workout state at `users/{uid}/appState/activeWorkout`
+- Active-workout Firestore writes strip optional undefined fields and include development-only sync diagnostics
 - Firestore-backed completed workout history at `users/{uid}/completedWorkouts/{workoutId}`
 - JSON backup export from Settings
 - Confirmed JSON backup import that replaces Firestore-backed account data

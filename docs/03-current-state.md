@@ -29,6 +29,7 @@
 - Exercise metadata display for primary muscle, secondary muscles, equipment, and instructions
 - Optional routine-level exercise display name overrides
 - Lightweight routine superset pairing
+- Focused superset partner selection with compact grouped-row labels
 - Workout mode
 - Supersetted exercises render in grouped workout-mode blocks
 - Faster workout logging with automatic weight carry-forward, compact prior-session summaries, clear set states, and collapsible completed exercises

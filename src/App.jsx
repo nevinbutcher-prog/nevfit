@@ -1935,6 +1935,8 @@ function App() {
     () => new Set(),
   );
   const [expandedExerciseIndex, setExpandedExerciseIndex] = useState(null);
+  const [supersetPairingExerciseIndex, setSupersetPairingExerciseIndex] =
+    useState(null);
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
   );
@@ -3215,17 +3217,17 @@ function App() {
             return day;
           }
 
-          const currentGroupId = nextExercises[exerciseIndex].supersetGroupId;
           const pairedGroupId = nextExercises[pairedIndex].supersetGroupId;
-          const nextGroupId =
-            pairedGroupId ?? currentGroupId ?? createSupersetGroupId();
+          nextExercises[exerciseIndex].supersetGroupId = null;
+          const cleanedExercises = cleanOrphanedSupersetGroups(nextExercises);
+          const nextGroupId = pairedGroupId ?? createSupersetGroupId();
 
-          nextExercises[exerciseIndex].supersetGroupId = nextGroupId;
-          nextExercises[pairedIndex].supersetGroupId = nextGroupId;
+          cleanedExercises[exerciseIndex].supersetGroupId = nextGroupId;
+          cleanedExercises[pairedIndex].supersetGroupId = nextGroupId;
 
           return {
             ...day,
-            exercises: cleanOrphanedSupersetGroups(nextExercises),
+            exercises: cleanOrphanedSupersetGroups(cleanedExercises),
           };
         }),
       };
@@ -5307,27 +5309,17 @@ function App() {
                                 routineExercise,
                                 exercise,
                               );
-                            const supersetPartnerIndexes =
-                              selectedProgramDayDraft.exercises
-                                .map((exerciseItem, exerciseIndex) =>
-                                  exerciseIndex !== index &&
-                                  exerciseItem.supersetGroupId &&
-                                  exerciseItem.supersetGroupId ===
-                                    routineExercise.supersetGroupId
-                                    ? exerciseIndex
-                                    : null,
-                                )
-                                .filter((exerciseIndex) => exerciseIndex !== null);
                             const supersetPartnerNames =
                               getSupersetPartnerNames(
                                 selectedProgramDayDraft.exercises,
                                 index,
                                 exerciseLibrary,
                               );
-                            const selectedSupersetValue =
-                              supersetPartnerIndexes.length > 0
-                                ? String(supersetPartnerIndexes[0])
-                                : "";
+                            const supersetGroupPosition = routineExercise.supersetGroupId
+                              ? selectedProgramDayDraft.exercises
+                                  .filter((item) => item.supersetGroupId === routineExercise.supersetGroupId)
+                                  .findIndex((item) => item === routineExercise) + 1
+                              : null;
                             const hasCustomDisplayName = Boolean(
                               routineExercise.displayNameOverride?.trim(),
                             );
@@ -5353,8 +5345,8 @@ function App() {
                                     aria-expanded={isExpanded}
                                   >
                                     <div className="flex min-w-0 items-start gap-3">
-                                      <span className="shrink-0 text-sm font-semibold text-slate-500">
-                                        {index + 1}.
+                                      <span className={`shrink-0 text-sm font-semibold ${supersetGroupPosition ? "text-emerald-300" : "text-slate-500"}`}>
+                                        {supersetGroupPosition ? `S${supersetGroupPosition}` : `${index + 1}.`}
                                       </span>
                                       <div className="min-w-0">
                                         <p className="truncate font-semibold text-white">
@@ -5493,7 +5485,7 @@ function App() {
                                       </label>
                                     </div>
 
-                                    {exerciseFinderOpen ? <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                                    <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
                                       <label className="flex min-w-0 items-start gap-3 text-sm font-semibold text-slate-300">
                                         <input
                                           type="checkbox"
@@ -5571,61 +5563,40 @@ function App() {
                                           </span>
                                         </label>
                                       ) : null}
-                                    </div> : null}
+                                    </div>
 
                                     <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
-                                      <p className="text-sm font-semibold text-slate-300">
-                                        Superset with
+                                      <p className="text-sm font-semibold text-slate-300">Superset</p>
+                                      <p className="mt-1 text-sm text-slate-400">
+                                        {supersetPartnerNames.length
+                                          ? `Paired with ${supersetPartnerNames.join(" + ")}`
+                                          : "Not paired"}
                                       </p>
-                                      <div className="mt-2 flex min-w-0 flex-wrap gap-2">
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            updateExerciseSuperset(
-                                              selectedProgramDraft.id,
-                                              selectedProgramDayDraft.id,
-                                              index,
-                                              null,
-                                            )
-                                          }
-                                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                                            selectedSupersetValue
-                                              ? "border-slate-700 text-slate-200 hover:border-slate-500"
-                                              : "border-emerald-400 bg-emerald-400 text-slate-950"
-                                          }`}
-                                        >
-                                          None
+                                      <div className="mt-3 flex gap-2">
+                                        <button type="button" onClick={() => setSupersetPairingExerciseIndex(index)} className="rounded-lg border border-emerald-400/60 px-3 py-2 text-sm font-semibold text-emerald-200">
+                                          {supersetPartnerNames.length ? "Change pairing" : "Pair with exercise"}
                                         </button>
-                                        {selectedProgramDayDraft.exercises.map(
-                                          (exerciseItem, exerciseIndex) =>
-                                            exerciseIndex === index ? null : (
-                                              <button
-                                                key={`${exerciseItem.exerciseId}-${exerciseIndex}`}
-                                                type="button"
-                                                onClick={() =>
-                                                  updateExerciseSuperset(
-                                                    selectedProgramDraft.id,
-                                                    selectedProgramDayDraft.id,
-                                                    index,
-                                                    exerciseIndex,
-                                                  )
-                                                }
-                                                className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${
-                                                  selectedSupersetValue ===
-                                                  String(exerciseIndex)
-                                                    ? "border-emerald-400 bg-emerald-400 text-slate-950"
-                                                    : "border-slate-700 text-slate-200 hover:border-slate-500"
-                                                }`}
-                                              >
-                                                {getRoutineExerciseName(
-                                                  exerciseItem,
-                                                  exerciseLibrary,
-                                                )}
-                                              </button>
-                                            ),
-                                        )}
+                                        {supersetPartnerNames.length ? (
+                                          <button type="button" onClick={() => updateExerciseSuperset(selectedProgramDraft.id, selectedProgramDayDraft.id, index, null)} className="rounded-lg border border-red-400/60 px-3 py-2 text-sm font-semibold text-red-200">Remove superset</button>
+                                        ) : null}
                                       </div>
                                     </div>
+
+                                    {supersetPairingExerciseIndex === index ? (
+                                      <div className="fixed inset-0 z-[60] flex items-end bg-slate-950/85 sm:items-center sm:justify-center sm:p-4">
+                                        <div className="max-h-[80dvh] w-full overflow-y-auto rounded-t-2xl border border-slate-700 bg-slate-900 p-4 sm:max-w-md sm:rounded-2xl">
+                                          <div className="flex items-center justify-between"><h4 className="text-xl font-bold">Select Superset Partner</h4><button type="button" onClick={() => setSupersetPairingExerciseIndex(null)} className="px-3 py-2 text-slate-300">Close</button></div>
+                                          <div className="mt-3 space-y-2">
+                                            {selectedProgramDayDraft.exercises.map((candidate, candidateIndex) => candidateIndex === index ? null : (
+                                              <button key={`${candidate.exerciseId}-${candidateIndex}`} type="button" onClick={() => { updateExerciseSuperset(selectedProgramDraft.id, selectedProgramDayDraft.id, index, candidateIndex); setSupersetPairingExerciseIndex(null); }} className="w-full rounded-lg border border-slate-700 px-3 py-3 text-left hover:border-emerald-400">
+                                                <span className="block font-semibold text-white">{getRoutineExerciseName(candidate, exerciseLibrary)}</span>
+                                                <span className="mt-1 block text-sm text-slate-400">{candidate.sets} sets · {candidate.repRange} reps{candidate.supersetGroupId ? " · Already grouped (join group)" : ""}</span>
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : null}
 
                                     {exerciseFinderOpen && exercise ? (
                                       <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-400">

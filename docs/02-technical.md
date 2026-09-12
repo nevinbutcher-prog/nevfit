@@ -116,6 +116,11 @@ already in a group joins that group. Removing a pairing or deleting an exercise
 cleans up orphaned groups so a remaining single exercise has
 `supersetGroupId: null`.
 
+The routine editor exposes pairing through a focused partner selector keyed by
+routine-row index, so duplicate base exercise IDs remain independently
+targetable. Changing a pairing first removes the edited row from its old group,
+cleans any orphan, then creates or joins the selected partner's group.
+
 Workout sessions snapshot the effective exercise name at start time:
 
 ```js

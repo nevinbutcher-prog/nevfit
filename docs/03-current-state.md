@@ -33,7 +33,7 @@
 - Non-destructive blank workout close
 - Append-only workout history persistence
 - Historical session storage
-- Previous performance lookup from completed history
+- Previous performance lookup from global completed history by stable exercise ID
 - Rest timer with repeated alarm sound, vibration support, and stronger complete state
 - Sticky workout footer
 - Wake lock during active workouts

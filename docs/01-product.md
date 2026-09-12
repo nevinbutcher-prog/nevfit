@@ -32,7 +32,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Workout mode with active workout persistence
 - Rest timer with repeated audible alarm, vibration support, and strong complete state
 - Append-only completed workout history
-- Previous performance derived from completed workout history
+- Previous performance derived from global completed workout history by stable exercise ID
 - Blank workout sessions are non-destructive and are not saved as completed workouts
 - Provider-neutral exercise library search with common gym-language alias support
 - Dedicated Add Exercises builder flow that stays open for repeated additions

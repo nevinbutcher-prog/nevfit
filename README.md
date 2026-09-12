@@ -10,7 +10,7 @@ The current app supports:
 - Program and routine editing
 - Workout session logging
 - Append-only completed workout history
-- Previous performance lookup from completed history
+- Previous performance lookup from global completed history by stable exercise ID
 - Rest timer and workout-mode feedback
 - wger-native exercise search with common gym-language aliases
 - Optional routine-level exercise display names for wger variants
@@ -34,9 +34,8 @@ npm run build
 
 ## Data
 
-NevFit currently stores workout, program, schedule, and history state in
-`localStorage`. Firebase Auth and a Firestore user-profile document are wired as
-the identity foundation, but workout data has not been migrated.
+NevFit uses `localStorage` as a local cache and Firebase Auth/Firestore for
+authenticated workout, program, schedule, and history data.
 
 Key docs:
 

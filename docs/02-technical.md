@@ -65,8 +65,11 @@ users/{uid}/completedWorkouts/{workoutId}
 
 `nevfit_completed_workouts` remains a local cache.
 
-Previous performance is derived from completed workout history, not from active
-or blank sessions.
+Previous performance is derived from completed workout history globally by
+stable `exerciseId`, not by routine, schedule slot, day, or program. It uses
+the most recent matching completed exercise with meaningful logged effort, not
+active or blank sessions. Routine-level `displayNameOverride` values do not
+change that history identity.
 
 Blank workout sessions are non-destructive:
 

@@ -1720,16 +1720,8 @@ function createCompletedWorkoutRecord(
   };
 }
 
-function getPreviousExercisePerformance(
-  exerciseId,
-  routineDayId,
-  completedWorkouts,
-) {
+function getPreviousExercisePerformance(exerciseId, completedWorkouts) {
   return completedWorkouts.reduce((latestPerformance, completedWorkout) => {
-    if (completedWorkout.routineDayId !== routineDayId) {
-      return latestPerformance;
-    }
-
     const exercisePerformance = completedWorkout.exercises.find(
       (exercise) => exercise.exerciseId === exerciseId,
     );
@@ -3776,7 +3768,6 @@ function App() {
     const exercise = getExercise(sessionExercise.exerciseId);
     const previousPerformance = getPreviousExercisePerformance(
       sessionExercise.exerciseId,
-      activeRoutineDay.id,
       completedWorkouts,
     );
     const exerciseFeedback = getExerciseFeedback(sessionExercise);

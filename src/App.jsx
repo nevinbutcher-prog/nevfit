@@ -40,6 +40,7 @@ import {
   getPreviousExercisePerformance as getPreviousExercisePerformanceData,
 } from "./services/workoutSnapshots";
 import {
+  isSetEligibleForCompletion,
   isWorkoutSetComplete,
   toggleWorkoutSetCompletion,
   updateWorkoutSetDraft,
@@ -3739,21 +3740,14 @@ function App() {
     setActiveWorkoutSession(result.workout);
     if (result.completed) {
       startRestTimer(sessionExercise);
+      if (result.nextSetNumber) {
+        window.setTimeout(() => {
+          workoutSetInputRefs.current
+            .get(`${exerciseIndex}-${result.nextSetNumber}-reps`)
+            ?.focus();
+        }, 0);
+      }
     }
-  }
-
-  function copyPreviousSet(exerciseId, setNumber, exerciseIndex) {
-    const currentExercise = activeWorkoutSession?.exercises[exerciseIndex];
-    const previousSet = currentExercise?.sets.find(
-      (set) => set.setNumber === setNumber - 1,
-    );
-
-    if (!previousSet || !hasMeaningfulLoggedEffort(previousSet)) {
-      return;
-    }
-
-    updateSetValue(setNumber, "weight", previousSet.weight, exerciseIndex);
-    updateSetValue(setNumber, "reps", previousSet.reps, exerciseIndex);
   }
 
   if (authLoading) {
@@ -3943,48 +3937,24 @@ function App() {
             <span>Set</span>
             <span>Weight</span>
             <span>Reps</span>
-            <span aria-hidden="true" />
+            <span>Confirm</span>
           </div>
           {sessionExercise.sets.map((set) => {
             const repRange = parseRepRange(sessionExercise.repRange);
             const setFeedback = getSetFeedback(set, repRange);
             const isSetComplete = isWorkoutSetComplete(set);
-            const isCurrentSet =
-              !isSetComplete &&
-              sessionExercise.sets.findIndex(
-                (candidateSet) => !isWorkoutSetComplete(candidateSet),
-              ) ===
-                sessionExercise.sets.indexOf(set);
-            const previousSet = sessionExercise.sets.find(
-              (candidateSet) => candidateSet.setNumber === set.setNumber - 1,
-            );
-            const canCopyPreviousSet =
-              set.setNumber > 1 && hasMeaningfulLoggedEffort(previousSet);
+            const canConfirm =
+              isSetComplete ||
+              isSetEligibleForCompletion(set, completionOptions);
 
             return (
               <div
                 key={set.setNumber}
                 className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate-800 px-2 py-2 last:border-b-0"
               >
-                <button
-                  type="button"
-                  onClick={() =>
-                    toggleSetCompletion(
-                      exerciseIndex,
-                      set.setNumber,
-                      completionOptions,
-                    )
-                  }
-                  className={`-m-2 flex min-h-11 min-w-11 items-center justify-center rounded-md text-sm font-semibold transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 ${
-                    isSetComplete || isCurrentSet
-                      ? "text-emerald-300"
-                      : "text-slate-400"
-                  }`}
-                  aria-label={`${isSetComplete ? "Mark" : "Complete"} set ${set.setNumber}`}
-                  aria-pressed={isSetComplete}
-                >
-                  {isSetComplete ? "✓" : "○"} <span className="sr-only">Set </span>{set.setNumber}
-                </button>
+                <span className="text-sm font-semibold text-slate-300">
+                  {set.setNumber}
+                </span>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -4049,25 +4019,29 @@ function App() {
                         : ""
                   }`}
                 />
-                {canCopyPreviousSet ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      copyPreviousSet(
-                        sessionExercise.exerciseId,
-                        set.setNumber,
-                        exerciseIndex,
-                      )
-                    }
-                    className="rounded-md px-1.5 py-2 text-xs font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
-                    title="Copy the previous set"
-                    aria-label={`Copy set ${set.setNumber - 1}`}
-                  >
-                    Copy
-                  </button>
-                ) : (
-                  <span aria-hidden="true" />
-                )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    toggleSetCompletion(
+                      exerciseIndex,
+                      set.setNumber,
+                      completionOptions,
+                    )
+                  }
+                  disabled={!canConfirm}
+                  className={`flex min-h-11 min-w-11 items-center justify-center rounded-full border text-lg font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 ${
+                    isSetComplete
+                      ? "border-emerald-300 bg-emerald-300 text-slate-950"
+                      : canConfirm
+                        ? "border-slate-500 text-slate-200 hover:border-emerald-300 hover:text-emerald-200"
+                        : "cursor-not-allowed border-slate-700 text-slate-600"
+                  }`}
+                  title={isSetComplete ? "Mark set incomplete" : "Confirm set"}
+                  aria-label={`${isSetComplete ? "Mark" : "Confirm"} set ${set.setNumber}`}
+                  aria-pressed={isSetComplete}
+                >
+                  {isSetComplete ? "✓" : "○"}
+                </button>
                 {setFeedback ? (
                   <span
                     className={`col-span-4 px-1 pb-1 text-xs font-semibold ${

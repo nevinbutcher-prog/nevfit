@@ -38,7 +38,7 @@
 - Automated builder regression coverage for normalization, add/swap/remove/reorder, supersets, duplication, persistence fallback, and workout snapshots
 - Workout mode
 - Supersetted exercises render in grouped workout-mode blocks
-- Faster workout logging with independent per-set drafts, explicit tap-to-complete controls, compact prior-session summaries, and clear set states
+- Faster workout logging with independent per-set drafts, right-edge confirmation, automatic weight carry-forward, compact prior-session summaries, and clear set states
 - Flat, table-style set rows with quiet inline progression feedback and a compact timer footer
 - Active workout save/load
 - Non-destructive blank workout close

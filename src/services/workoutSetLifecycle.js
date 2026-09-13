@@ -95,9 +95,18 @@ export function toggleWorkoutSetCompletion(
     return { changed: false, completed: false, reason: "invalid", workout };
   }
 
+  const exercise = workout.exercises[exerciseIndex];
+  const currentSetIndex = exercise.sets.findIndex(
+    (candidate) => candidate.setNumber === setNumber,
+  );
+  const nextSet = exercise.sets[currentSetIndex + 1];
+  const shouldCarryWeight = Boolean(nextSet && !nextSet.weight.trim());
+
   return {
     changed: true,
     completed: true,
+    nextSetNumber: nextSet?.setNumber ?? null,
+    carriedWeight: shouldCarryWeight,
     workout: {
       ...workout,
       exercises: workout.exercises.map((exercise, index) =>
@@ -108,6 +117,8 @@ export function toggleWorkoutSetCompletion(
               sets: exercise.sets.map((candidate) =>
                 candidate.setNumber === setNumber
                   ? { ...candidate, completed: true }
+                  : shouldCarryWeight && candidate.setNumber === nextSet.setNumber
+                    ? { ...candidate, weight: set.weight }
                   : candidate,
               ),
             },

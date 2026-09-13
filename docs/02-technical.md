@@ -517,7 +517,9 @@ completing a workout clears the active session. Each active set also persists a
 `completed` flag. Weight and reps draft edits save immediately but do not change
 that flag; an explicit eligible right-edge confirmation marks a set complete,
 carries its weight into a blank next set, and starts the rest timer. Reps and
-completion state are never carried forward. Before
+completion state are never carried forward. An exercise collapses only after
+all of its sets are explicitly confirmed; the collapsed Edit action reopens it
+for corrections. Before
 Firestore writes, active-workout snapshots remove optional `undefined` fields
 such as an omitted exercise note, because Firestore does not accept undefined
 nested values. Development diagnostics report the attempted active-workout path,

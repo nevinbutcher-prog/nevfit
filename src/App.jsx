@@ -3813,10 +3813,15 @@ function App() {
     const completedSetCount = sessionExercise.sets.filter(
       isWorkoutSetComplete,
     ).length;
+    const isExerciseComplete =
+      sessionExercise.sets.length > 0 &&
+      completedSetCount === sessionExercise.sets.length;
+    const isExerciseExpanded =
+      !isExerciseComplete || expandedCompletedExerciseIds.has(workoutDetailsKey);
     const isWorkoutDetailsExpanded =
       expandedWorkoutDetailsExerciseId === workoutDetailsKey;
 
-    if (expandedCompletedExerciseIds.has(workoutDetailsKey)) {
+    if (!isExerciseExpanded) {
       return (
         <button
           type="button"

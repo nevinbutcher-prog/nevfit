@@ -40,8 +40,8 @@ import {
   getPreviousExercisePerformance as getPreviousExercisePerformanceData,
 } from "./services/workoutSnapshots";
 import {
-  finalizeWorkoutSet,
   isWorkoutSetComplete,
+  toggleWorkoutSetCompletion,
   updateWorkoutSetDraft,
 } from "./services/workoutSetLifecycle";
 import { persistProgramDrafts } from "./services/programPersistence";
@@ -1124,7 +1124,7 @@ function hasWorkoutLoggedEffort(workoutSession) {
 }
 
 function createWorkoutSession(scheduleDay, routineDay, exerciseLibrary = []) {
-  return createWorkoutSessionSnapshot(
+  const workoutSession = createWorkoutSessionSnapshot(
     scheduleDay,
     routineDay,
     (exercise) => {
@@ -1134,6 +1134,31 @@ function createWorkoutSession(scheduleDay, routineDay, exerciseLibrary = []) {
       );
       return getEffectiveExerciseName(exercise, sourceExercise);
     },
+  );
+
+  return {
+    ...workoutSession,
+    exercises: workoutSession.exercises.map((sessionExercise) => ({
+      ...sessionExercise,
+      allowsBlankWeight: allowsBlankWorkoutWeight(
+        sessionExercise,
+        getExerciseFromLibrary(sessionExercise.exerciseId, exerciseLibrary),
+      ),
+    })),
+  };
+}
+
+function allowsBlankWorkoutWeight(sessionExercise, sourceExercise) {
+  const exerciseDetails = [
+    sessionExercise?.exerciseName,
+    sourceExercise?.name,
+    ...(Array.isArray(sourceExercise?.equipment) ? sourceExercise.equipment : []),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return /body\s*weight|bodyweight|pull[- ]?up|push[- ]?up|dip|plank|crunch|sit[- ]?up/i.test(
+    exerciseDetails,
   );
 }
 
@@ -3673,7 +3698,7 @@ function App() {
     setRestTimer(null);
   }
 
-  function updateSetValue(setNumber, field, value, exerciseIndex) {
+  function updateSetValue(setNumber, field, value, exerciseIndex, completionOptions) {
     if (field !== "weight" && field !== "reps") {
       return;
     }
@@ -3685,24 +3710,35 @@ function App() {
     }
 
     setActiveWorkoutSession((currentSession) =>
-      updateWorkoutSetDraft(currentSession, exerciseIndex, setNumber, field, value),
+      updateWorkoutSetDraft(
+        currentSession,
+        exerciseIndex,
+        setNumber,
+        field,
+        value,
+        completionOptions,
+      ),
     );
   }
 
-  function finalizeSet(exerciseIndex, setNumber) {
-    const result = finalizeWorkoutSet(activeWorkoutSession, exerciseIndex, setNumber);
-    if (!result.finalized) return;
+  function toggleSetCompletion(exerciseIndex, setNumber, completionOptions) {
+    const result = toggleWorkoutSetCompletion(
+      activeWorkoutSession,
+      exerciseIndex,
+      setNumber,
+      completionOptions,
+    );
+    if (!result.changed) {
+      if (result.reason === "invalid") {
+        setSaveMessage("Enter valid weight and reps before completing this set.");
+      }
+      return;
+    }
 
     const sessionExercise = result.workout.exercises[exerciseIndex];
-    const nextSet = sessionExercise.sets.find((set) => set.setNumber === setNumber + 1);
     setActiveWorkoutSession(result.workout);
-    startRestTimer(sessionExercise);
-    if (nextSet) {
-      window.setTimeout(() => {
-        workoutSetInputRefs.current
-          .get(`${exerciseIndex}-${nextSet.setNumber}-weight`)
-          ?.focus();
-      }, 0);
+    if (result.completed) {
+      startRestTimer(sessionExercise);
     }
   }
 
@@ -3769,6 +3805,11 @@ function App() {
 
   function renderWorkoutExerciseBlock(sessionExercise, exerciseIndex, isNested = false) {
     const exercise = getExercise(sessionExercise.exerciseId);
+    const completionOptions = {
+      allowsBlankWeight:
+        sessionExercise.allowsBlankWeight === true ||
+        allowsBlankWorkoutWeight(sessionExercise, exercise),
+    };
     const previousPerformance = getPreviousExercisePerformance(
       sessionExercise.exerciseId,
       completedWorkouts,
@@ -3925,9 +3966,25 @@ function App() {
                 key={set.setNumber}
                 className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate-800 px-2 py-2 last:border-b-0"
               >
-                <span className={`text-sm font-semibold ${isSetComplete || isCurrentSet ? "text-emerald-300" : "text-slate-400"}`}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    toggleSetCompletion(
+                      exerciseIndex,
+                      set.setNumber,
+                      completionOptions,
+                    )
+                  }
+                  className={`-m-2 flex min-h-11 min-w-11 items-center justify-center rounded-md text-sm font-semibold transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 ${
+                    isSetComplete || isCurrentSet
+                      ? "text-emerald-300"
+                      : "text-slate-400"
+                  }`}
+                  aria-label={`${isSetComplete ? "Mark" : "Complete"} set ${set.setNumber}`}
+                  aria-pressed={isSetComplete}
+                >
                   {isSetComplete ? "✓" : "○"} <span className="sr-only">Set </span>{set.setNumber}
-                </span>
+                </button>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -3940,6 +3997,7 @@ function App() {
                       "weight",
                       event.target.value,
                       exerciseIndex,
+                      completionOptions,
                     )
                   }
                   ref={(input) => {
@@ -3974,6 +4032,7 @@ function App() {
                       "reps",
                       event.target.value,
                       exerciseIndex,
+                      completionOptions,
                     )
                   }
                   ref={(input) => {
@@ -3982,12 +4041,6 @@ function App() {
                     else workoutSetInputRefs.current.delete(key);
                   }}
                   enterKeyHint="done"
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      finalizeSet(exerciseIndex, set.setNumber);
-                    }
-                  }}
                   className={`${workoutNumberInputClassName} ${
                     setFeedback
                       ? setFeedbackStyles[setFeedback]
@@ -4006,11 +4059,11 @@ function App() {
                         exerciseIndex,
                       )
                     }
-                    className="rounded-md px-1 py-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+                    className="rounded-md px-1.5 py-2 text-xs font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
                     title="Copy the previous set"
                     aria-label={`Copy set ${set.setNumber - 1}`}
                   >
-                    ↥
+                    Copy
                   </button>
                 ) : (
                   <span aria-hidden="true" />

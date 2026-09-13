@@ -515,8 +515,8 @@ Starting or
 editing a workout saves the active session. Closing a blank workout or
 completing a workout clears the active session. Each active set also persists a
 `completed` flag. Weight and reps draft edits save immediately but do not change
-that flag; explicit reps-field finalisation marks an eligible set complete and
-starts the rest timer. Before
+that flag; an explicit eligible set-status tap marks a set complete and starts
+the rest timer. Before
 Firestore writes, active-workout snapshots remove optional `undefined` fields
 such as an omitted exercise note, because Firestore does not accept undefined
 nested values. Development diagnostics report the attempted active-workout path,

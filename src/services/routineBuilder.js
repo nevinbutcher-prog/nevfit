@@ -211,6 +211,7 @@ export function createWorkoutSessionSnapshot(
         setNumber: index + 1,
         weight: "",
         reps: "",
+        completed: false,
       })),
     })),
   };

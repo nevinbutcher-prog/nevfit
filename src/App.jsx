@@ -39,6 +39,11 @@ import {
   createCompletedWorkoutSnapshot,
   getPreviousExercisePerformance as getPreviousExercisePerformanceData,
 } from "./services/workoutSnapshots";
+import {
+  finalizeWorkoutSet,
+  isWorkoutSetComplete,
+  updateWorkoutSetDraft,
+} from "./services/workoutSetLifecycle";
 import { persistProgramDrafts } from "./services/programPersistence";
 import {
   addRoutineExercise,
@@ -1428,7 +1433,9 @@ function isValidWorkoutSession(value) {
             set &&
             typeof set.setNumber === "number" &&
             typeof set.weight === "string" &&
-            typeof set.reps === "string",
+            typeof set.reps === "string" &&
+            (typeof set.completed === "boolean" ||
+              typeof set.completed === "undefined"),
         ),
     )
   );
@@ -1891,7 +1898,7 @@ function App() {
   const healthPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutLoadedRef = useRef(false);
-  const manuallyEnteredWeightSetKeysRef = useRef(new Set());
+  const workoutSetInputRefs = useRef(new Map());
   const backupFileInputRef = useRef(null);
   const exerciseSearchInputRef = useRef(null);
   const isWorkoutActive =
@@ -3666,84 +3673,36 @@ function App() {
     setRestTimer(null);
   }
 
-  function updateSetValue(exerciseId, setNumber, field, value, exerciseIndex) {
+  function updateSetValue(setNumber, field, value, exerciseIndex) {
     if (field !== "weight" && field !== "reps") {
       return;
     }
 
     const currentExercise = activeWorkoutSession?.exercises[exerciseIndex];
-    const currentSet = currentExercise?.sets.find(
-      (set) => set.setNumber === setNumber,
-    );
-
+    const currentSet = currentExercise?.sets.find((set) => set.setNumber === setNumber);
     if (!currentExercise || !currentSet || currentSet[field] === value) {
       return;
     }
 
-    if (field === "reps") {
-      startRestTimer(currentExercise);
-    }
+    setActiveWorkoutSession((currentSession) =>
+      updateWorkoutSetDraft(currentSession, exerciseIndex, setNumber, field, value),
+    );
+  }
 
-    const setKey = `${exerciseId}-${exerciseIndex}-${setNumber}`;
+  function finalizeSet(exerciseIndex, setNumber) {
+    const result = finalizeWorkoutSet(activeWorkoutSession, exerciseIndex, setNumber);
+    if (!result.finalized) return;
 
-    if (field === "weight") {
-      if (value.trim()) {
-        manuallyEnteredWeightSetKeysRef.current.add(setKey);
-      } else {
-        manuallyEnteredWeightSetKeysRef.current.delete(setKey);
-      }
-    }
-
-    setActiveWorkoutSession((currentSession) => {
-      if (!currentSession) {
-        return currentSession;
-      }
-
-      return {
-        ...currentSession,
-        exercises: currentSession.exercises.map((exercise, index) => {
-          if (index !== exerciseIndex || exercise.exerciseId !== exerciseId) {
-            return exercise;
-          }
-
-          const currentSetIndex = exercise.sets.findIndex(
-            (set) => set.setNumber === setNumber,
-          );
-          const nextSet = exercise.sets[currentSetIndex + 1];
-          const nextSetKey = nextSet
-            ? `${exerciseId}-${exerciseIndex}-${nextSet.setNumber}`
-            : null;
-          const shouldCarryWeight =
-            field === "weight" &&
-            Number(value) > 0 &&
-            nextSet &&
-            !nextSet.weight.trim() &&
-            !manuallyEnteredWeightSetKeysRef.current.has(nextSetKey);
-
-          return {
-            ...exercise,
-            sets: exercise.sets.map((set) => {
-              if (set.setNumber === setNumber) {
-                return { ...set, [field]: value };
-              }
-
-              if (shouldCarryWeight && set.setNumber === nextSet.setNumber) {
-                return { ...set, weight: value };
-              }
-
-              return set;
-            }),
-          };
-        }),
-      };
-    });
-
-    if (field === "reps" && hasMeaningfulLoggedEffort({ ...currentSet, reps: value })) {
-      setExpandedCompletedExerciseIds((currentIds) => {
-        const nextIds = new Set(currentIds);
-        nextIds.delete(`${exerciseId}-${exerciseIndex}`);
-        return nextIds;
-      });
+    const sessionExercise = result.workout.exercises[exerciseIndex];
+    const nextSet = sessionExercise.sets.find((set) => set.setNumber === setNumber + 1);
+    setActiveWorkoutSession(result.workout);
+    startRestTimer(sessionExercise);
+    if (nextSet) {
+      window.setTimeout(() => {
+        workoutSetInputRefs.current
+          .get(`${exerciseIndex}-${nextSet.setNumber}-weight`)
+          ?.focus();
+      }, 0);
     }
   }
 
@@ -3757,8 +3716,8 @@ function App() {
       return;
     }
 
-    updateSetValue(exerciseId, setNumber, "weight", previousSet.weight, exerciseIndex);
-    updateSetValue(exerciseId, setNumber, "reps", previousSet.reps, exerciseIndex);
+    updateSetValue(setNumber, "weight", previousSet.weight, exerciseIndex);
+    updateSetValue(setNumber, "reps", previousSet.reps, exerciseIndex);
   }
 
   if (authLoading) {
@@ -3794,7 +3753,7 @@ function App() {
   const activeWorkoutCompletedSetCount =
     activeWorkoutSession?.exercises.reduce(
       (total, exercise) =>
-        total + exercise.sets.filter(hasMeaningfulLoggedEffort).length,
+        total + exercise.sets.filter(isWorkoutSetComplete).length,
       0,
     ) ?? 0;
   const restTimerStatusLabel = !restTimer
@@ -3816,18 +3775,13 @@ function App() {
     );
     const exerciseFeedback = getExerciseFeedback(sessionExercise);
     const workoutDetailsKey = `${sessionExercise.exerciseId}-${exerciseIndex}`;
-    const isExerciseComplete = sessionExercise.sets.every(
-      hasMeaningfulLoggedEffort,
-    );
-    const isExerciseExpanded =
-      !isExerciseComplete || expandedCompletedExerciseIds.has(workoutDetailsKey);
     const completedSetCount = sessionExercise.sets.filter(
-      hasMeaningfulLoggedEffort,
+      isWorkoutSetComplete,
     ).length;
     const isWorkoutDetailsExpanded =
       expandedWorkoutDetailsExerciseId === workoutDetailsKey;
 
-    if (!isExerciseExpanded) {
+    if (expandedCompletedExerciseIds.has(workoutDetailsKey)) {
       return (
         <button
           type="button"
@@ -3953,11 +3907,11 @@ function App() {
           {sessionExercise.sets.map((set) => {
             const repRange = parseRepRange(sessionExercise.repRange);
             const setFeedback = getSetFeedback(set, repRange);
-            const isSetComplete = hasMeaningfulLoggedEffort(set);
+            const isSetComplete = isWorkoutSetComplete(set);
             const isCurrentSet =
               !isSetComplete &&
               sessionExercise.sets.findIndex(
-                (candidateSet) => !hasMeaningfulLoggedEffort(candidateSet),
+                (candidateSet) => !isWorkoutSetComplete(candidateSet),
               ) ===
                 sessionExercise.sets.indexOf(set);
             const previousSet = sessionExercise.sets.find(
@@ -3982,13 +3936,26 @@ function App() {
                   value={set.weight}
                   onChange={(event) =>
                     updateSetValue(
-                      sessionExercise.exerciseId,
                       set.setNumber,
                       "weight",
                       event.target.value,
                       exerciseIndex,
                     )
                   }
+                  ref={(input) => {
+                    const key = `${exerciseIndex}-${set.setNumber}-weight`;
+                    if (input) workoutSetInputRefs.current.set(key, input);
+                    else workoutSetInputRefs.current.delete(key);
+                  }}
+                  enterKeyHint="next"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      workoutSetInputRefs.current
+                        .get(`${exerciseIndex}-${set.setNumber}-reps`)
+                        ?.focus();
+                    }
+                  }}
                   className={`${workoutNumberInputClassName} ${
                     isSetComplete
                       ? "border-emerald-400/30 bg-emerald-400/10"
@@ -4003,13 +3970,24 @@ function App() {
                   value={set.reps}
                   onChange={(event) =>
                     updateSetValue(
-                      sessionExercise.exerciseId,
                       set.setNumber,
                       "reps",
                       event.target.value,
                       exerciseIndex,
                     )
                   }
+                  ref={(input) => {
+                    const key = `${exerciseIndex}-${set.setNumber}-reps`;
+                    if (input) workoutSetInputRefs.current.set(key, input);
+                    else workoutSetInputRefs.current.delete(key);
+                  }}
+                  enterKeyHint="done"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      finalizeSet(exerciseIndex, set.setNumber);
+                    }
+                  }}
                   className={`${workoutNumberInputClassName} ${
                     setFeedback
                       ? setFeedbackStyles[setFeedback]

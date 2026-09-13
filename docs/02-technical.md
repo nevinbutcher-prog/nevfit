@@ -513,9 +513,10 @@ shape, including exercise IDs, snapped exercise names, prescribed sets,
 slots additionally retain `originalExerciseId` and `originalExerciseName`.
 Starting or
 editing a workout saves the active session. Closing a blank workout or
-completing a workout clears the active session. Workout-mode weight
-carry-forward writes the next set's existing `weight` field through this same
-active-session persistence path; it adds no history or Firestore schema. Before
+completing a workout clears the active session. Each active set also persists a
+`completed` flag. Weight and reps draft edits save immediately but do not change
+that flag; explicit reps-field finalisation marks an eligible set complete and
+starts the rest timer. Before
 Firestore writes, active-workout snapshots remove optional `undefined` fields
 such as an omitted exercise note, because Firestore does not accept undefined
 nested values. Development diagnostics report the attempted active-workout path,

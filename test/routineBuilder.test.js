@@ -158,8 +158,8 @@ test("workout snapshots preserve selected routine order, effective names, and pr
     restSeconds: 90,
     supersetGroupId: "ss-4",
     sets: [
-      { setNumber: 1, weight: "", reps: "" },
-      { setNumber: 2, weight: "", reps: "" },
+      { setNumber: 1, weight: "", reps: "", completed: false },
+      { setNumber: 2, weight: "", reps: "", completed: false },
     ],
   });
   assert.deepEqual(history, [{ id: "completed-1", exerciseName: "Historical name" }]);

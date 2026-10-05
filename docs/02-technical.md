@@ -44,6 +44,9 @@ trusts a client-supplied user ID. It accepts only a bounded
 provider-neutral `{ messages }` request; callers cannot select a provider,
 model, output budget, headers, tools, or routing settings.
 
+The production callable runs as a second-generation Node.js 22 function in
+`us-central1`. Its Functions package entry point is `functions/src/index.js`.
+
 `functions/src/ai/aiService.js` owns validation and the provider-neutral
 service contract. `functions/src/ai/providers/openRouterProvider.js` is the
 current OpenRouter adapter and is the only module that knows the OpenRouter

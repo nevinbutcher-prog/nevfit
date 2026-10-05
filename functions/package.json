@@ -2,8 +2,9 @@
   "name": "nevfit-functions",
   "private": true,
   "type": "module",
+  "main": "src/index.js",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "scripts": {
     "test": "node --test",
@@ -11,7 +12,7 @@
     "check": "npm run lint && npm test"
   },
   "dependencies": {
-    "firebase-functions": "^6.3.2"
+    "firebase-functions": "^7.4.0"
   },
   "devDependencies": {
     "eslint": "^10.3.0"

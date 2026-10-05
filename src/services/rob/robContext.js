@@ -148,7 +148,7 @@ export function buildRobContext({ requestType, program, routineId = null, comple
       serializedProgram = serializeProgram(program, { routineId, allRoutines: false });
     } else {
       selectedRoutineId = id(routineId);
-      const adviceWithSelectedRoutine = requestType === ROB_CONTEXT_TYPES.ADVICE && selectedRoutineId;
+      const adviceWithSelectedRoutine = requestType === ROB_CONTEXT_TYPES.ADVICE && selectedRoutineId && routinesFor(program)?.some((routine) => routine?.id === selectedRoutineId && routine.archived !== true);
       serializedProgram = serializeProgram(program, { routineId: selectedRoutineId, allRoutines: !adviceWithSelectedRoutine });
       if (selectedRoutineId && !serializedProgram.routines.some((routine) => routine.id === selectedRoutineId)) selectedRoutineId = null;
     }
@@ -159,7 +159,7 @@ export function buildRobContext({ requestType, program, routineId = null, comple
   return {
     version: 1,
     requestType,
-    target: { programId: serializedProgram?.id ?? null, routineId: requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW ? null : selectedRoutineId },
+    target: { scope: serializedProgram ? (selectedRoutineId ? "routine" : "program") : "none", programId: serializedProgram?.id ?? null, routineId: requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW ? null : selectedRoutineId },
     profile: profile(),
     program: serializedProgram,
     history: { workouts: relevantHistory(completedWorkouts, { routineIds, exerciseIds, limits: requestType === ROB_CONTEXT_TYPES.ADVICE ? ROB_ADVICE_CONTEXT_LIMITS : ROB_CONTEXT_LIMITS }) },

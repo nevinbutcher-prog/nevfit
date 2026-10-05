@@ -4211,7 +4211,8 @@ function App() {
       const context = buildRobContext({
         requestType: ROB_CONTEXT_TYPES.ADVICE,
         program: dashboardProgram,
-        routineId: selectedProgramDayId,
+        // Global Ask Rob is program-scoped; editor selection is not implicit scope.
+        routineId: null,
         completedWorkouts,
       });
       const result = await requestRobAdvice({ question: trimmedQuestion, context });

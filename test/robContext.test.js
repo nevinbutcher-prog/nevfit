@@ -19,7 +19,7 @@ test("builds deterministic routine-review context without mutating sources", () 
   const first = buildRobContext(input);
   assert.deepEqual(first, buildRobContext(input));
   assert.deepEqual(input, before);
-  assert.deepEqual(first.target, { programId: "program-1", routineId: "a" });
+  assert.deepEqual(first.target, { scope: "routine", programId: "program-1", routineId: "a" });
   assert.equal(first.program.routines.length, 1);
   assert.deepEqual(first.program.routines[0].exercises[0], { routineExerciseId: "ri-a-1", exerciseId: "press", name: "Incline DB Press", sets: 3, repRange: "8-12", restSeconds: 120, note: "controlled", supersetGroupId: "ss-1" });
   assert.deepEqual(first.history.workouts.map((workout) => workout.id), ["new", "old"]);
@@ -30,9 +30,19 @@ test("advice supports profile-only and optional program context", () => {
   const profileOnly = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE });
   assert.equal(profileOnly.program, null);
   assert.deepEqual(profileOnly.history, { workouts: [] });
+  assert.equal(profileOnly.target.scope, "none");
   const targeted = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program, routineId: "b" });
   assert.equal(targeted.target.routineId, "b");
   assert.deepEqual(targeted.program.routines.map((routine) => routine.id), ["b"]);
+});
+
+test("general advice exposes the full active program without inheriting a stale routine", () => {
+  const fourRoutineProgram = structuredClone(program);
+  fourRoutineProgram.days = ["Upper", "Lower", "Push", "Pull"].map((name, index) => ({ id: `routine-${index}`, name, exercises: [{ routineExerciseId: `ri-${index}`, exerciseId: `exercise-${index}`, sets: 3 }] }));
+  const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program: fourRoutineProgram, routineId: "stale-day-a" });
+  assert.equal(context.target.scope, "program");
+  assert.equal(context.target.routineId, null);
+  assert.deepEqual(context.program.routines.map((routine) => ({ id: routine.id, name: routine.name })), [{ id: "routine-0", name: "Upper" }, { id: "routine-1", name: "Lower" }, { id: "routine-2", name: "Push" }, { id: "routine-3", name: "Pull" }]);
 });
 
 test("advice context stays compact for realistic routine and history data", () => {
@@ -46,10 +56,19 @@ test("advice context stays compact for realistic routine and history data", () =
   assert.ok(JSON.stringify(context).length < 4000);
 });
 
+test("full-program advice remains below the server prompt cap", () => {
+  const fullProgram = { id: "full", name: "Full program", days: Array.from({ length: 4 }, (_, routineIndex) => ({ id: `routine-${routineIndex}`, name: `Routine ${routineIndex}`, exercises: Array.from({ length: 8 }, (_, exerciseIndex) => ({ routineExerciseId: `ri-${routineIndex}-${exerciseIndex}`, exerciseId: `exercise-${routineIndex}-${exerciseIndex}`, sets: 3, repRange: "8-12", restSeconds: 90, note: "Controlled working sets" })) })) };
+  const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program: fullProgram });
+  assert.equal(context.target.scope, "program");
+  assert.equal(context.program.routines.length, 4);
+  assert.ok(JSON.stringify(context).length < 12000);
+});
+
 test("program review includes active routines in order and excludes archived routines", () => {
   const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program, completedWorkouts: workouts });
   assert.deepEqual(context.program.routines.map((routine) => routine.id), ["a", "b"]);
   assert.equal(context.target.routineId, null);
+  assert.equal(context.target.scope, "program");
 });
 
 test("normalizes absent prescription values to null while preserving numeric strings", () => {

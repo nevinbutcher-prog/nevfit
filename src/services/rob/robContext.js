@@ -16,6 +16,11 @@ export const ROB_CONTEXT_LIMITS = Object.freeze({
   name: 160,
   id: 200,
 });
+export const ROB_ADVICE_CONTEXT_LIMITS = Object.freeze({
+  historyWorkouts: 2,
+  exercisesPerWorkout: 5,
+  setsPerExercise: 2,
+});
 
 export class RobContextError extends Error {
   constructor(code) {
@@ -90,7 +95,7 @@ function serializeProgram(program, { routineId = null, allRoutines = true } = {}
   };
 }
 
-function serializeWorkout(workout) {
+function serializeWorkout(workout, limits = ROB_CONTEXT_LIMITS) {
   const workoutId = id(workout?.id);
   if (!workoutId || !Array.isArray(workout.exercises) || !workout.exercises.some((exercise) => Array.isArray(exercise?.sets) && exercise.sets.some(meaningfulSet))) return null;
   return {
@@ -98,10 +103,10 @@ function serializeWorkout(workout) {
     completedAt: isoDate(workout.completedAt),
     routineId: id(workout.routineId ?? workout.routineDayId),
     routineName: text(workout.routineName ?? workout.routineDayName, ROB_CONTEXT_LIMITS.name),
-    exercises: workout.exercises.slice(0, ROB_CONTEXT_LIMITS.exercisesPerWorkout).map((exercise) => {
+    exercises: workout.exercises.slice(0, limits.exercisesPerWorkout).map((exercise) => {
       const exerciseId = id(exercise?.exerciseId);
       if (!exerciseId) return null;
-      const sets = (Array.isArray(exercise.sets) ? exercise.sets : []).filter(meaningfulSet).slice(0, ROB_CONTEXT_LIMITS.setsPerExercise).map((set) => ({
+      const sets = (Array.isArray(exercise.sets) ? exercise.sets : []).filter(meaningfulSet).slice(0, limits.setsPerExercise).map((set) => ({
         weight: text(set.weight, ROB_CONTEXT_LIMITS.name),
         reps: text(set.reps, ROB_CONTEXT_LIMITS.name),
       }));
@@ -110,9 +115,9 @@ function serializeWorkout(workout) {
   };
 }
 
-function relevantHistory(completedWorkouts, { routineIds, exerciseIds }) {
+function relevantHistory(completedWorkouts, { routineIds, exerciseIds, limits = ROB_CONTEXT_LIMITS }) {
   return (Array.isArray(completedWorkouts) ? completedWorkouts : [])
-    .map((workout, index) => ({ workout: serializeWorkout(workout), index }))
+    .map((workout, index) => ({ workout: serializeWorkout(workout, limits), index }))
     .filter(({ workout }) => workout)
     .filter(({ workout }) => {
       if (!routineIds.size && !exerciseIds.size) return true;
@@ -120,7 +125,7 @@ function relevantHistory(completedWorkouts, { routineIds, exerciseIds }) {
       return routineIds.has(workout.routineId) || workout.exercises.some((exercise) => exerciseIds.has(exercise.exerciseId));
     })
     .sort((a, b) => (Date.parse(b.workout.completedAt ?? "") || -Infinity) - (Date.parse(a.workout.completedAt ?? "") || -Infinity) || a.index - b.index)
-    .slice(0, ROB_CONTEXT_LIMITS.historyWorkouts)
+    .slice(0, limits.historyWorkouts)
     .map(({ workout }) => workout);
 }
 
@@ -143,7 +148,8 @@ export function buildRobContext({ requestType, program, routineId = null, comple
       serializedProgram = serializeProgram(program, { routineId, allRoutines: false });
     } else {
       selectedRoutineId = id(routineId);
-      serializedProgram = serializeProgram(program);
+      const adviceWithSelectedRoutine = requestType === ROB_CONTEXT_TYPES.ADVICE && selectedRoutineId;
+      serializedProgram = serializeProgram(program, { routineId: selectedRoutineId, allRoutines: !adviceWithSelectedRoutine });
       if (selectedRoutineId && !serializedProgram.routines.some((routine) => routine.id === selectedRoutineId)) selectedRoutineId = null;
     }
   }
@@ -156,6 +162,6 @@ export function buildRobContext({ requestType, program, routineId = null, comple
     target: { programId: serializedProgram?.id ?? null, routineId: requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW ? null : selectedRoutineId },
     profile: profile(),
     program: serializedProgram,
-    history: { workouts: relevantHistory(completedWorkouts, { routineIds, exerciseIds }) },
+    history: { workouts: relevantHistory(completedWorkouts, { routineIds, exerciseIds, limits: requestType === ROB_CONTEXT_TYPES.ADVICE ? ROB_ADVICE_CONTEXT_LIMITS : ROB_CONTEXT_LIMITS }) },
   };
 }

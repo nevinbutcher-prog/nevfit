@@ -43,7 +43,7 @@ export function createRobAdviceHandler({ providerFactory = () => createOpenRoute
       return result;
     } catch (error) {
       const normalized = normalizeAiError(error);
-      logger.warn("Rob advice failed", { operation: "rob_advice", model: aiConfig.model, code: normalized.code, durationMs: Date.now() - startedAt, authenticatedUidPresent: true });
+      logger.warn("Rob advice failed", { operation: "rob_advice", model: aiConfig.model, code: normalized.code, validation: normalized.validationDiagnostic ?? null, durationMs: Date.now() - startedAt, authenticatedUidPresent: true });
       throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized));
     }
   };

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRobAdviceHandler } from "../src/index.js";
-import { ROB_QUESTION_MAX_CHARS, generateRobAdvice } from "../src/rob/robAdvice.js";
+import { ROB_CONTEXT_MAX_CHARS, ROB_QUESTION_MAX_CHARS, generateRobAdvice, validateRobAdviceRequest } from "../src/rob/robAdvice.js";
 import { AiError } from "../src/ai/aiErrors.js";
 
 const data = { question: "What equipment do I have?", context: { version: 1, requestType: "advice", profile: { equipment: ["Dumbbells"] } } };
@@ -31,4 +31,10 @@ test("rejects unauthenticated, invalid, oversized, and non-advice requests befor
 
 test("preserves normalized provider errors", async () => {
   await assert.rejects(() => generateRobAdvice(data, { provider: { generate: async () => { throw new AiError("ai_timeout", { retryable: true }); } } }), (error) => error.code === "ai_timeout" && error.retryable);
+});
+
+test("accepts Firebase-callable-compatible object shapes and retains a hard context cap", () => {
+  const context = Object.assign(Object.create(null), data.context);
+  assert.equal(validateRobAdviceRequest({ question: data.question, context }).context, context);
+  assert.throws(() => validateRobAdviceRequest({ question: "short", context: { version: 1, requestType: "advice", padding: "x".repeat(ROB_CONTEXT_MAX_CHARS) } }), (error) => error.code === "ai_invalid_request" && error.validationDiagnostic?.reason === "context_size");
 });

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildRobContext, ROB_CONTEXT_LIMITS, ROB_CONTEXT_TYPES, RobContextError } from "../src/services/rob/robContext.js";
+import { buildRobContext, ROB_ADVICE_CONTEXT_LIMITS, ROB_CONTEXT_LIMITS, ROB_CONTEXT_TYPES, RobContextError } from "../src/services/rob/robContext.js";
 
 const program = { id: "program-1", name: "Current Program", description: "  Hypertrophy  ", days: [
   { id: "a", name: "Day A", exercises: [{ routineExerciseId: "ri-a-1", exerciseId: "press", displayNameOverride: "Incline DB Press", sets: 3, repRange: "8-12", restSeconds: 120, note: "  controlled  ", supersetGroupId: "ss-1" }] },
@@ -30,7 +30,20 @@ test("advice supports profile-only and optional program context", () => {
   const profileOnly = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE });
   assert.equal(profileOnly.program, null);
   assert.deepEqual(profileOnly.history, { workouts: [] });
-  assert.equal(buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program, routineId: "b" }).target.routineId, "b");
+  const targeted = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program, routineId: "b" });
+  assert.equal(targeted.target.routineId, "b");
+  assert.deepEqual(targeted.program.routines.map((routine) => routine.id), ["b"]);
+});
+
+test("advice context stays compact for realistic routine and history data", () => {
+  const current = structuredClone(program);
+  current.days[0].exercises = Array.from({ length: 8 }, (_, index) => ({ routineExerciseId: `ri-${index}`, exerciseId: `exercise-${index}`, sets: 3, repRange: "8-12", restSeconds: 90, note: "Controlled working sets" }));
+  const history = Array.from({ length: 8 }, (_, workoutIndex) => ({ id: `workout-${workoutIndex}`, completedAt: `2026-02-${String(8 - workoutIndex).padStart(2, "0")}T00:00:00Z`, routineDayId: "a", exercises: Array.from({ length: 10 }, (_, exerciseIndex) => ({ exerciseId: `exercise-${exerciseIndex}`, exerciseName: `Exercise ${exerciseIndex}`, sets: Array.from({ length: 6 }, () => ({ weight: "22.5", reps: "10" })) })) }));
+  const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program: current, routineId: "a", completedWorkouts: history });
+  assert.equal(context.history.workouts.length, ROB_ADVICE_CONTEXT_LIMITS.historyWorkouts);
+  assert.equal(context.history.workouts[0].exercises.length, ROB_ADVICE_CONTEXT_LIMITS.exercisesPerWorkout);
+  assert.equal(context.history.workouts[0].exercises[0].sets.length, ROB_ADVICE_CONTEXT_LIMITS.setsPerExercise);
+  assert.ok(JSON.stringify(context).length < 4000);
 });
 
 test("program review includes active routines in order and excludes archived routines", () => {
@@ -74,6 +87,6 @@ test("bounds exercises and sets within each serialized history workout", () => {
     sets: Array.from({ length: ROB_CONTEXT_LIMITS.setsPerExercise + 2 }, () => ({ weight: "20", reps: "10" })),
   }));
   const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, completedWorkouts: [{ id: "large-history", completedAt: "2026-02-01T00:00:00Z", exercises }] });
-  assert.equal(context.history.workouts[0].exercises.length, ROB_CONTEXT_LIMITS.exercisesPerWorkout);
-  assert.equal(context.history.workouts[0].exercises[0].sets.length, ROB_CONTEXT_LIMITS.setsPerExercise);
+  assert.equal(context.history.workouts[0].exercises.length, ROB_ADVICE_CONTEXT_LIMITS.exercisesPerWorkout);
+  assert.equal(context.history.workouts[0].exercises[0].sets.length, ROB_ADVICE_CONTEXT_LIMITS.setsPerExercise);
 });

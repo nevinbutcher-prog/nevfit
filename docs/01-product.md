@@ -50,6 +50,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Settings Data Management with JSON backup export and confirmed backup import
 - Settings/About attribution for exercise data and images
 - Ask Rob: authenticated, transient training advice grounded in current Fitbot context
+- Review with Rob: read-only structured routine and program reviews with strengths, concerns, suggested changes, and limitations
 
 ## Current Product Direction
 
@@ -72,6 +73,7 @@ Users can:
 - Track manual steps and weekly runs until integrations exist
 - Download and restore account backups from Settings
 - Ask Rob for practical strength and hypertrophy advice without changing training data
+- Review the visible unsaved routine or program draft with Rob without saving or changing it
 
 Future expansion:
 

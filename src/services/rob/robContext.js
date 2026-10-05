@@ -21,6 +21,11 @@ export const ROB_ADVICE_CONTEXT_LIMITS = Object.freeze({
   exercisesPerWorkout: 5,
   setsPerExercise: 2,
 });
+export const ROB_REVIEW_CONTEXT_LIMITS = Object.freeze({
+  historyWorkouts: 3,
+  exercisesPerWorkout: 8,
+  setsPerExercise: 3,
+});
 
 export class RobContextError extends Error {
   constructor(code) {
@@ -162,6 +167,6 @@ export function buildRobContext({ requestType, program, routineId = null, comple
     target: { scope: serializedProgram ? (selectedRoutineId ? "routine" : "program") : "none", programId: serializedProgram?.id ?? null, routineId: requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW ? null : selectedRoutineId },
     profile: profile(),
     program: serializedProgram,
-    history: { workouts: relevantHistory(completedWorkouts, { routineIds, exerciseIds, limits: requestType === ROB_CONTEXT_TYPES.ADVICE ? ROB_ADVICE_CONTEXT_LIMITS : ROB_CONTEXT_LIMITS }) },
+    history: { workouts: relevantHistory(completedWorkouts, { routineIds, exerciseIds, limits: requestType === ROB_CONTEXT_TYPES.ADVICE ? ROB_ADVICE_CONTEXT_LIMITS : ROB_REVIEW_CONTEXT_LIMITS }) },
   };
 }

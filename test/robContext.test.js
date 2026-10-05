@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildRobContext, ROB_ADVICE_CONTEXT_LIMITS, ROB_CONTEXT_LIMITS, ROB_CONTEXT_TYPES, RobContextError } from "../src/services/rob/robContext.js";
+import { buildRobContext, ROB_ADVICE_CONTEXT_LIMITS, ROB_CONTEXT_LIMITS, ROB_CONTEXT_TYPES, ROB_REVIEW_CONTEXT_LIMITS, RobContextError } from "../src/services/rob/robContext.js";
 
 const program = { id: "program-1", name: "Current Program", description: "  Hypertrophy  ", days: [
   { id: "a", name: "Day A", exercises: [{ routineExerciseId: "ri-a-1", exerciseId: "press", displayNameOverride: "Incline DB Press", sets: 3, repRange: "8-12", restSeconds: 120, note: "  controlled  ", supersetGroupId: "ss-1" }] },
@@ -71,6 +71,17 @@ test("program review includes active routines in order and excludes archived rou
   assert.equal(context.target.scope, "program");
 });
 
+test("realistic full-program review retains prescriptions and stays within the review boundary", () => {
+  const reviewProgram = { id: "pcyc", name: "PCYC 1", days: Array.from({ length: 4 }, (_, routineIndex) => ({ id: `routine-${routineIndex}`, name: `Routine ${routineIndex + 1}`, exercises: Array.from({ length: 8 }, (_, exerciseIndex) => ({ routineExerciseId: `ri-${routineIndex}-${exerciseIndex}`, exerciseId: `exercise-${routineIndex}-${exerciseIndex}`, sets: 3, repRange: "8-12", restSeconds: 90, note: "Controlled working sets" })) })) };
+  const history = Array.from({ length: 6 }, (_, workoutIndex) => ({ id: `workout-${workoutIndex}`, completedAt: `2026-02-${String(20 - workoutIndex).padStart(2, "0")}T00:00:00Z`, routineDayId: "routine-0", exercises: Array.from({ length: 10 }, (_, exerciseIndex) => ({ exerciseId: `exercise-${exerciseIndex}`, sets: Array.from({ length: 5 }, () => ({ weight: "22.5", reps: "10" })) })) }));
+  const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: reviewProgram, completedWorkouts: history });
+  assert.equal(context.program.routines.length, 4);
+  assert.equal(context.history.workouts.length, ROB_REVIEW_CONTEXT_LIMITS.historyWorkouts);
+  assert.equal(context.history.workouts[0].exercises.length, ROB_REVIEW_CONTEXT_LIMITS.exercisesPerWorkout);
+  assert.equal(context.history.workouts[0].exercises[0].sets.length, ROB_REVIEW_CONTEXT_LIMITS.setsPerExercise);
+  assert.ok(JSON.stringify(context).length < 12000);
+});
+
 test("normalizes absent prescription values to null while preserving numeric strings", () => {
   const sparse = structuredClone(program);
   sparse.days[0].exercises = [
@@ -96,7 +107,7 @@ test("bounds large contexts and excludes identity data", () => {
   const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: large, completedWorkouts: Array.from({ length: 20 }, (_, index) => ({ id: `w-${index}`, completedAt: `2026-01-${String((index % 9) + 1).padStart(2, "0")}T00:00:00Z`, exercises: [{ exerciseId: "e", sets: [{ weight: "1", reps: "1" }] }] })) });
   assert.equal(context.program.routines.length, ROB_CONTEXT_LIMITS.routines);
   assert.equal(context.program.routines[0].exercises.length, ROB_CONTEXT_LIMITS.exercisesPerRoutine);
-  assert.equal(context.history.workouts.length, ROB_CONTEXT_LIMITS.historyWorkouts);
+  assert.equal(context.history.workouts.length, ROB_REVIEW_CONTEXT_LIMITS.historyWorkouts);
   assert.equal(JSON.stringify(context).match(/email|photoURL|providerId|uid|apiKey|OPENROUTER_API_KEY/), null);
 });
 

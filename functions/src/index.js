@@ -6,6 +6,7 @@ import { AiError, normalizeAiError, toClientError } from "./ai/aiErrors.js";
 import { createOpenRouterProvider } from "./ai/providers/openRouterProvider.js";
 import { generateAiResponse } from "./ai/aiService.js";
 import { generateRobAdvice } from "./rob/robAdvice.js";
+import { generateRobReview } from "./rob/robReview.js";
 
 const openRouterApiKey = defineSecret("OPENROUTER_API_KEY");
 
@@ -50,3 +51,24 @@ export function createRobAdviceHandler({ providerFactory = () => createOpenRoute
 }
 
 export const robAdvice = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobAdviceHandler());
+
+export function createRobReviewHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: aiConfig }) } = {}) {
+  return async (request) => {
+    if (!request.auth) {
+      const error = toClientError(new AiError("ai_unauthenticated"));
+      throw new HttpsError("unauthenticated", error.message, error);
+    }
+    const startedAt = Date.now();
+    try {
+      const result = await generateRobReview(request.data, { provider: providerFactory() });
+      logger.info("Rob review completed", { operation: "rob_review", reviewType: result.review.reviewType, model: result.model, durationMs: Date.now() - startedAt, usage: result.usage, authenticatedUidPresent: true });
+      return result;
+    } catch (error) {
+      const normalized = normalizeAiError(error);
+      logger.warn("Rob review failed", { operation: "rob_review", reviewType: request.data?.context?.requestType ?? null, code: normalized.code, validation: normalized.validationDiagnostic ?? null, durationMs: Date.now() - startedAt, authenticatedUidPresent: true });
+      throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized));
+    }
+  };
+}
+
+export const robReview = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobReviewHandler());

@@ -71,6 +71,7 @@ import {
 } from "./utils/navigation";
 import { buildRobContext, ROB_CONTEXT_TYPES } from "./services/rob/robContext";
 import { requestRobAdvice } from "./services/rob/robClient";
+import { requestRobReview } from "./services/rob/robReviewClient";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -1887,6 +1888,13 @@ function App() {
   const [robExchange, setRobExchange] = useState(null);
   const [robStatus, setRobStatus] = useState("idle");
   const [robError, setRobError] = useState(null);
+  const [robReview, setRobReview] = useState(null);
+  const [robReviewStatus, setRobReviewStatus] = useState("idle");
+  const [robReviewError, setRobReviewError] = useState(null);
+  useEffect(() => {
+    setRobReview(null);
+    setRobReviewError(null);
+  }, [programDrafts, selectedProgramId, selectedProgramDayId]);
   const [saveMessage, setSaveMessage] = useState("");
   const [programSaveStatus, setProgramSaveStatus] = useState(null);
   const [cycleStartDate, setCycleStartDate] = useState(
@@ -4225,6 +4233,28 @@ function App() {
     }
   }
 
+  async function submitRobReview(requestType) {
+    if (robReviewStatus === "loading") return;
+    const program = selectedProgramDraft ?? dashboardProgram;
+    const routineId = requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW
+      ? selectedProgramDayDraft?.id
+      : null;
+    if (!program || (requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW && !routineId)) return;
+    setRobReviewStatus("loading");
+    setRobReviewError(null);
+    setRobReview(null);
+    try {
+      const context = buildRobContext({ requestType, program, routineId, completedWorkouts });
+      const result = await requestRobReview({ context });
+      setRobReview({ ...result.review, programName: context.program?.name ?? "Program", routineName: context.program?.routines?.[0]?.name ?? null });
+      setRobReviewStatus("success");
+      setViewMode("review");
+    } catch (error) {
+      setRobReviewError({ requestType, message: error?.message ?? "Rob couldn't complete the review. Try again.", retryable: error?.retryable !== false });
+      setRobReviewStatus("error");
+    }
+  }
+
   return (
     <main
       className={`min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-white sm:p-4 ${
@@ -4347,7 +4377,20 @@ function App() {
           </p>
         ) : null}
 
-        {viewMode === "rob" ? (
+        {viewMode === "review" ? (
+          <section className="mx-auto max-w-2xl space-y-4">
+            <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
+              <div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Rob</p><h2 className="mt-2 text-3xl font-bold text-white">Rob's Review</h2><p className="mt-2 text-sm text-slate-300">{robReview?.programName}{robReview?.routineName ? ` · ${robReview.routineName}` : " · Program"}</p></div>
+              <button type="button" onClick={() => setViewMode("routines")} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">Back</button>
+            </div>
+            {robReview ? <>
+              <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</p><p className="mt-2 text-slate-100">{robReview.summary}</p></article>
+              {[["Strengths", robReview.strengths, "border-emerald-400/40", "text-emerald-200"], ["Concerns", robReview.concerns, "border-amber-400/40", "text-amber-200"], ["Suggested changes", robReview.suggestedChanges, "border-slate-700", "text-slate-200"]].map(([title, findings, border, heading]) => <section key={title} className={`rounded-2xl border ${border} bg-slate-900 p-5`}><h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${heading}`}>{title}</h3><div className="mt-3 space-y-4">{findings.length ? findings.map((finding, index) => <div key={`${title}-${index}`}><p className="font-semibold text-white">{finding.title}{finding.priority ? <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs font-medium capitalize text-slate-300">{finding.priority}</span> : null}</p><p className="mt-1 text-sm text-slate-300">{finding.explanation}</p></div>) : <p className="text-sm text-slate-400">No specific findings.</p>}</div></section>)}
+              <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Limitations</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{robReview.limitations.length ? robReview.limitations.map((limitation, index) => <li key={index}>• {limitation}</li>) : <li>• No additional limitations were supplied.</li>}</ul></section>
+            </> : null}
+            {robReviewError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robReviewError.message}</p>{robReviewError.retryable ? <button type="button" onClick={() => submitRobReview(robReviewError.requestType)} disabled={robReviewStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
+          </section>
+        ) : viewMode === "rob" ? (
           <section className="mx-auto max-w-2xl space-y-4">
             <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
               <div>
@@ -5142,6 +5185,14 @@ function App() {
                     <div className="flex shrink-0 flex-wrap gap-2">
                       <button
                         type="button"
+                        onClick={() => submitRobReview(ROB_CONTEXT_TYPES.PROGRAM_REVIEW)}
+                        disabled={robReviewStatus === "loading"}
+                        className="rounded-lg border border-emerald-400/60 px-4 py-2 font-semibold text-emerald-200 transition hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {robReviewStatus === "loading" ? "Rob is reviewing…" : "Review Program"}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => saveProgram(selectedProgramDraft.id)}
                         className={`rounded-lg px-4 py-2 font-semibold transition ${
                           selectedProgramSaveStatus?.type === "success" &&
@@ -5261,6 +5312,14 @@ function App() {
                             {selectedProgramDayDraft.exercises.length} exercises
                           </p>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => submitRobReview(ROB_CONTEXT_TYPES.ROUTINE_REVIEW)}
+                          disabled={robReviewStatus === "loading"}
+                          className="rounded-lg border border-emerald-400/60 px-3 py-2 text-sm font-semibold text-emerald-200 transition hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {robReviewStatus === "loading" ? "Rob is reviewing…" : "Review with Rob"}
+                        </button>
                         <button
                           type="button"
                           onClick={() => {

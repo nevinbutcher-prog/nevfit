@@ -92,6 +92,25 @@ model/provider or override system instructions. Advice responses are plain,
 transient text with explicit retry on recoverable failures. They do not invoke
 proposal, program, workout, planning, health, or persistence services.
 
+## Structured Rob Reviews
+
+The authenticated `robReview` callable accepts only a deterministic
+`routine_review` or `program_review` context. Routine reviews require exactly
+one target routine; program reviews use all active routines. The browser sends
+no free-form review prompt, provider/model setting, or mutation proposal.
+
+The function asks the provider for one JSON object, accepts direct JSON or one
+JSON code fence, and validates a bounded version-1 result before returning it.
+Malformed output is rejected as retryable `ai_invalid_response`; raw provider
+text is never rendered. Returned targets are derived from the validated context
+and optional routine/exercise references are filtered to IDs present there.
+
+Reviews are transient and read-only. The program editor can review its current
+in-memory draft without saving it, then presents bounded strengths, concerns,
+suggested changes, and limitations. Reviews do not call proposal or persistence
+paths and make no claims about recovery, pain, readiness, clinical safety, or
+other facts absent from context.
+
 ## localStorage Keys
 
 - `nevfit_schedule`

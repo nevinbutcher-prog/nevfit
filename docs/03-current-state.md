@@ -74,7 +74,7 @@
 - Deterministic pure Rob context builder for advice, routine review, and program review
 - Static current coaching profile, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for future Rob requests
 - Authenticated structured Rob routine and program reviews with server-validated JSON results, privacy-safe diagnostics, and no persistence or proposal application
-- Program-editor review actions assess the current unsaved draft and render transient strengths, concerns, suggested changes, and limitations
+- Program-editor review actions assess the current unsaved draft, then route transient strengths, concerns, suggested changes, and limitations to the Rob coaching panel
 
 ## Current Known Limitations
 

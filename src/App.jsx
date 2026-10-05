@@ -1891,6 +1891,8 @@ function App() {
   const [robReview, setRobReview] = useState(null);
   const [robReviewStatus, setRobReviewStatus] = useState("idle");
   const [robReviewError, setRobReviewError] = useState(null);
+  const [robPanelMode, setRobPanelMode] = useState("advice");
+  const [robReviewOrigin, setRobReviewOrigin] = useState(null);
   useEffect(() => {
     setRobReview(null);
     setRobReviewError(null);
@@ -4243,12 +4245,14 @@ function App() {
     setRobReviewStatus("loading");
     setRobReviewError(null);
     setRobReview(null);
+    setRobPanelMode(requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW ? "routine_review" : "program_review");
+    setRobReviewOrigin({ type: requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW ? "routine" : "program", programName: program.name, routineName: selectedProgramDayDraft?.name ?? null });
+    setViewMode("rob");
     try {
       const context = buildRobContext({ requestType, program, routineId, completedWorkouts });
       const result = await requestRobReview({ context });
       setRobReview({ ...result.review, programName: context.program?.name ?? "Program", routineName: context.program?.routines?.[0]?.name ?? null });
       setRobReviewStatus("success");
-      setViewMode("review");
     } catch (error) {
       setRobReviewError({ requestType, message: error?.message ?? "Rob couldn't complete the review. Try again.", retryable: error?.retryable !== false });
       setRobReviewStatus("error");
@@ -4345,7 +4349,7 @@ function App() {
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode("rob")}
+                onClick={() => { setRobPanelMode("advice"); setViewMode("rob"); }}
                 aria-label="Open Rob training advice"
                 className={`min-w-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
                   viewMode === "rob"
@@ -4395,12 +4399,16 @@ function App() {
             <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Rob</p>
-                <h2 className="mt-2 text-3xl font-bold text-white">Your training coach</h2>
-                <p className="mt-2 text-sm text-slate-300">Ask about training, exercises, volume, session structure or progression.</p>
+                <h2 className="mt-2 text-3xl font-bold text-white">{robPanelMode === "advice" ? "Your training coach" : "Rob's Review"}</h2>
+                <p className="mt-2 text-sm text-slate-300">{robPanelMode === "routine_review" ? `Routine review · ${robReview?.routineName ?? robReviewOrigin?.routineName ?? "Routine"}` : robPanelMode === "program_review" ? `Program review · ${robReview?.programName ?? robReviewOrigin?.programName ?? "Program"}` : "Ask about training, exercises, volume, session structure or progression."}</p>
               </div>
-              <button type="button" onClick={() => setViewMode("dashboard")} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">Back</button>
+              <button type="button" onClick={() => setViewMode(robPanelMode === "advice" ? "dashboard" : "routines")} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">{robPanelMode === "routine_review" ? "Back to routine" : robPanelMode === "program_review" ? "Back to program" : "Back"}</button>
             </div>
-            {robExchange ? (
+            {robPanelMode !== "advice" ? <>
+              {robReviewStatus === "loading" ? <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">Rob is reviewing this {robPanelMode === "routine_review" ? "routine" : "program"}…</p> : null}
+              {robReview ? <><article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</p><p className="mt-2 text-slate-100">{robReview.summary}</p></article>{[["Strengths", robReview.strengths, "border-emerald-400/40", "text-emerald-200"], ["Concerns", robReview.concerns, "border-amber-400/40", "text-amber-200"], ["Suggested changes", robReview.suggestedChanges, "border-slate-700", "text-slate-200"]].map(([title, findings, border, heading]) => <section key={title} className={`rounded-2xl border ${border} bg-slate-900 p-5`}><h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${heading}`}>{title}</h3><div className="mt-3 space-y-4">{findings.length ? findings.map((finding, index) => <div key={`${title}-${index}`}><p className="font-semibold text-white">{finding.title}{finding.priority ? <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs font-medium capitalize text-slate-300">{finding.priority}</span> : null}</p><p className="mt-1 text-sm text-slate-300">{finding.explanation}</p></div>) : <p className="text-sm text-slate-400">No specific findings.</p>}</div></section>)}<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Limitations</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{robReview.limitations.length ? robReview.limitations.map((limitation, index) => <li key={index}>• {limitation}</li>) : <li>• No additional limitations were supplied.</li>}</ul></section></> : null}
+              {robReviewError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robReviewError.message}</p>{robReviewError.retryable ? <button type="button" onClick={() => submitRobReview(robReviewError.requestType)} disabled={robReviewStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
+            </> : robExchange ? (
               <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-5">
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">You</p><p className="mt-1 whitespace-pre-wrap text-slate-100">{robExchange.question}</p></div>
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Rob</p><p className="mt-1 whitespace-pre-wrap text-slate-100">{robExchange.text}</p></div>

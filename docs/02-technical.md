@@ -111,6 +111,10 @@ suggested changes, and limitations. Reviews do not call proposal or persistence
 paths and make no claims about recovery, pain, readiness, clinical safety, or
 other facts absent from context.
 
+The editor contains only contextual review actions. They switch the shared Rob
+panel into routine- or program-review mode and retain a transient builder return
+target, so review output never competes with editable routine fields.
+
 ## localStorage Keys
 
 - `nevfit_schedule`

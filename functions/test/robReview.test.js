@@ -42,15 +42,34 @@ test("program review permits active routines and invokes its provider once", asy
   assert.equal(result.review.target.routineId, null);
 });
 
-test("review parser accepts one JSON fence and rejects prose, malformed JSON, invalid schema and arrays", () => {
+test("review parser accepts exact JSON, one fence, optional arrays, and empty sections", () => {
   const reviewContext = context();
+  assert.equal(parseReview(response(), reviewContext).summary, "A useful summary.");
   assert.equal(parseReview(`\`\`\`json\n${response()}\n\`\`\``, reviewContext).summary, "A useful summary.");
-  for (const value of [`Before ${response()}`, `${response()} after`, "{", "[]", response().replace('"medium"', '"urgent"'), response().replace('"program-1"', '"wrong-program"')]) {
-    assert.throws(() => parseReview(value, reviewContext), (error) => error.code === "ai_invalid_response" && error.retryable);
+  const minimal = JSON.parse(response());
+  minimal.strengths = [];
+  minimal.concerns = [];
+  minimal.suggestedChanges = [{ title: "Optional priority", explanation: "Missing references and priority are safe." }];
+  delete minimal.limitations;
+  const parsed = parseReview(JSON.stringify(minimal), reviewContext);
+  assert.deepEqual(parsed.limitations, []);
+  assert.deepEqual(parsed.suggestedChanges[0].routineIds, []);
+  assert.equal(parsed.suggestedChanges[0].priority, "medium");
+});
+
+test("review parser gives privacy-safe categories for malformed provider output", () => {
+  const reviewContext = context();
+  const cases = [
+    ["{'version':1}", "json_parse"],
+    [`Before ${response()}`, "json_parse"],
+    ["[]", "response_shape"],
+    [response().replace('"program-1"', '"wrong-program"'), "target"],
+    [response().replace('"medium"', '"urgent"'), "invalid_priority"],
+    [JSON.stringify({ ...JSON.parse(response()), extra: true }), "unexpected_field"],
+  ];
+  for (const [value, category] of cases) {
+    assert.throws(() => parseReview(value, reviewContext), (error) => error.code === "ai_invalid_response" && error.retryable && error.validationDiagnostic?.category === category && typeof error.validationDiagnostic.responseLength === "number");
   }
-  const withoutLimitations = JSON.parse(response());
-  delete withoutLimitations.limitations;
-  assert.deepEqual(parseReview(JSON.stringify(withoutLimitations), reviewContext).limitations, []);
 });
 
 test("review request only accepts bounded, correctly-targeted review contexts", () => {

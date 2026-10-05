@@ -69,6 +69,8 @@
 - Provider-neutral AI service boundary with OpenRouter as the current server-only provider
 - Bounded AI request validation, server-configured model/output/timeout controls, normalized safe errors, and transient usage diagnostics
 - No user-facing Rob coaching UI or AI-driven application-data reads/writes
+- Deterministic pure Rob context builder for advice, routine review, and program review
+- Static current coaching profile, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for future Rob requests
 
 ## Current Known Limitations
 

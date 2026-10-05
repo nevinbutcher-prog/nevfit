@@ -119,6 +119,11 @@ broadening these data paths.
 
 ## Primary Training Profile
 
+The documented training profile is also represented as a static, non-editable
+coaching configuration in `src/services/rob/robTrainingProfile.js`. It is kept
+separate from the Firebase identity document and supplies future Rob context;
+it does not add a profile editor or persist new profile fields.
+
 Primary user:
 
 - Nevin

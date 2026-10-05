@@ -67,6 +67,21 @@ context was present—never prompts, outputs, tokens, emails, or health/training
 data. AI responses are transient: this foundation reads or writes no program,
 routine, workout, planning, health, or Firestore domain data.
 
+## Rob Coaching Context
+
+`src/services/rob/robContext.js` is a pure deterministic domain boundary for
+future Rob features. It supports `advice`, `routine_review`, and
+`program_review` contexts, preserves program/routine/exercise stable IDs, and
+serializes compact prescriptions without invoking the AI transport.
+
+The builder uses the explicit non-editable coaching profile in
+`src/services/rob/robTrainingProfile.js`, rather than Firebase identity data.
+It excludes identity and credentials, has no network or persistence imports,
+and never mutates supplied state. History is meaningful-workout-only,
+target-relevant where association data exists, capped at eight records, and
+ordered newest first. Program, routine, exercise, note, set, and history sizes
+are independently bounded to keep future AI context predictable.
+
 ## localStorage Keys
 
 - `nevfit_schedule`

@@ -4272,7 +4272,8 @@ function App() {
     setRobProposalState({ status: "loading", explanation: null, proposal: null, error: null });
     try {
       const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program, routineId, completedWorkouts });
-      const generated = await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." } });
+      const review = { summary: robReview.summary, concerns: robReview.concerns.map(({ title, explanation }) => ({ title, explanation })), suggestedChanges: robReview.suggestedChanges.map(({ title, explanation, priority }) => ({ title, explanation, priority })) };
+      const generated = await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." }, review });
       const latest = programDraftsRef.current.find((item) => item.id === program.id);
       if (!latest || JSON.stringify(latest) !== fingerprint) throw new Error("proposal_draft_changed");
       const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest });

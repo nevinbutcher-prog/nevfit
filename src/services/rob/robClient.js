@@ -1,14 +1,7 @@
 import { httpsCallable } from "firebase/functions";
-import { functions } from "../firebase";
-
-export class RobClientError extends Error {
-  constructor({ code = "ai_unknown", message = "Rob couldn't get a response right now. Try again.", retryable = false } = {}) {
-    super(message);
-    this.name = "RobClientError";
-    this.code = code;
-    this.retryable = retryable;
-  }
-}
+import { functions } from "../firebase.js";
+export { RobClientError } from "./robClientError.js";
+import { RobClientError } from "./robClientError.js";
 
 export async function requestRobAdvice({ question, context }) {
   try {

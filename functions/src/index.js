@@ -7,6 +7,7 @@ import { createOpenRouterProvider } from "./ai/providers/openRouterProvider.js";
 import { generateAiResponse } from "./ai/aiService.js";
 import { generateRobAdvice } from "./rob/robAdvice.js";
 import { generateRobReview } from "./rob/robReview.js";
+import { generateRobProposal } from "./rob/robProposal.js";
 
 const openRouterApiKey = defineSecret("OPENROUTER_API_KEY");
 
@@ -72,3 +73,20 @@ export function createRobReviewHandler({ providerFactory = () => createOpenRoute
 }
 
 export const robReview = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobReviewHandler());
+
+export function createRobProposalHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: aiConfig }) } = {}) {
+  return async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", toClientError(new AiError("ai_unauthenticated")).message);
+    const startedAt = Date.now();
+    try {
+      const result = await generateRobProposal(request.data, { provider: providerFactory() });
+      logger.info("Rob proposal completed", { operation: "rob_proposal", proposalType: result.candidate.proposalType, model: result.model, usage: result.usage, durationMs: Date.now() - startedAt, candidateOperationCount: result.candidate.changes?.length ?? result.candidate.routine?.exercises?.length ?? 0, authenticatedUidPresent: true });
+      return result;
+    } catch (error) {
+      const normalized = normalizeAiError(error);
+      logger.warn("Rob proposal failed", { operation: "rob_proposal", proposalType: request.data?.request?.type ?? null, code: normalized.code, validation: normalized.validationDiagnostic ?? null, durationMs: Date.now() - startedAt, authenticatedUidPresent: true });
+      throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized));
+    }
+  };
+}
+export const robProposal = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobProposalHandler());

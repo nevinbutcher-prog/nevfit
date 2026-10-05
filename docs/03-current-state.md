@@ -75,6 +75,7 @@
 - Static current coaching profile, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for future Rob requests
 - Authenticated structured Rob routine and program reviews with server-validated JSON results, privacy-safe diagnostics, and no persistence or proposal application
 - Program-editor review actions assess the current unsaved draft, then route transient strengths, concerns, suggested changes, and limitations to the Rob coaching panel
+- Routine reviews can prepare a transient candidate proposal that Fitbot resolves and validates against the current draft; no proposal is applied or persisted
 
 ## Current Known Limitations
 

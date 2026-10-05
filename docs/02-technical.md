@@ -115,6 +115,18 @@ The editor contains only contextual review actions. They switch the shared Rob
 panel into routine- or program-review mode and retain a transient builder return
 target, so review output never competes with editable routine fields.
 
+## Rob Proposal Preparation
+
+`robProposal` is an authenticated callable that returns a bounded, untrusted
+candidate envelope only. The browser resolves any new exercise suggestion
+through `exerciseProvider.js`, generates proposal/routine/row IDs itself, then
+must pass the materialized object to `validateRoutineProposal()` against the
+current in-memory draft. Only that validator's normalized output is retained.
+
+Preparation is transient and read-only: it never calls `applyRoutineProposal`,
+saves a program, or writes local or cloud state. The Rob panel can prepare a
+routine proposal after a routine review, but provides no approval or Apply UI.
+
 ## localStorage Keys
 
 - `nevfit_schedule`

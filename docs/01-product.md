@@ -51,6 +51,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Settings/About attribution for exercise data and images
 - Ask Rob: authenticated, transient training advice grounded in current Fitbot context
 - Review with Rob: read-only structured routine and program reviews shown in the Rob coaching panel, with strengths, concerns, suggested changes, and limitations
+- Routine reviews can prepare a transient, validated Rob proposal for later human review; they never apply or save changes
 
 ## Current Product Direction
 

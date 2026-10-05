@@ -72,6 +72,7 @@ import {
 import { buildRobContext, ROB_CONTEXT_TYPES } from "./services/rob/robContext";
 import { requestRobAdvice } from "./services/rob/robClient";
 import { requestRobReview } from "./services/rob/robReviewClient";
+import { requestRobProposal, resolveRobProposalCandidate } from "./services/rob/robProposalClient";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -1893,9 +1894,13 @@ function App() {
   const [robReviewError, setRobReviewError] = useState(null);
   const [robPanelMode, setRobPanelMode] = useState("advice");
   const [robReviewOrigin, setRobReviewOrigin] = useState(null);
+  const [robProposalState, setRobProposalState] = useState({ status: "idle", explanation: null, proposal: null, error: null });
+  const programDraftsRef = useRef(programDrafts);
   useEffect(() => {
+    programDraftsRef.current = programDrafts;
     setRobReview(null);
     setRobReviewError(null);
+    setRobProposalState({ status: "idle", explanation: null, proposal: null, error: null });
   }, [programDrafts, selectedProgramId, selectedProgramDayId]);
   const [saveMessage, setSaveMessage] = useState("");
   const [programSaveStatus, setProgramSaveStatus] = useState(null);
@@ -4259,6 +4264,29 @@ function App() {
     }
   }
 
+  async function submitRobProposal() {
+    if (robProposalState.status === "loading" || !selectedProgramDraft || !selectedProgramDayDraft) return;
+    const program = selectedProgramDraft;
+    const routineId = selectedProgramDayDraft.id;
+    const fingerprint = JSON.stringify(program);
+    setRobProposalState({ status: "loading", explanation: null, proposal: null, error: null });
+    try {
+      const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program, routineId, completedWorkouts });
+      const generated = await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." } });
+      const latest = programDraftsRef.current.find((item) => item.id === program.id);
+      if (!latest || JSON.stringify(latest) !== fingerprint) throw new Error("proposal_draft_changed");
+      const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest });
+      if (!resolved.validation.valid) {
+        setRobProposalState({ status: "error", explanation: generated.explanation, proposal: null, error: "The proposal didn't pass Fitbot validation and was blocked." });
+        return;
+      }
+      setRobProposalState({ status: "success", explanation: generated.explanation, proposal: resolved.proposal, error: null });
+    } catch (error) {
+      const message = error?.message === "proposal_draft_changed" ? "The routine changed while Rob was preparing the proposal. Generate it again." : error?.code === "proposal_exercise_unresolved" ? error.message : error?.code === "ai_invalid_response" ? "Rob returned an unusable proposal." : "Rob couldn't prepare a proposal right now.";
+      setRobProposalState({ status: "error", explanation: null, proposal: null, error: message });
+    }
+  }
+
   return (
     <main
       className={`min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-white sm:p-4 ${
@@ -4394,6 +4422,7 @@ function App() {
             {robPanelMode !== "advice" ? <>
               {robReviewStatus === "loading" ? <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">Rob is reviewing this {robPanelMode === "routine_review" ? "routine" : "program"}…</p> : null}
               {robReview ? <><article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</p><p className="mt-2 text-slate-100">{robReview.summary}</p></article>{[["Strengths", robReview.strengths, "border-emerald-400/40", "text-emerald-200"], ["Concerns", robReview.concerns, "border-amber-400/40", "text-amber-200"], ["Suggested changes", robReview.suggestedChanges, "border-slate-700", "text-slate-200"]].map(([title, findings, border, heading]) => <section key={title} className={`rounded-2xl border ${border} bg-slate-900 p-5`}><h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${heading}`}>{title}</h3><div className="mt-3 space-y-4">{findings.length ? findings.map((finding, index) => <div key={`${title}-${index}`}><p className="font-semibold text-white">{finding.title}{finding.priority ? <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs font-medium capitalize text-slate-300">{finding.priority}</span> : null}</p><p className="mt-1 text-sm text-slate-300">{finding.explanation}</p></div>) : <p className="text-sm text-slate-400">No specific findings.</p>}</div></section>)}<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Limitations</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{robReview.limitations.length ? robReview.limitations.map((limitation, index) => <li key={index}>• {limitation}</li>) : <li>• No additional limitations were supplied.</li>}</ul></section></> : null}
+              {robPanelMode === "routine_review" && robReview ? <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><p className="text-sm text-slate-300">{robProposalState.status === "success" ? "Proposal ready for review" : "Rob can prepare a validated routine proposal from this review. It will not change your routine."}</p>{robProposalState.explanation ? <p className="mt-2 text-sm text-slate-400">{robProposalState.explanation}</p> : null}{robProposalState.error ? <p className="mt-2 text-sm font-semibold text-amber-200">{robProposalState.error}</p> : null}<button type="button" onClick={submitRobProposal} disabled={robProposalState.status === "loading" || robProposalState.status === "success"} className="mt-3 rounded-lg border border-emerald-400/60 px-3 py-2 text-sm font-semibold text-emerald-200 disabled:cursor-not-allowed disabled:opacity-50">{robProposalState.status === "loading" ? "Rob is preparing…" : robProposalState.status === "success" ? "Proposal prepared" : "Prepare routine proposal"}</button></section> : null}
               {robReviewError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robReviewError.message}</p>{robReviewError.retryable ? <button type="button" onClick={() => submitRobReview(robReviewError.requestType)} disabled={robReviewStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
             </> : robExchange ? (
               <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-5">

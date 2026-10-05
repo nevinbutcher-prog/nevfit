@@ -68,7 +68,9 @@
 - Deployed Firebase-authenticated `aiGenerate` callable AI transport foundation
 - Provider-neutral AI service boundary with OpenRouter as the current server-only provider
 - Bounded AI request validation, server-configured model/output/timeout controls, normalized safe errors, and transient usage diagnostics
-- No user-facing Rob coaching UI or AI-driven application-data reads/writes
+- No Rob advice flow can read or write application data beyond its supplied in-memory coaching context
+- Ask Rob advisory surface with authenticated, server-owned persona/prompt instructions and transient recoverable responses
+- Rob advice automatically supplies bounded deterministic advice context but cannot modify routines, programs, workouts, or other application data
 - Deterministic pure Rob context builder for advice, routine review, and program review
 - Static current coaching profile, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for future Rob requests
 

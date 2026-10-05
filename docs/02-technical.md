@@ -82,6 +82,16 @@ target-relevant where association data exists, capped at eight records, and
 ordered newest first. Program, routine, exercise, note, set, and history sizes
 are independently bounded to keep future AI context predictable.
 
+## Rob Training Advice
+
+The authenticated `robAdvice` callable is the user-facing AI boundary. Its
+server-owned persona and safety instructions compose deterministic advice
+context plus one user question, then reuse the provider-neutral AI provider.
+The browser can send only `question` and advice context; it cannot select a
+model/provider or override system instructions. Advice responses are plain,
+transient text with explicit retry on recoverable failures. They do not invoke
+proposal, program, workout, planning, health, or persistence services.
+
 ## localStorage Keys
 
 - `nevfit_schedule`

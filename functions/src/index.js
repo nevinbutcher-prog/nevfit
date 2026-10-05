@@ -5,6 +5,7 @@ import { aiConfig } from "./ai/aiConfig.js";
 import { AiError, normalizeAiError, toClientError } from "./ai/aiErrors.js";
 import { createOpenRouterProvider } from "./ai/providers/openRouterProvider.js";
 import { generateAiResponse } from "./ai/aiService.js";
+import { generateRobAdvice } from "./rob/robAdvice.js";
 
 const openRouterApiKey = defineSecret("OPENROUTER_API_KEY");
 
@@ -28,3 +29,24 @@ export function createAiGenerateHandler({ providerFactory = () => createOpenRout
 }
 
 export const aiGenerate = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createAiGenerateHandler());
+
+export function createRobAdviceHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: aiConfig }) } = {}) {
+  return async (request) => {
+    if (!request.auth) {
+      const error = toClientError(new AiError("ai_unauthenticated"));
+      throw new HttpsError("unauthenticated", error.message, error);
+    }
+    const startedAt = Date.now();
+    try {
+      const result = await generateRobAdvice(request.data, { provider: providerFactory() });
+      logger.info("Rob advice completed", { operation: "rob_advice", model: result.model, durationMs: Date.now() - startedAt, usage: result.usage, authenticatedUidPresent: true });
+      return result;
+    } catch (error) {
+      const normalized = normalizeAiError(error);
+      logger.warn("Rob advice failed", { operation: "rob_advice", model: aiConfig.model, code: normalized.code, durationMs: Date.now() - startedAt, authenticatedUidPresent: true });
+      throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized));
+    }
+  };
+}
+
+export const robAdvice = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobAdviceHandler());

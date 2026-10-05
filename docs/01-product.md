@@ -49,6 +49,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Firestore-backed programs, planning, health state, active workout, and workout history
 - Settings Data Management with JSON backup export and confirmed backup import
 - Settings/About attribution for exercise data and images
+- Ask Rob: authenticated, transient training advice grounded in current Fitbot context
 
 ## Current Product Direction
 
@@ -70,6 +71,7 @@ Users can:
 - Review previous performance
 - Track manual steps and weekly runs until integrations exist
 - Download and restore account backups from Settings
+- Ask Rob for practical strength and hypertrophy advice without changing training data
 
 Future expansion:
 

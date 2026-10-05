@@ -69,6 +69,8 @@ import {
   getInitialViewMode,
   getViewModeForLoadedActiveWorkout,
 } from "./utils/navigation";
+import { buildRobContext, ROB_CONTEXT_TYPES } from "./services/rob/robContext";
+import { requestRobAdvice } from "./services/rob/robClient";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -1881,6 +1883,10 @@ function App() {
     loadStoredActiveWorkoutSession,
   );
   const [viewMode, setViewMode] = useState(getInitialViewMode);
+  const [robQuestion, setRobQuestion] = useState("");
+  const [robExchange, setRobExchange] = useState(null);
+  const [robStatus, setRobStatus] = useState("idle");
+  const [robError, setRobError] = useState(null);
   const [saveMessage, setSaveMessage] = useState("");
   const [programSaveStatus, setProgramSaveStatus] = useState(null);
   const [cycleStartDate, setCycleStartDate] = useState(
@@ -4196,6 +4202,28 @@ function App() {
     ) ?? todayCompletedWorkout;
   const cycleWeekLabel = getCycleWeekLabel(cycleStartDate, cycleLengthWeeks);
 
+  async function submitRobQuestion(question = robQuestion) {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion || robStatus === "loading") return;
+    setRobStatus("loading");
+    setRobError(null);
+    try {
+      const context = buildRobContext({
+        requestType: ROB_CONTEXT_TYPES.ADVICE,
+        program: dashboardProgram,
+        routineId: selectedProgramDayId,
+        completedWorkouts,
+      });
+      const result = await requestRobAdvice({ question: trimmedQuestion, context });
+      setRobExchange({ question: trimmedQuestion, text: result.text });
+      setRobQuestion("");
+      setRobStatus("success");
+    } catch (error) {
+      setRobError({ message: error?.code === "ai_invalid_request" ? "That question couldn't be sent. Try shortening or rewording it." : error?.message ?? "Rob couldn't get a response right now. Try again.", retryable: error?.retryable !== false });
+      setRobStatus("error");
+    }
+  }
+
   return (
     <main
       className={`min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-white sm:p-4 ${
@@ -4250,7 +4278,7 @@ function App() {
                 )}
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[26rem]">
+            <div className="mt-4 grid grid-cols-4 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem]">
               <button
                 type="button"
                 onClick={() => setViewMode("dashboard")}
@@ -4284,6 +4312,17 @@ function App() {
               >
                 Programs
               </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("rob")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  viewMode === "rob"
+                    ? "bg-emerald-400 text-slate-950"
+                    : "text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                Ask Rob
+              </button>
             </div>
           </header>
         ) : null}
@@ -4306,7 +4345,32 @@ function App() {
           </p>
         ) : null}
 
-        {viewMode === "dashboard" ? (
+        {viewMode === "rob" ? (
+          <section className="mx-auto max-w-2xl space-y-4">
+            <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Rob</p>
+                <h2 className="mt-2 text-3xl font-bold text-white">Your training coach</h2>
+                <p className="mt-2 text-sm text-slate-300">Ask about training, exercises, volume, session structure or progression.</p>
+              </div>
+              <button type="button" onClick={() => setViewMode("dashboard")} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">Back</button>
+            </div>
+            {robExchange ? (
+              <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+                <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">You</p><p className="mt-1 whitespace-pre-wrap text-slate-100">{robExchange.question}</p></div>
+                <div><p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Rob</p><p className="mt-1 whitespace-pre-wrap text-slate-100">{robExchange.text}</p></div>
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">I'm Rob. Ask me about your training, exercises, volume, session structure or progression.</p>
+            )}
+            {robError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robError.message}</p>{robError.retryable ? <button type="button" onClick={() => submitRobQuestion()} disabled={robStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
+            <form onSubmit={(event) => { event.preventDefault(); submitRobQuestion(); }} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <label htmlFor="rob-question" className="text-sm font-semibold text-slate-200">Ask Rob</label>
+              <textarea id="rob-question" value={robQuestion} onChange={(event) => setRobQuestion(event.target.value)} placeholder="What do you want help with?" rows="4" disabled={robStatus === "loading"} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-emerald-400" />
+              <div className="mt-3 flex items-center justify-between gap-3"><p className="text-sm text-slate-400">{robStatus === "loading" ? "Rob is thinking…" : "Advice only — Rob will not change your program."}</p><button type="submit" disabled={!robQuestion.trim() || robStatus === "loading"} className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">Ask Rob</button></div>
+            </form>
+          </section>
+        ) : viewMode === "dashboard" ? (
           <section className="min-w-0 space-y-4">
             {saveMessage ? (
               <p className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">

@@ -39,6 +39,19 @@ test("program review includes active routines in order and excludes archived rou
   assert.equal(context.target.routineId, null);
 });
 
+test("normalizes absent prescription values to null while preserving numeric strings", () => {
+  const sparse = structuredClone(program);
+  sparse.days[0].exercises = [
+    { routineExerciseId: "missing", exerciseId: "missing", sets: null, restSeconds: "" },
+    { routineExerciseId: "numeric", exerciseId: "numeric", sets: "3", restSeconds: "90" },
+  ];
+  const exercises = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: sparse }).program.routines[0].exercises;
+  assert.equal(exercises[0].sets, null);
+  assert.equal(exercises[0].restSeconds, null);
+  assert.equal(exercises[1].sets, 3);
+  assert.equal(exercises[1].restSeconds, 90);
+});
+
 test("validates required review targets and request types", () => {
   for (const input of [{ requestType: "other" }, { requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW }, { requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program }, { requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program, routineId: "missing" }]) {
     assert.throws(() => buildRobContext(input), (error) => error instanceof RobContextError);
@@ -53,4 +66,14 @@ test("bounds large contexts and excludes identity data", () => {
   assert.equal(context.program.routines[0].exercises.length, ROB_CONTEXT_LIMITS.exercisesPerRoutine);
   assert.equal(context.history.workouts.length, ROB_CONTEXT_LIMITS.historyWorkouts);
   assert.equal(JSON.stringify(context).match(/email|photoURL|providerId|uid|apiKey|OPENROUTER_API_KEY/), null);
+});
+
+test("bounds exercises and sets within each serialized history workout", () => {
+  const exercises = Array.from({ length: ROB_CONTEXT_LIMITS.exercisesPerWorkout + 2 }, (_, index) => ({
+    exerciseId: `history-${index}`,
+    sets: Array.from({ length: ROB_CONTEXT_LIMITS.setsPerExercise + 2 }, () => ({ weight: "20", reps: "10" })),
+  }));
+  const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, completedWorkouts: [{ id: "large-history", completedAt: "2026-02-01T00:00:00Z", exercises }] });
+  assert.equal(context.history.workouts[0].exercises.length, ROB_CONTEXT_LIMITS.exercisesPerWorkout);
+  assert.equal(context.history.workouts[0].exercises[0].sets.length, ROB_CONTEXT_LIMITS.setsPerExercise);
 });

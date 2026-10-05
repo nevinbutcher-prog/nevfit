@@ -28,6 +28,11 @@ export class RobContextError extends Error {
 const validTypes = new Set(Object.values(ROB_CONTEXT_TYPES));
 const text = (value, limit = ROB_CONTEXT_LIMITS.text) =>
   typeof value === "string" && value.trim() ? value.trim().slice(0, limit) : null;
+const optionalNumber = (value) => {
+  if (value === null || typeof value === "undefined" || value === "" || (typeof value === "string" && !value.trim())) return null;
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : null;
+};
 const id = (value) => {
   const normalized = text(value, ROB_CONTEXT_LIMITS.id);
   return normalized && normalized.length === String(value).trim().length ? normalized : null;
@@ -50,9 +55,9 @@ function serializeExercise(exercise) {
     routineExerciseId,
     exerciseId,
     name: text(exercise.displayNameOverride, ROB_CONTEXT_LIMITS.name) ?? text(exercise.name ?? exercise.exerciseName, ROB_CONTEXT_LIMITS.name),
-    sets: Number.isInteger(Number(exercise.sets)) ? Number(exercise.sets) : null,
+    sets: Number.isInteger(optionalNumber(exercise.sets)) ? optionalNumber(exercise.sets) : null,
     repRange: text(exercise.repRange, ROB_CONTEXT_LIMITS.name),
-    restSeconds: Number.isFinite(Number(exercise.restSeconds)) ? Number(exercise.restSeconds) : null,
+    restSeconds: optionalNumber(exercise.restSeconds),
     note: text(exercise.note),
     supersetGroupId: id(exercise.supersetGroupId),
   };

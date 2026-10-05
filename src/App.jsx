@@ -4279,11 +4279,11 @@ function App() {
                 )}
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-2 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem]">
+            <div className="mt-4 grid w-full grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem] sm:gap-2">
               <button
                 type="button"
                 onClick={() => setViewMode("dashboard")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                className={`min-w-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
                   viewMode === "dashboard"
                     ? "bg-emerald-400 text-slate-950"
                     : "text-slate-300 hover:bg-slate-800"
@@ -4294,7 +4294,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setViewMode("planner")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                className={`min-w-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
                   viewMode === "planner"
                     ? "bg-emerald-400 text-slate-950"
                     : "text-slate-300 hover:bg-slate-800"
@@ -4305,7 +4305,7 @@ function App() {
               <button
                 type="button"
                 onClick={() => setViewMode("routines")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                className={`min-w-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
                   viewMode === "routines"
                     ? "bg-emerald-400 text-slate-950"
                     : "text-slate-300 hover:bg-slate-800"
@@ -4316,13 +4316,14 @@ function App() {
               <button
                 type="button"
                 onClick={() => setViewMode("rob")}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                aria-label="Open Rob training advice"
+                className={`min-w-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
                   viewMode === "rob"
                     ? "bg-emerald-400 text-slate-950"
                     : "text-slate-300 hover:bg-slate-800"
                 }`}
               >
-                Ask Rob
+                Rob
               </button>
             </div>
           </header>

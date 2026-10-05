@@ -4381,20 +4381,7 @@ function App() {
           </p>
         ) : null}
 
-        {viewMode === "review" ? (
-          <section className="mx-auto max-w-2xl space-y-4">
-            <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
-              <div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Rob</p><h2 className="mt-2 text-3xl font-bold text-white">Rob's Review</h2><p className="mt-2 text-sm text-slate-300">{robReview?.programName}{robReview?.routineName ? ` · ${robReview.routineName}` : " · Program"}</p></div>
-              <button type="button" onClick={() => setViewMode("routines")} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">Back</button>
-            </div>
-            {robReview ? <>
-              <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</p><p className="mt-2 text-slate-100">{robReview.summary}</p></article>
-              {[["Strengths", robReview.strengths, "border-emerald-400/40", "text-emerald-200"], ["Concerns", robReview.concerns, "border-amber-400/40", "text-amber-200"], ["Suggested changes", robReview.suggestedChanges, "border-slate-700", "text-slate-200"]].map(([title, findings, border, heading]) => <section key={title} className={`rounded-2xl border ${border} bg-slate-900 p-5`}><h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${heading}`}>{title}</h3><div className="mt-3 space-y-4">{findings.length ? findings.map((finding, index) => <div key={`${title}-${index}`}><p className="font-semibold text-white">{finding.title}{finding.priority ? <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs font-medium capitalize text-slate-300">{finding.priority}</span> : null}</p><p className="mt-1 text-sm text-slate-300">{finding.explanation}</p></div>) : <p className="text-sm text-slate-400">No specific findings.</p>}</div></section>)}
-              <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Limitations</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{robReview.limitations.length ? robReview.limitations.map((limitation, index) => <li key={index}>• {limitation}</li>) : <li>• No additional limitations were supplied.</li>}</ul></section>
-            </> : null}
-            {robReviewError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robReviewError.message}</p>{robReviewError.retryable ? <button type="button" onClick={() => submitRobReview(robReviewError.requestType)} disabled={robReviewStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
-          </section>
-        ) : viewMode === "rob" ? (
+        {viewMode === "rob" ? (
           <section className="mx-auto max-w-2xl space-y-4">
             <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
               <div>
@@ -4416,12 +4403,14 @@ function App() {
             ) : (
               <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">I'm Rob. Ask me about your training, exercises, volume, session structure or progression.</p>
             )}
-            {robError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robError.message}</p>{robError.retryable ? <button type="button" onClick={() => submitRobQuestion()} disabled={robStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
-            <form onSubmit={(event) => { event.preventDefault(); submitRobQuestion(); }} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            {robPanelMode === "advice" ? <>
+              {robError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robError.message}</p>{robError.retryable ? <button type="button" onClick={() => submitRobQuestion()} disabled={robStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
+              <form onSubmit={(event) => { event.preventDefault(); submitRobQuestion(); }} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <label htmlFor="rob-question" className="text-sm font-semibold text-slate-200">Ask Rob</label>
               <textarea id="rob-question" value={robQuestion} onChange={(event) => setRobQuestion(event.target.value)} placeholder="What do you want help with?" rows="4" disabled={robStatus === "loading"} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-emerald-400" />
               <div className="mt-3 flex items-center justify-between gap-3"><p className="text-sm text-slate-400">{robStatus === "loading" ? "Rob is thinking…" : "Advice only — Rob will not change your program."}</p><button type="submit" disabled={!robQuestion.trim() || robStatus === "loading"} className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">Ask Rob</button></div>
-            </form>
+              </form>
+            </> : null}
           </section>
         ) : viewMode === "dashboard" ? (
           <section className="min-w-0 space-y-4">

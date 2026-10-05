@@ -1,6 +1,6 @@
 import { AiError } from "../ai/aiErrors.js";
 
-const LIMITS = { context: 12000, response: 18000, explanation: 1000, title: 160, summary: 600, changes: 12, exercises: 20, query: 160, name: 160, note: 500, reviewFindings: 8, findingTitle: 160, findingExplanation: 600 };
+const LIMITS = { context: 12000, response: 18000, explanation: 1000, title: 160, summary: 600, changes: 12, exercises: 20, query: 160, name: 160, note: 500, reviewFindings: 8, findingTitle: 160, findingExplanation: 600, reviewRoutineRefs: 6, reviewExerciseRefs: 12 };
 const TYPES = new Set(["modify_routine", "create_routine"]);
 const OPERATIONS = new Set(["add_exercise", "remove_exercise", "replace_exercise", "move_exercise", "update_exercise", "set_superset", "clear_superset", "rename_routine"]);
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
@@ -9,14 +9,21 @@ const fail = (category, data = {}) => { const error = new AiError("ai_invalid_re
 const invalid = (reason) => { const error = new AiError("ai_invalid_request"); error.validationDiagnostic = { reason }; throw error; };
 const hasOnly = (value, keys) => object(value) && Object.keys(value).every((key) => keys.includes(key));
 
-function reviewFinding(value, { priority = false } = {}) {
-  const keys = priority ? ["title", "explanation", "priority"] : ["title", "explanation"];
-  if (!hasOnly(value, keys) || !text(value.title, LIMITS.findingTitle) || !text(value.explanation, LIMITS.findingExplanation) || (priority && !["low", "medium", "high"].includes(value.priority))) invalid("review_shape");
-  return priority ? { title: value.title.trim(), explanation: value.explanation.trim(), priority: value.priority } : { title: value.title.trim(), explanation: value.explanation.trim() };
+function reviewRefs(value, valid, limit) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > limit || value.some((id) => !text(id, LIMITS.name))) invalid("review_shape");
+  return [...new Set(value.map((id) => id.trim()).filter((id) => valid.has(id)))].slice(0, limit);
 }
-function reviewInput(value) {
+function reviewFinding(value, ids, { priority = false } = {}) {
+  const keys = priority ? ["title", "explanation", "priority", "routineIds", "routineExerciseIds"] : ["title", "explanation", "routineIds", "routineExerciseIds"];
+  if (!hasOnly(value, keys) || !text(value.title, LIMITS.findingTitle) || !text(value.explanation, LIMITS.findingExplanation) || (priority && !["low", "medium", "high"].includes(value.priority))) invalid("review_shape");
+  const references = { routineIds: reviewRefs(value.routineIds, ids.routines, LIMITS.reviewRoutineRefs), routineExerciseIds: reviewRefs(value.routineExerciseIds, ids.exercises, LIMITS.reviewExerciseRefs) };
+  return priority ? { title: value.title.trim(), explanation: value.explanation.trim(), priority: value.priority, ...references } : { title: value.title.trim(), explanation: value.explanation.trim(), ...references };
+}
+function reviewInput(value, context) {
   if (!hasOnly(value, ["summary", "concerns", "suggestedChanges"]) || !text(value.summary, LIMITS.summary) || !Array.isArray(value.concerns) || !Array.isArray(value.suggestedChanges) || value.concerns.length > LIMITS.reviewFindings || value.suggestedChanges.length > LIMITS.reviewFindings) invalid("review_shape");
-  return { summary: value.summary.trim(), concerns: value.concerns.map((finding) => reviewFinding(finding)), suggestedChanges: value.suggestedChanges.map((finding) => reviewFinding(finding, { priority: true })) };
+  const ids = { routines: new Set(context.program.routines.map((routine) => routine.id)), exercises: new Set(context.program.routines.flatMap((routine) => routine.exercises.map((exercise) => exercise.routineExerciseId))) };
+  return { summary: value.summary.trim(), concerns: value.concerns.map((finding) => reviewFinding(finding, ids)), suggestedChanges: value.suggestedChanges.map((finding) => reviewFinding(finding, ids, { priority: true })) };
 }
 
 export function validateRobProposalRequest(data) {
@@ -24,11 +31,11 @@ export function validateRobProposalRequest(data) {
   const { context, request, review } = data;
   if (!TYPES.has(request.type) || !text(request.instruction, 600) || context.version !== 1 || !object(context.target) || !object(context.program)) invalid("metadata");
   const expectedContext = request.type === "modify_routine" ? "routine_review" : "program_review";
-  if (context.requestType !== expectedContext || context.target.programId !== context.program.id || (request.type === "modify_routine" && (!context.target.routineId || context.program.routines?.length !== 1))) invalid("target");
+  if (context.requestType !== expectedContext || context.target.programId !== context.program.id || (request.type === "modify_routine" && (!context.target.routineId || !Array.isArray(context.program.routines) || context.program.routines.length !== 1))) invalid("target");
   const contextLength = JSON.stringify(context).length;
   if (contextLength > LIMITS.context) invalid("context_size");
   if (request.type === "modify_routine" && !object(review)) invalid("review_required");
-  return { context, request: { type: request.type, instruction: request.instruction.trim() }, review: request.type === "modify_routine" ? reviewInput(review) : null };
+  return { context, request: { type: request.type, instruction: request.instruction.trim() }, review: request.type === "modify_routine" ? reviewInput(review, context) : null };
 }
 
 export function proposalMessages(context, request, review) {

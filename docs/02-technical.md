@@ -127,8 +127,10 @@ Preparation is transient and read-only: it never calls `applyRoutineProposal`,
 saves a program, or writes local or cloud state. The Rob panel can prepare a
 routine proposal after a routine review, but provides no approval or Apply UI.
 For routine proposals, the browser supplies only the completed review's bounded
-summary, concerns, and suggested changes. `robProposal` validates that review
-shape, sends it separately from the routine context, and instructs the provider
+summary, concerns, and suggested changes, including their bounded routine and
+routine-exercise references. `robProposal` validates that review shape and
+rechecks every reference against the supplied routine context before sending it
+separately from that context; stale references are discarded. It instructs the provider
 to make only changes supported by those findings. Every candidate operation has
 an explicit allowlist of fields before the client resolves exercises and applies
 the mandatory routine-proposal validation gate.

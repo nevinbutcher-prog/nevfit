@@ -36,6 +36,34 @@ Root Firebase config files:
 - `firebase.json`
 - `firestore.rules`
 
+## AI Transport Foundation
+
+Firebase Functions provides the sole browser-accessible AI boundary. The
+callable `aiGenerate` function requires Firebase Authentication and never
+trusts a client-supplied user ID. It accepts only a bounded
+provider-neutral `{ messages }` request; callers cannot select a provider,
+model, output budget, headers, tools, or routing settings.
+
+`functions/src/ai/aiService.js` owns validation and the provider-neutral
+service contract. `functions/src/ai/providers/openRouterProvider.js` is the
+current OpenRouter adapter and is the only module that knows the OpenRouter
+endpoint, headers, and response layout. The server config in `aiConfig.js`
+owns the provider, explicit default model, maximum output tokens, and finite
+upstream timeout. It performs one request only: there are no automatic retries.
+
+`OPENROUTER_API_KEY` is a Firebase Functions secret bound to the callable
+function, never a Vite environment value. Configure it outside source control
+with `firebase functions:secrets:set OPENROUTER_API_KEY`. The secret must not
+be placed in browser code, Firestore, local storage, logs, or committed env
+files.
+
+Responses normalize to text, model, and nullable token usage. Errors normalize
+to stable `ai_*` codes and safe messages. Development diagnostics record only
+provider/model, result/error code, duration, usage, and whether authenticated
+context was present—never prompts, outputs, tokens, emails, or health/training
+data. AI responses are transient: this foundation reads or writes no program,
+routine, workout, planning, health, or Firestore domain data.
+
 ## localStorage Keys
 
 - `nevfit_schedule`

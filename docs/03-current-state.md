@@ -65,6 +65,10 @@
 - JSON backup export from Settings
 - Confirmed JSON backup import that replaces Firestore-backed account data
 - Settings/About attribution for exercise data and images
+- Firebase-authenticated callable AI transport foundation
+- Provider-neutral AI service boundary with OpenRouter as the current server-only provider
+- Bounded AI request validation, server-configured model/output/timeout controls, normalized safe errors, and transient usage diagnostics
+- No user-facing Rob coaching UI or AI-driven application-data reads/writes
 
 ## Current Known Limitations
 
@@ -84,6 +88,7 @@
 - PR tracking
 - Historical progression analysis
 - Automatic runs and steps integrations
+- Configure the Firebase `OPENROUTER_API_KEY` secret and perform an authenticated production AI smoke test before enabling future Rob features
 
 ## Recent User Testing Findings
 

@@ -77,10 +77,12 @@ import {
   buildRoutineProposalPreview,
   createRoutineProposalBaseline,
   isRoutineProposalFresh,
-  prepareRoutineProposalApplication,
 } from "./services/rob/robProposalApproval";
-
-const createRobProposalState = () => ({ status: "idle", explanation: null, proposal: null, baseline: null, preview: null, error: null });
+import {
+  approveRobProposalWorkflow,
+  createRobProposalState,
+  rejectRobProposalWorkflow,
+} from "./services/rob/robProposalApprovalOrchestrator";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -1912,6 +1914,7 @@ function App() {
   }, [programDrafts, selectedProgramId, selectedProgramDayId]);
   const [saveMessage, setSaveMessage] = useState("");
   const [programSaveStatus, setProgramSaveStatus] = useState(null);
+  const [programDraftNotice, setProgramDraftNotice] = useState(null);
   const [cycleStartDate, setCycleStartDate] = useState(
     loadStoredCycleStartDate,
   );
@@ -2279,6 +2282,12 @@ function App() {
 
     return () => window.clearTimeout(timeoutId);
   }, [programSaveStatus]);
+
+  useEffect(() => {
+    if (!programDraftNotice) return undefined;
+    const timeoutId = window.setTimeout(() => setProgramDraftNotice(null), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [programDraftNotice]);
 
   useEffect(() => {
     setExpandedExerciseIndex(null);
@@ -4127,6 +4136,10 @@ function App() {
     programSaveStatus?.programId === selectedProgramId
       ? programSaveStatus
       : null;
+  const selectedProgramDraftNotice =
+    programDraftNotice?.programId === selectedProgramId
+      ? programDraftNotice
+      : null;
   const selectedProgramSaveButtonLabel =
     selectedProgramSaveStatus?.type === "success" &&
     !selectedProgramHasUnsavedChanges
@@ -4315,35 +4328,21 @@ function App() {
   }
 
   function rejectRobProposal() {
-    if (robProposalState.status === "applying") return;
-    setRobProposalState(createRobProposalState());
+    rejectRobProposalWorkflow({ proposalState: robProposalState, setProposalState: setRobProposalState });
   }
 
   function approveRobProposal() {
-    if (robProposalState.status !== "success" || !robProposalState.proposal || !robProposalState.baseline) return;
-    const proposal = robProposalState.proposal;
-    const baseline = robProposalState.baseline;
-    setRobProposalState((state) => ({ ...state, status: "applying", error: null }));
-    const latestProgram = programDraftsRef.current.find((program) => program.id === baseline.programId);
-    const prepared = prepareRoutineProposalApplication(latestProgram, proposal, baseline);
-    if (!prepared.ok) {
-      const message = prepared.code === "rob_proposal_stale"
-        ? "This routine has changed since Rob prepared these suggestions. Review the latest routine with Rob again before applying them."
-        : prepared.code === "rob_proposal_target_missing"
-          ? "The proposal's target is no longer available. Review the latest routine with Rob again."
-          : prepared.code === "rob_proposal_invalidated"
-            ? "These suggestions are no longer valid for this routine. Review the latest routine with Rob again."
-            : "Fitbot couldn't apply these changes safely. Your routine hasn't been changed.";
-      setRobProposalState((state) => ({ ...state, status: prepared.code === "rob_proposal_stale" ? "stale" : "error", proposal: null, baseline: null, error: message }));
-      return;
-    }
-    setProgramDrafts((drafts) => drafts.map((program) => program.id === prepared.result.program.id ? prepared.result.program : program));
-    setProgramSaveStatus({ programId: prepared.result.program.id, type: "success", message: "Changes added to your program draft. Review them and use Save Program when you're ready." });
-    setSelectedProgramId(prepared.result.program.id);
-    setSelectedProgramDayId(prepared.result.routineId);
-    setIsProgramEditorOpen(true);
-    setRobProposalState({ ...createRobProposalState(), status: "applied", error: "Changes added to your program draft. Review them and use Save Program when you're ready." });
-    setViewMode("routines");
+    approveRobProposalWorkflow({
+      proposalState: robProposalState,
+      getLatestProgram: (programId) => programDraftsRef.current.find((program) => program.id === programId),
+      setProposalState: setRobProposalState,
+      setProgramDrafts,
+      setProgramDraftNotice,
+      setSelectedProgramId,
+      setSelectedProgramDayId,
+      setIsProgramEditorOpen,
+      setViewMode,
+    });
   }
 
   return (
@@ -5180,6 +5179,11 @@ function App() {
                 }`}
               >
                 {selectedProgramSaveStatus.message}
+              </p>
+            ) : null}
+            {selectedProgramDraftNotice ? (
+              <p className="mb-4 rounded-lg border border-sky-400/40 bg-sky-400/10 px-4 py-3 text-sm font-semibold text-sky-100">
+                {selectedProgramDraftNotice.message}
               </p>
             ) : null}
 

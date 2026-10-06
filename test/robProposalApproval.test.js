@@ -42,6 +42,12 @@ test("preview blocks approval when an exercise name cannot be resolved", () => {
   assert.equal(result.code, "rob_proposal_preview_unavailable");
 });
 
+test("preview renders nullable rest as None without a seconds suffix", () => {
+  const result = buildRoutineProposalPreview(program(), proposal([{ type: "update_exercise", targetRoutineExerciseId: "row-a", updates: { restSeconds: null } }]), { getExerciseName: (id) => names[id] });
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.items[0].details, ["Rest: 120 sec → None"]);
+});
+
 test("baseline detects prescriptions, order, supersets, and routine names changing", () => {
   const original = program();
   const baseline = createRoutineProposalBaseline(original, proposal([{ type: "update_exercise", targetRoutineExerciseId: "row-a", updates: { sets: 4 } }]));

@@ -107,8 +107,9 @@ export function buildRoutineProposalPreview(program, proposal, { getExerciseName
       if (change.type === "update_exercise") {
         const labels = { sets: "Sets", repRange: "Reps", restSeconds: "Rest", displayNameOverride: "Name", note: "Note" };
         const details = Object.entries(change.updates).filter(([key, next]) => (target[key] ?? null) !== next).map(([key, next]) => {
-          const before = key === "restSeconds" ? `${value(target[key])} sec` : value(target[key]);
-          const after = key === "restSeconds" ? `${value(next)} sec` : value(next);
+          const restValue = (rest) => rest === null || rest === undefined ? "None" : `${rest} sec`;
+          const before = key === "restSeconds" ? restValue(target[key]) : value(target[key]);
+          const after = key === "restSeconds" ? restValue(next) : value(next);
           return `${labels[key]}: ${before} → ${after}`;
         });
         return { type: change.type, title: `Update ${named(target)}`, details };

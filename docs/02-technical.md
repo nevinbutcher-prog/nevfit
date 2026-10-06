@@ -125,7 +125,10 @@ current in-memory draft. Only that validator's normalized output is retained.
 
 Preparation is transient and read-only: it never calls `applyRoutineProposal`,
 saves a program, or writes local or cloud state. The Rob panel can prepare a
-routine proposal after a routine review, but provides no approval or Apply UI.
+routine proposal after a routine review, then shows a deterministic Fitbot
+preview of every operation in normal training terminology. The explanation is
+context only; the preview is derived from the normalized proposal and current
+draft rather than AI prose.
 For routine proposals, the browser supplies only the completed review's bounded
 summary, concerns, and suggested changes, including their bounded routine and
 routine-exercise references. `robProposal` validates that review shape and
@@ -134,6 +137,24 @@ separately from that context; stale references are discarded. It instructs the p
 to make only changes supported by those findings. Every candidate operation has
 an explicit allowlist of fields before the client resolves exercises and applies
 the mandatory routine-proposal validation gate.
+
+## Rob Proposal Approval
+
+`src/services/rob/robProposalApproval.js` is a pure approval boundary. When a
+validated proposal becomes reviewable, it records a deterministic baseline of
+the relevant routine (or program for a create proposal), including routine
+name, exercise order and IDs, prescriptions, display names, notes, and
+supersets. Approval reads the latest draft through `programDraftsRef`, compares
+that baseline, reruns `validateRoutineProposal`, then calls
+`applyRoutineProposal` with the newly normalized proposal. A structurally valid
+proposal is still blocked if the target draft changed after it was prepared.
+
+Rejecting, stale detection, previewing, and approval itself perform no
+persistence. A successful application atomically replaces only the matching
+entry in `programDrafts`; it clears the transient proposal and returns the user
+to the normal builder, where Save Program remains the only local/cloud commit.
+Neither Rob nor this workflow can modify workouts, history, planning, health,
+or any persisted data directly.
 
 ## localStorage Keys
 

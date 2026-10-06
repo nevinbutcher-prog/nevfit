@@ -48,6 +48,17 @@ test("preview renders nullable rest as None without a seconds suffix", () => {
   assert.deepEqual(result.items[0].details, ["Rest: 120 sec → None"]);
 });
 
+test("create preview exposes validated superset partners without group keys", () => {
+  const create = { id: "create-1", version: 1, proposalType: "create_routine", targetProgramId: "program-1", routine: { id: "routine-new", name: "Arms", exercises: [exercise("new-a", "wger-a", { proposalGroupKey: "pair" }), exercise("new-b", "wger-b", { proposalGroupKey: "pair" }), exercise("new-c", "wger-c")] } };
+  const result = buildRoutineProposalPreview(program(), create, { getExerciseName: (id) => names[id] });
+  assert.equal(result.valid, true);
+  assert.match(result.items[0].details.join(" "), /Superset with Cable Row/);
+  assert.match(result.items[1].details.join(" "), /Superset with Bench Press/);
+  assert.doesNotMatch(result.items.flatMap((item) => item.details).join(" "), /pair/);
+  create.routine.exercises[1].proposalGroupKey = null;
+  assert.equal(buildRoutineProposalPreview(program(), create, { getExerciseName: (id) => names[id] }).valid, false);
+});
+
 test("baseline detects prescriptions, order, supersets, and routine names changing", () => {
   const original = program();
   const baseline = createRoutineProposalBaseline(original, proposal([{ type: "update_exercise", targetRoutineExerciseId: "row-a", updates: { sets: 4 } }]));

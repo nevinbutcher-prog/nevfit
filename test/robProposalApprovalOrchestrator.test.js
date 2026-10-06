@@ -60,6 +60,20 @@ test("App approval orchestration uses the latest draft, updates only that draft,
   assert.equal(harness.events.includes("persistence"), false);
 });
 
+test("Create with Rob approval adds exactly one Fitbot-owned routine to its target draft only", () => {
+  const create = { id: "proposal-create", version: 1, proposalType: "create_routine", targetProgramId: "program-1", routine: { id: "routine-rob-owned", name: "Rob Arms", exercises: [{ routineExerciseId: "ri-rob-owned", exerciseId: "wger-new", sets: 3, repRange: "10-15", restSeconds: 90, proposalGroupKey: null }] } };
+  const source = program();
+  const state = { ...createRobProposalState(), status: "success", proposal: create, baseline: createRoutineProposalBaseline(source, create), preview: { items: [] } };
+  const harness = createHarness({ proposalState: state });
+  const before = structuredClone(harness.persisted);
+  assert.equal(approveRobProposalWorkflow(harness.options), true);
+  assert.equal(harness.drafts[0].days.length, 2);
+  assert.equal(harness.drafts[0].days[1].id, "routine-rob-owned");
+  assert.equal(harness.drafts[0].days[1].exercises[0].routineExerciseId, "ri-rob-owned");
+  assert.equal(harness.drafts[1].days.length, 1);
+  assert.deepEqual(harness.persisted, before);
+});
+
 test("App rejection clears proposal state without invoking application or persistence", () => {
   const harness = createHarness({ proposalState: readyState() });
   const beforeDrafts = structuredClone(harness.drafts);

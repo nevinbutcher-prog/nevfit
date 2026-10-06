@@ -78,7 +78,15 @@ export function buildRoutineProposalPreview(program, proposal, { getExerciseName
   try {
     if (proposal?.proposalType === ROUTINE_PROPOSAL_TYPES.CREATE) {
       const newRoutine = proposal.routine;
-      const items = newRoutine.exercises.map((entry) => ({ type: "add_exercise", title: `Add ${named(entry)}`, details: [...prescription(entry), "In new routine"] }));
+      const groups = new Map();
+      newRoutine.exercises.forEach((entry) => {
+        if (entry.proposalGroupKey) groups.set(entry.proposalGroupKey, [...(groups.get(entry.proposalGroupKey) ?? []), entry]);
+      });
+      if ([...groups.values()].some((members) => members.length < 2)) throw new Error("invalid_group");
+      const items = newRoutine.exercises.map((entry) => {
+        const partners = entry.proposalGroupKey ? groups.get(entry.proposalGroupKey).filter((member) => member !== entry) : [];
+        return { type: "add_exercise", title: `Add ${named(entry)}`, details: [...prescription(entry), ...(partners.length ? [`Superset with ${partners.map(named).join(", ")}`] : []), "In new routine"] };
+      });
       return { valid: true, routineName: newRoutine.name, items };
     }
     if (proposal?.proposalType !== ROUTINE_PROPOSAL_TYPES.MODIFY) return { valid: false, code: "rob_proposal_invalidated", items: [] };

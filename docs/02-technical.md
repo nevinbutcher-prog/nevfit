@@ -156,6 +156,16 @@ to the normal builder, where Save Program remains the only local/cloud commit.
 Neither Rob nor this workflow can modify workouts, history, planning, health,
 or any persisted data directly.
 
+## Create Routines with Rob
+
+The selected-program builder provides a constrained Create with Rob form for a
+training focus plus optional duration, equipment, and considerations. It builds
+a bounded instruction and uses the existing `program_review` context and
+`create_routine` proposal contract. Candidate movements still resolve only
+through the exercise provider, then follow the existing validation, preview,
+freshness, approval, and draft-only Save Program workflow. This creates one
+routine at a time; it does not schedule, activate, or generate whole programs.
+
 ## localStorage Keys
 
 - `nevfit_schedule`

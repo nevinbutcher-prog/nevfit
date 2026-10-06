@@ -83,6 +83,7 @@ import {
   createRobProposalState,
   rejectRobProposalWorkflow,
 } from "./services/rob/robProposalApprovalOrchestrator";
+import { buildRoutineCreationInstruction } from "./services/rob/robRoutineCreation";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -1905,6 +1906,8 @@ function App() {
   const [robPanelMode, setRobPanelMode] = useState("advice");
   const [robReviewOrigin, setRobReviewOrigin] = useState(null);
   const [robProposalState, setRobProposalState] = useState(createRobProposalState);
+  const [robCreateForm, setRobCreateForm] = useState({ focus: "", duration: "", equipment: "", considerations: "" });
+  const [robCreateState, setRobCreateState] = useState({ open: false, status: "idle", error: null });
   const programDraftsRef = useRef(programDrafts);
   useEffect(() => {
     programDraftsRef.current = programDrafts;
@@ -4331,6 +4334,41 @@ function App() {
     rejectRobProposalWorkflow({ proposalState: robProposalState, setProposalState: setRobProposalState });
   }
 
+  async function submitRobRoutineCreation() {
+    if (robCreateState.status === "loading" || !selectedProgramDraft) return;
+    const request = buildRoutineCreationInstruction(robCreateForm);
+    if (!request.valid) {
+      setRobCreateState((state) => ({ ...state, error: request.code === "missing_focus" ? "Tell Rob what you would like to train." : "This request is too long. Shorten it before asking Rob.", status: "error" }));
+      return;
+    }
+    const original = selectedProgramDraft;
+    const fingerprint = JSON.stringify(original);
+    setRobCreateState((state) => ({ ...state, status: "loading", error: null }));
+    try {
+      const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: original, routineId: null, completedWorkouts });
+      const generated = await requestRobProposal({ context, request: { type: "create_routine", instruction: request.instruction } });
+      const latest = programDraftsRef.current.find((item) => item.id === original.id);
+      if (!latest || JSON.stringify(latest) !== fingerprint) throw new Error("proposal_draft_changed");
+      const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest });
+      if (!resolved.validation.valid) throw new Error("proposal_invalid");
+      const baseline = createRoutineProposalBaseline(latest, resolved.proposal);
+      const suppliedNames = resolved.exerciseNames ?? {};
+      const missingIds = resolved.proposal.routine.exercises.filter((entry) => !suppliedNames[entry.exerciseId] && !getExercise(entry.exerciseId)?.name).map((entry) => entry.exerciseId);
+      const fetched = (await Promise.all([...new Set(missingIds)].map((id) => getExerciseById(id).catch(() => null)))).filter(Boolean);
+      if (fetched.length) setExerciseLibrary((library) => [...library, ...fetched.filter((item) => !library.some((entry) => entry.id === item.id))]);
+      const current = programDraftsRef.current.find((item) => item.id === original.id);
+      if (!isRoutineProposalFresh(current, baseline)) throw new Error("proposal_draft_changed");
+      const fetchedNames = Object.fromEntries(fetched.map((item) => [item.id, item.name]));
+      const preview = buildRoutineProposalPreview(current, resolved.proposal, { getExerciseName: (id) => suppliedNames[id] ?? fetchedNames[id] ?? getExercise(id)?.name ?? null });
+      if (!preview.valid) throw new Error("proposal_invalid");
+      setRobProposalState({ status: "success", explanation: generated.explanation, proposal: resolved.proposal, baseline, preview, error: null });
+      setRobCreateState((state) => ({ ...state, status: "success", error: null }));
+    } catch (error) {
+      const message = error?.message === "proposal_draft_changed" ? "This program changed while Rob was building the routine. Try again from the latest draft." : error?.code === "proposal_exercise_unresolved" ? error.message : "Rob couldn't build a safe routine proposal right now.";
+      setRobCreateState((state) => ({ ...state, status: "error", error: message }));
+    }
+  }
+
   function approveRobProposal() {
     approveRobProposalWorkflow({
       proposalState: robProposalState,
@@ -5387,7 +5425,12 @@ function App() {
                     >
                       + Add Routine
                     </button>
+                    <button type="button" onClick={() => setRobCreateState((state) => ({ ...state, open: !state.open, error: null }))} className="rounded-lg border border-violet-400/60 px-4 py-2 text-sm font-semibold text-violet-200 transition hover:border-violet-300">✨ Create with Rob</button>
                   </div>
+
+                  {robCreateState.open ? <section className="mt-4 rounded-xl border border-violet-400/30 bg-slate-950/60 p-4"><h3 className="font-bold text-white">Create a routine with Rob</h3><p className="mt-1 text-sm text-slate-400">Rob will propose a routine for this program. You can review it before anything changes.</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="sm:col-span-2 text-sm font-semibold text-slate-300">What would you like to train?<textarea value={robCreateForm.focus} maxLength="360" onChange={(event) => setRobCreateForm((form) => ({ ...form, focus: event.target.value }))} rows="2" className={`${routineEditorInputClassName} mt-1`} placeholder="A 45-minute upper-body hypertrophy workout focusing on shoulders and arms." /></label><label className="text-sm font-semibold text-slate-300">Approximate duration<select value={robCreateForm.duration} onChange={(event) => setRobCreateForm((form) => ({ ...form, duration: event.target.value }))} className={`${routineEditorSelectClassName} mt-1`}><option value="">No preference</option><option>30 minutes</option><option>45 minutes</option><option>60 minutes</option><option>75 minutes</option></select></label><label className="text-sm font-semibold text-slate-300">Available equipment<textarea value={robCreateForm.equipment} maxLength="160" onChange={(event) => setRobCreateForm((form) => ({ ...form, equipment: event.target.value }))} rows="2" className={`${routineEditorInputClassName} mt-1`} placeholder="Gym machines and cables only" /></label><label className="sm:col-span-2 text-sm font-semibold text-slate-300">Additional considerations<textarea value={robCreateForm.considerations} maxLength="180" onChange={(event) => setRobCreateForm((form) => ({ ...form, considerations: event.target.value }))} rows="2" className={`${routineEditorInputClassName} mt-1`} placeholder="Avoid movements requiring heavy gripping." /></label></div>{robCreateState.error ? <p className="mt-3 text-sm font-semibold text-amber-200">{robCreateState.error}</p> : null}<button type="button" onClick={submitRobRoutineCreation} disabled={robCreateState.status === "loading"} className="mt-3 rounded-lg bg-violet-300 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50">{robCreateState.status === "loading" ? "Rob is building your routine…" : "Ask Rob to create routine"}</button></section> : null}
+
+                  {robCreateState.status === "success" && robProposalState.status === "success" ? <section className="mt-4 rounded-xl border border-violet-400/30 bg-slate-950/60 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-violet-200">Rob's proposed routine</p><h3 className="mt-1 text-xl font-bold">{robProposalState.preview?.routineName}</h3>{robProposalState.explanation ? <p className="mt-2 text-sm text-slate-300">{robProposalState.explanation}</p> : null}<div className="mt-3 space-y-2">{robProposalState.preview?.items.map((item, index) => <div key={index} className="rounded-lg border border-slate-800 p-3"><p className="font-semibold">{index + 1}. {item.title.replace(/^Add /, "")}</p>{item.details.filter((detail) => detail !== "In new routine").map((detail, detailIndex) => <p key={detailIndex} className="text-sm text-slate-400">{detail}</p>)}</div>)}</div><div className="mt-4 flex gap-3"><button type="button" onClick={() => { rejectRobProposal(); setRobCreateState((state) => ({ ...state, status: "idle" })); }} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold">Reject</button><button type="button" onClick={approveRobProposal} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950">Approve routine</button></div></section> : null}
 
                   {selectedProgramDayDraft ? (
                     <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3 sm:p-4">

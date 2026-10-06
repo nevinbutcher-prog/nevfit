@@ -42,7 +42,9 @@ export function approveRobProposalWorkflow({
     setProposalState((state) => ({ ...state, status: prepared.code === "rob_proposal_stale" ? "stale" : "error", proposal: null, baseline: null, error: failureMessage(prepared.code) }));
     return false;
   }
-  const message = "Changes added to your program draft. Review them and use Save Program when you're ready.";
+  const message = proposal.proposalType === "create_routine"
+    ? "Routine added to your program draft. Review it and use Save Program when you're ready."
+    : "Changes added to your program draft. Review them and use Save Program when you're ready.";
   setProgramDrafts((drafts) => drafts.map((program) => program.id === prepared.result.program.id ? prepared.result.program : program));
   setProgramDraftNotice({ programId: prepared.result.program.id, message });
   setSelectedProgramId(prepared.result.program.id);

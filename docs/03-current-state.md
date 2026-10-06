@@ -78,6 +78,7 @@
 - Routine reviews can prepare a transient candidate proposal that Fitbot resolves and validates against the current draft, then presents as a readable change preview
 - Rob routine proposals require explicit whole-proposal approval or rejection; rejection is non-mutating and approval applies only to the unsaved editable program draft
 - Proposal approval fingerprints the relevant draft, checks freshness and revalidates immediately before the sole `applyRoutineProposal` application boundary; Save Program remains the only persistence commit
+- Selected program builders include Create with Rob for one requested routine with optional duration, equipment, and constraints; proposals use existing provider resolution, human approval, and draft-only persistence boundaries
 
 ## Current Known Limitations
 

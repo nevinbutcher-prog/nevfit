@@ -53,6 +53,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Review with Rob: read-only structured routine and program reviews shown in the Rob coaching panel, with strengths, concerns, suggested changes, and limitations
 - Routine reviews can prepare a transient, validated Rob proposal with a human-readable Fitbot change preview; users must explicitly approve or reject it
 - Approved Rob proposals update only the editable, unsaved program draft; Save Program remains the sole persistence action
+- Program builders can ask Rob to create one constrained routine, then inspect, approve, or reject the draft-only proposal
 
 ## Current Product Direction
 

@@ -1,19 +1,28 @@
-const DEFAULT_ALIASES = {
-  "db": "dumbbell",
-  "bb": "barbell",
-  "lat raise": "lateral raise",
-  "pulldown": "lat pulldown",
-  "cable pushdown": "triceps pushdown",
-  "db bench": "dumbbell bench press",
-};
+const DEFAULT_ALIASES = [
+  { from: ["db", "bench", "press"], to: ["dumbbell", "bench", "press"] },
+  { from: ["db", "bench"], to: ["dumbbell", "bench", "press"] },
+  { from: ["db"], to: ["dumbbell"] },
+  { from: ["bb"], to: ["barbell"] },
+  { from: ["lat", "raise"], to: ["lateral", "raise"] },
+  { from: ["cable", "pushdown"], to: ["triceps", "pushdown"] },
+];
+
+const tokensMatch = (tokens, index, expected) => expected.every((token, offset) => tokens[index + offset] === token);
 
 export function normalizeExerciseText(value, aliases = DEFAULT_ALIASES) {
-  let text = typeof value === "string" ? value.toLowerCase() : "";
-  text = text.replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
-  Object.entries(aliases).sort(([first], [second]) => second.length - first.length).forEach(([from, to]) => {
-    text = text.replace(new RegExp(`(^| )${from.replace(/ /g, "\\s+")}(?= |$)`, "g"), `$1${to}`);
-  });
-  return text.replace(/\s+/g, " ").trim();
+  const tokens = (typeof value === "string" ? value.toLowerCase() : "").replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter(Boolean);
+  const rules = Array.isArray(aliases) ? aliases : DEFAULT_ALIASES;
+  const canonical = [];
+  for (let index = 0; index < tokens.length;) {
+    const rule = rules.find((entry) => tokensMatch(tokens, index, entry.from));
+    if (rule) { canonical.push(...rule.to); index += rule.from.length; continue; }
+    // A bare pulldown is shorthand for a lat pulldown. Do not expand it when
+    // the canonical qualifier is already present anywhere in the description.
+    if (tokens[index] === "pulldown" && !tokens.includes("lat")) canonical.push("lat");
+    canonical.push(tokens[index]);
+    index += 1;
+  }
+  return canonical.join(" ");
 }
 
 const validProviderExercise = (exercise) => exercise && /^wger-[A-Za-z0-9._:-]+$/.test(exercise.id) && typeof exercise.name === "string";

@@ -80,6 +80,7 @@
 - Proposal approval fingerprints the relevant draft, checks freshness and revalidates immediately before the sole `applyRoutineProposal` application boundary; Save Program remains the only persistence commit
 - Selected program builders include Create with Rob for one requested routine with optional duration, equipment, and constraints; proposals use existing provider resolution, human approval, and draft-only persistence boundaries
 - Deterministic Rob exercise resolution supports bounded aliases and conservative similarity matching; ambiguous provider results require user choice before validation
+- Pending exercise resolution retains the original generation baseline, so edits made before validation invalidate rather than rebase the cached Rob candidate
 
 ## Current Known Limitations
 

@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildRoutineProposalPreview,
+  createRobProposalGenerationBaseline,
   createRoutineProposalBaseline,
+  isRobProposalGenerationFresh,
   isRoutineProposalFresh,
   prepareRoutineProposalApplication,
 } from "../src/services/rob/robProposalApproval.js";
@@ -73,6 +75,25 @@ test("baseline detects prescriptions, order, supersets, and routine names changi
     mutate(changed);
     assert.equal(isRoutineProposalFresh(changed, baseline), false);
   }
+});
+
+test("generation baseline blocks stale ambiguous routine modifications before materialization", () => {
+  const draftA = program();
+  const candidate = { proposalType: "modify_routine", targetRoutineId: "routine-1", changes: [{ type: "add_exercise" }] };
+  const baseline = createRobProposalGenerationBaseline(draftA, candidate);
+  const draftB = structuredClone(draftA);
+  draftB.days[0].exercises[0].sets = 4;
+  assert.equal(isRobProposalGenerationFresh(draftA, baseline), true);
+  assert.equal(isRobProposalGenerationFresh(draftB, baseline), false);
+});
+
+test("generation baseline blocks stale ambiguous routine creation when any program draft changes", () => {
+  const draftA = program();
+  const baseline = createRobProposalGenerationBaseline(draftA, { proposalType: "create_routine", routine: { name: "Rob routine" } });
+  const draftB = structuredClone(draftA);
+  draftB.days[0].exercises[0].repRange = "6-10";
+  assert.equal(isRobProposalGenerationFresh(draftA, baseline), true);
+  assert.equal(isRobProposalGenerationFresh(draftB, baseline), false);
 });
 
 test("approval preparation is draft-only, revalidates, and blocks stale or invalid proposals", () => {

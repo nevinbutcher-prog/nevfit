@@ -141,6 +141,14 @@ plausible provider results enter a transient `needs_resolution` state. The
 user selects one displayed provider result, after which Fitbot reruns normal
 proposal validation without making another AI request. No program draft is
 mutated during resolution.
+
+When resolution pauses, Fitbot also retains a canonical generation baseline of
+the draft on which Rob produced the candidate. Continuing resolution first
+compares the latest draft with that baseline: routine changes invalidate a
+routine-modification candidate, while any program change invalidates a
+routine-creation candidate. A cached candidate is never rebased onto newer
+draft state. This check complements, rather than replaces, the normal
+preview and approval-time freshness checks.
 For routine proposals, the browser supplies only the completed review's bounded
 summary, concerns, and suggested changes, including their bounded routine and
 routine-exercise references. `robProposal` validates that review shape and

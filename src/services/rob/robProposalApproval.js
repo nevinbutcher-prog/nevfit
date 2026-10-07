@@ -40,6 +40,13 @@ export function createRoutineProposalBaseline(program, proposal) {
   return null;
 }
 
+// Generation freshness is captured before exercise resolution may pause. It
+// intentionally shares the approval boundary's canonical state definition.
+export function createRobProposalGenerationBaseline(program, candidate) {
+  if (!candidate || typeof candidate !== "object") return null;
+  return createRoutineProposalBaseline(program, { ...candidate, targetProgramId: program?.id });
+}
+
 export function isRoutineProposalFresh(program, baseline) {
   if (!program || !baseline || program.id !== baseline.programId) return false;
   if (baseline.proposalType === ROUTINE_PROPOSAL_TYPES.MODIFY) {
@@ -51,6 +58,8 @@ export function isRoutineProposalFresh(program, baseline) {
   }
   return false;
 }
+
+export const isRobProposalGenerationFresh = isRoutineProposalFresh;
 
 const prescription = (exercise) => [
   `${exercise.sets} ${exercise.sets === 1 ? "set" : "sets"}`,

@@ -75,7 +75,9 @@ import { requestRobReview } from "./services/rob/robReviewClient";
 import { requestRobProposal, resolveRobProposalCandidate } from "./services/rob/robProposalClient";
 import {
   buildRoutineProposalPreview,
+  createRobProposalGenerationBaseline,
   createRoutineProposalBaseline,
+  isRobProposalGenerationFresh,
   isRoutineProposalFresh,
 } from "./services/rob/robProposalApproval";
 import {
@@ -4288,21 +4290,21 @@ function App() {
     }
   }
 
-  async function submitRobProposal(resolutionSelections = {}, cachedGenerated = null) {
+  async function submitRobProposal(resolutionSelections = {}, cachedResolution = null) {
     if (robProposalState.status === "loading" || robProposalState.status === "applying" || !selectedProgramDraft || !selectedProgramDayDraft) return;
     const program = selectedProgramDraft;
     const routineId = selectedProgramDayDraft.id;
-    const fingerprint = JSON.stringify(program);
     setRobProposalState({ ...createRobProposalState(), status: "loading" });
     try {
       const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program, routineId, completedWorkouts });
       const review = { summary: robReview.summary, concerns: robReview.concerns.map(({ title, explanation, routineIds, routineExerciseIds }) => ({ title, explanation, routineIds, routineExerciseIds })), suggestedChanges: robReview.suggestedChanges.map(({ title, explanation, priority, routineIds, routineExerciseIds }) => ({ title, explanation, priority, routineIds, routineExerciseIds })) };
-      const generated = cachedGenerated ?? await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." }, review });
-      const latest = programDraftsRef.current.find((item) => item.id === program.id);
-      if (!latest || JSON.stringify(latest) !== fingerprint) throw new Error("proposal_draft_changed");
+      const generated = cachedResolution?.candidate ?? await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." }, review });
+      const generationBaseline = cachedResolution?.generationBaseline ?? createRobProposalGenerationBaseline(program, generated.candidate);
+      const latest = programDraftsRef.current.find((item) => item.id === generationBaseline?.programId);
+      if (!latest || !isRobProposalGenerationFresh(latest, generationBaseline)) throw new Error(cachedResolution ? "proposal_resolution_stale" : "proposal_draft_changed");
       const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest, resolutionSelections });
       if (resolved.status === "needs_resolution") {
-        setRobProposalState({ status: "needs_resolution", explanation: generated.explanation, candidate: generated, pending: resolved.pending, resolutionSelections, error: null, origin: "review" });
+        setRobProposalState({ status: "needs_resolution", explanation: generated.explanation, candidate: generated, generationBaseline, pending: resolved.pending, resolutionSelections, error: null, origin: "review" });
         return;
       }
       if (!resolved.validation.valid) {
@@ -4329,7 +4331,7 @@ function App() {
       }
       setRobProposalState({ status: "success", explanation: generated.explanation, proposal: resolved.proposal, baseline, preview, error: null });
     } catch (error) {
-      const message = error?.message === "proposal_draft_changed" ? "The routine changed while Rob was preparing the proposal. Generate it again." : error?.code === "proposal_exercise_unresolved" ? error.message : error?.code === "ai_invalid_response" ? "Rob returned an unusable proposal." : "Rob couldn't prepare a proposal right now.";
+      const message = error?.message === "proposal_resolution_stale" ? "This routine changed while you were resolving Rob's suggested exercise. Review the latest routine with Rob again before applying the proposal." : error?.message === "proposal_draft_changed" ? "The routine changed while Rob was preparing the proposal. Generate it again." : error?.code === "proposal_exercise_unresolved" ? error.message : error?.code === "ai_invalid_response" ? "Rob returned an unusable proposal." : "Rob couldn't prepare a proposal right now.";
       setRobProposalState({ ...createRobProposalState(), status: "error", error: message });
     }
   }
@@ -4344,13 +4346,13 @@ function App() {
 
   function continueRobExerciseResolution() {
     if (robProposalState.status !== "needs_resolution" || !robProposalState.candidate) return;
-    const { resolutionSelections = {}, candidate, origin } = robProposalState;
+    const { resolutionSelections = {}, candidate, generationBaseline, origin } = robProposalState;
     if ((robProposalState.pending ?? []).some((item) => !resolutionSelections[item.key])) return;
-    if (origin === "creation") submitRobRoutineCreation(resolutionSelections, candidate);
-    else submitRobProposal(resolutionSelections, candidate);
+    if (origin === "creation") submitRobRoutineCreation(resolutionSelections, { candidate, generationBaseline });
+    else submitRobProposal(resolutionSelections, { candidate, generationBaseline });
   }
 
-  async function submitRobRoutineCreation(resolutionSelections = {}, cachedGenerated = null) {
+  async function submitRobRoutineCreation(resolutionSelections = {}, cachedResolution = null) {
     if (robCreateState.status === "loading" || !selectedProgramDraft) return;
     const request = buildRoutineCreationInstruction(robCreateForm);
     if (!request.valid) {
@@ -4358,16 +4360,16 @@ function App() {
       return;
     }
     const original = selectedProgramDraft;
-    const fingerprint = JSON.stringify(original);
     setRobCreateState((state) => ({ ...state, status: "loading", error: null }));
     try {
       const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: original, routineId: null, completedWorkouts });
-      const generated = cachedGenerated ?? await requestRobProposal({ context, request: { type: "create_routine", instruction: request.instruction } });
-      const latest = programDraftsRef.current.find((item) => item.id === original.id);
-      if (!latest || JSON.stringify(latest) !== fingerprint) throw new Error("proposal_draft_changed");
+      const generated = cachedResolution?.candidate ?? await requestRobProposal({ context, request: { type: "create_routine", instruction: request.instruction } });
+      const generationBaseline = cachedResolution?.generationBaseline ?? createRobProposalGenerationBaseline(original, generated.candidate);
+      const latest = programDraftsRef.current.find((item) => item.id === generationBaseline?.programId);
+      if (!latest || !isRobProposalGenerationFresh(latest, generationBaseline)) throw new Error(cachedResolution ? "proposal_resolution_stale" : "proposal_draft_changed");
       const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest, resolutionSelections });
       if (resolved.status === "needs_resolution") {
-        setRobProposalState({ status: "needs_resolution", explanation: generated.explanation, candidate: generated, pending: resolved.pending, resolutionSelections, error: null, origin: "creation" });
+        setRobProposalState({ status: "needs_resolution", explanation: generated.explanation, candidate: generated, generationBaseline, pending: resolved.pending, resolutionSelections, error: null, origin: "creation" });
         setRobCreateState((state) => ({ ...state, status: "needs_resolution", error: null }));
         return;
       }
@@ -4385,7 +4387,7 @@ function App() {
       setRobProposalState({ status: "success", explanation: generated.explanation, proposal: resolved.proposal, baseline, preview, error: null });
       setRobCreateState((state) => ({ ...state, status: "success", error: null }));
     } catch (error) {
-      const message = error?.message === "proposal_draft_changed" ? "This program changed while Rob was building the routine. Try again from the latest draft." : error?.code === "proposal_exercise_unresolved" ? error.message : "Rob couldn't build a safe routine proposal right now.";
+      const message = error?.message === "proposal_resolution_stale" ? "This program changed while you were resolving Rob's suggested exercise. Ask Rob to build the routine again from the latest program." : error?.message === "proposal_draft_changed" ? "This program changed while Rob was building the routine. Try again from the latest draft." : error?.code === "proposal_exercise_unresolved" ? error.message : "Rob couldn't build a safe routine proposal right now.";
       setRobCreateState((state) => ({ ...state, status: "error", error: message }));
     }
   }

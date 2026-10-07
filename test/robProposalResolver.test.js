@@ -13,9 +13,16 @@ test("proposal resolver resolves an exact provider exercise, generates IDs, and 
   assert.deepEqual(program, before);
 });
 
-test("proposal resolver rejects ambiguous or unresolved provider exercises", async () => {
+test("proposal resolver keeps ambiguous exercises transient for explicit user resolution and rejects unresolved matches", async () => {
   const candidate = { proposalType: "modify_routine", targetRoutineId: "routine-1", title: "Add", summary: "Add", changes: [{ type: "add_exercise", afterRoutineExerciseId: "row-1", exercise: { exerciseRef: { query: "raise", name: "Cable Lateral Raise" }, sets: 3, repRange: "10-15", restSeconds: 90 } }] };
-  for (const results of [[], [{ id: "wger-1", name: "Cable Lateral Raise" }, { id: "wger-2", name: "Cable Lateral Raise" }]]) await assert.rejects(() => resolveRobProposalCandidate({ candidate, currentProgram: program, searchExercises: async () => results }), (error) => error.code === "proposal_exercise_unresolved");
+  await assert.rejects(() => resolveRobProposalCandidate({ candidate, currentProgram: program, searchExercises: async () => [] }), (error) => error.code === "proposal_exercise_unresolved");
+  const ambiguous = await resolveRobProposalCandidate({ candidate, currentProgram: program, searchExercises: async () => [{ id: "wger-1", name: "Cable Lateral Raise" }, { id: "wger-2", name: "Cable Lateral Raise" }] });
+  assert.equal(ambiguous.status, "needs_resolution");
+  assert.equal(ambiguous.proposal, null);
+  assert.equal(ambiguous.pending[0].key, "changes.0.exercise");
+  const selected = await resolveRobProposalCandidate({ candidate, currentProgram: program, resolutionSelections: { "changes.0.exercise": "wger-2" }, searchExercises: async () => [{ id: "wger-1", name: "Cable Lateral Raise" }, { id: "wger-2", name: "Cable Lateral Raise" }] });
+  assert.equal(selected.validation.valid, true);
+  assert.equal(selected.proposal.changes[0].exercise.exerciseId, "wger-2");
 });
 
 test("proposal resolver supports a valid replace while refusing AI-supplied provider IDs", async () => {

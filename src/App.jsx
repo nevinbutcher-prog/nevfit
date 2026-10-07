@@ -4288,7 +4288,7 @@ function App() {
     }
   }
 
-  async function submitRobProposal() {
+  async function submitRobProposal(resolutionSelections = {}, cachedGenerated = null) {
     if (robProposalState.status === "loading" || robProposalState.status === "applying" || !selectedProgramDraft || !selectedProgramDayDraft) return;
     const program = selectedProgramDraft;
     const routineId = selectedProgramDayDraft.id;
@@ -4297,10 +4297,14 @@ function App() {
     try {
       const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program, routineId, completedWorkouts });
       const review = { summary: robReview.summary, concerns: robReview.concerns.map(({ title, explanation, routineIds, routineExerciseIds }) => ({ title, explanation, routineIds, routineExerciseIds })), suggestedChanges: robReview.suggestedChanges.map(({ title, explanation, priority, routineIds, routineExerciseIds }) => ({ title, explanation, priority, routineIds, routineExerciseIds })) };
-      const generated = await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." }, review });
+      const generated = cachedGenerated ?? await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." }, review });
       const latest = programDraftsRef.current.find((item) => item.id === program.id);
       if (!latest || JSON.stringify(latest) !== fingerprint) throw new Error("proposal_draft_changed");
-      const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest });
+      const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest, resolutionSelections });
+      if (resolved.status === "needs_resolution") {
+        setRobProposalState({ status: "needs_resolution", explanation: generated.explanation, candidate: generated, pending: resolved.pending, resolutionSelections, error: null, origin: "review" });
+        return;
+      }
       if (!resolved.validation.valid) {
         setRobProposalState({ ...createRobProposalState(), status: "error", explanation: generated.explanation, error: "The proposal didn't pass Fitbot validation and was blocked." });
         return;
@@ -4334,7 +4338,19 @@ function App() {
     rejectRobProposalWorkflow({ proposalState: robProposalState, setProposalState: setRobProposalState });
   }
 
-  async function submitRobRoutineCreation() {
+  function selectRobExerciseResolution(key, exerciseId) {
+    setRobProposalState((state) => ({ ...state, resolutionSelections: { ...(state.resolutionSelections ?? {}), [key]: exerciseId } }));
+  }
+
+  function continueRobExerciseResolution() {
+    if (robProposalState.status !== "needs_resolution" || !robProposalState.candidate) return;
+    const { resolutionSelections = {}, candidate, origin } = robProposalState;
+    if ((robProposalState.pending ?? []).some((item) => !resolutionSelections[item.key])) return;
+    if (origin === "creation") submitRobRoutineCreation(resolutionSelections, candidate);
+    else submitRobProposal(resolutionSelections, candidate);
+  }
+
+  async function submitRobRoutineCreation(resolutionSelections = {}, cachedGenerated = null) {
     if (robCreateState.status === "loading" || !selectedProgramDraft) return;
     const request = buildRoutineCreationInstruction(robCreateForm);
     if (!request.valid) {
@@ -4346,10 +4362,15 @@ function App() {
     setRobCreateState((state) => ({ ...state, status: "loading", error: null }));
     try {
       const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: original, routineId: null, completedWorkouts });
-      const generated = await requestRobProposal({ context, request: { type: "create_routine", instruction: request.instruction } });
+      const generated = cachedGenerated ?? await requestRobProposal({ context, request: { type: "create_routine", instruction: request.instruction } });
       const latest = programDraftsRef.current.find((item) => item.id === original.id);
       if (!latest || JSON.stringify(latest) !== fingerprint) throw new Error("proposal_draft_changed");
-      const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest });
+      const resolved = await resolveRobProposalCandidate({ candidate: generated.candidate, currentProgram: latest, resolutionSelections });
+      if (resolved.status === "needs_resolution") {
+        setRobProposalState({ status: "needs_resolution", explanation: generated.explanation, candidate: generated, pending: resolved.pending, resolutionSelections, error: null, origin: "creation" });
+        setRobCreateState((state) => ({ ...state, status: "needs_resolution", error: null }));
+        return;
+      }
       if (!resolved.validation.valid) throw new Error("proposal_invalid");
       const baseline = createRoutineProposalBaseline(latest, resolved.proposal);
       const suppliedNames = resolved.exerciseNames ?? {};
@@ -4381,6 +4402,18 @@ function App() {
       setIsProgramEditorOpen,
       setViewMode,
     });
+  }
+
+  function renderRobExerciseResolution() {
+    const pending = robProposalState.pending ?? [];
+    const selections = robProposalState.resolutionSelections ?? {};
+    const complete = pending.length > 0 && pending.every((item) => selections[item.key]);
+    return <section className="rounded-2xl border border-amber-400/40 bg-slate-900 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">Choose suggested exercises</p>
+      <p className="mt-2 text-sm text-slate-300">Fitbot found more than one plausible library exercise. Choose each match before it can validate the proposal.</p>
+      <div className="mt-4 space-y-4">{pending.map((item) => <fieldset key={item.key}><legend className="font-semibold text-white">{item.requestedName}</legend><div className="mt-2 grid gap-2">{item.candidates.map((exercise) => <label key={exercise.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-700 p-3 text-sm text-slate-200"><input type="radio" name={item.key} checked={selections[item.key] === exercise.id} onChange={() => selectRobExerciseResolution(item.key, exercise.id)} /><span>{exercise.name}</span></label>)}</div></fieldset>)}</div>
+      <div className="mt-4 flex flex-wrap gap-3"><button type="button" onClick={rejectRobProposal} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200">Reject</button><button type="button" onClick={continueRobExerciseResolution} disabled={!complete} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">Validate proposal</button></div>
+    </section>;
   }
 
   return (
@@ -4519,7 +4552,7 @@ function App() {
               {robReviewStatus === "loading" ? <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">Rob is reviewing this {robPanelMode === "routine_review" ? "routine" : "program"}…</p> : null}
               {robReview ? <><article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</p><p className="mt-2 text-slate-100">{robReview.summary}</p></article>{[["Strengths", robReview.strengths, "border-emerald-400/40", "text-emerald-200"], ["Concerns", robReview.concerns, "border-amber-400/40", "text-amber-200"], ["Suggested changes", robReview.suggestedChanges, "border-slate-700", "text-slate-200"]].map(([title, findings, border, heading]) => <section key={title} className={`rounded-2xl border ${border} bg-slate-900 p-5`}><h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${heading}`}>{title}</h3><div className="mt-3 space-y-4">{findings.length ? findings.map((finding, index) => <div key={`${title}-${index}`}><p className="font-semibold text-white">{finding.title}{finding.priority ? <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs font-medium capitalize text-slate-300">{finding.priority}</span> : null}</p><p className="mt-1 text-sm text-slate-300">{finding.explanation}</p></div>) : <p className="text-sm text-slate-400">No specific findings.</p>}</div></section>)}<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Limitations</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{robReview.limitations.length ? robReview.limitations.map((limitation, index) => <li key={index}>• {limitation}</li>) : <li>• No additional limitations were supplied.</li>}</ul></section></> : null}
               {robPanelMode === "routine_review" && robReview ? <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
-                {robProposalState.status === "success" || robProposalState.status === "applying" ? <>
+                {robProposalState.status === "needs_resolution" && robProposalState.origin === "review" ? renderRobExerciseResolution() : robProposalState.status === "success" || robProposalState.status === "applying" ? <>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">Rob's suggested changes</p>
                   {robProposalState.explanation ? <p className="mt-2 text-sm text-slate-300">{robProposalState.explanation}</p> : null}
                   <div className="mt-4 space-y-3">{robProposalState.preview?.items.map((item, index) => <article key={`${item.type}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950 p-3"><h4 className="font-semibold text-white">{item.title}</h4>{item.details.length ? <ul className="mt-2 space-y-1 text-sm text-slate-300">{item.details.map((detail, detailIndex) => <li key={detailIndex}>{detail}</li>)}</ul> : null}</article>)}</div>
@@ -5429,6 +5462,8 @@ function App() {
                   </div>
 
                   {robCreateState.open ? <section className="mt-4 rounded-xl border border-violet-400/30 bg-slate-950/60 p-4"><h3 className="font-bold text-white">Create a routine with Rob</h3><p className="mt-1 text-sm text-slate-400">Rob will propose a routine for this program. You can review it before anything changes.</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="sm:col-span-2 text-sm font-semibold text-slate-300">What would you like to train?<textarea value={robCreateForm.focus} maxLength="360" onChange={(event) => setRobCreateForm((form) => ({ ...form, focus: event.target.value }))} rows="2" className={`${routineEditorInputClassName} mt-1`} placeholder="A 45-minute upper-body hypertrophy workout focusing on shoulders and arms." /></label><label className="text-sm font-semibold text-slate-300">Approximate duration<select value={robCreateForm.duration} onChange={(event) => setRobCreateForm((form) => ({ ...form, duration: event.target.value }))} className={`${routineEditorSelectClassName} mt-1`}><option value="">No preference</option><option>30 minutes</option><option>45 minutes</option><option>60 minutes</option><option>75 minutes</option></select></label><label className="text-sm font-semibold text-slate-300">Available equipment<textarea value={robCreateForm.equipment} maxLength="160" onChange={(event) => setRobCreateForm((form) => ({ ...form, equipment: event.target.value }))} rows="2" className={`${routineEditorInputClassName} mt-1`} placeholder="Gym machines and cables only" /></label><label className="sm:col-span-2 text-sm font-semibold text-slate-300">Additional considerations<textarea value={robCreateForm.considerations} maxLength="180" onChange={(event) => setRobCreateForm((form) => ({ ...form, considerations: event.target.value }))} rows="2" className={`${routineEditorInputClassName} mt-1`} placeholder="Avoid movements requiring heavy gripping." /></label></div>{robCreateState.error ? <p className="mt-3 text-sm font-semibold text-amber-200">{robCreateState.error}</p> : null}<button type="button" onClick={submitRobRoutineCreation} disabled={robCreateState.status === "loading"} className="mt-3 rounded-lg bg-violet-300 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50">{robCreateState.status === "loading" ? "Rob is building your routine…" : "Ask Rob to create routine"}</button></section> : null}
+
+                  {robCreateState.status === "needs_resolution" && robProposalState.origin === "creation" ? <div className="mt-4">{renderRobExerciseResolution()}</div> : null}
 
                   {robCreateState.status === "success" && robProposalState.status === "success" ? <section className="mt-4 rounded-xl border border-violet-400/30 bg-slate-950/60 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-violet-200">Rob's proposed routine</p><h3 className="mt-1 text-xl font-bold">{robProposalState.preview?.routineName}</h3>{robProposalState.explanation ? <p className="mt-2 text-sm text-slate-300">{robProposalState.explanation}</p> : null}<div className="mt-3 space-y-2">{robProposalState.preview?.items.map((item, index) => <div key={index} className="rounded-lg border border-slate-800 p-3"><p className="font-semibold">{index + 1}. {item.title.replace(/^Add /, "")}</p>{item.details.filter((detail) => detail !== "In new routine").map((detail, detailIndex) => <p key={detailIndex} className="text-sm text-slate-400">{detail}</p>)}</div>)}</div><div className="mt-4 flex gap-3"><button type="button" onClick={() => { rejectRobProposal(); setRobCreateState((state) => ({ ...state, status: "idle" })); }} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold">Reject</button><button type="button" onClick={approveRobProposal} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950">Approve routine</button></div></section> : null}
 

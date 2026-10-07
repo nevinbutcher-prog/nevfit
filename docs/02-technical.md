@@ -129,6 +129,18 @@ routine proposal after a routine review, then shows a deterministic Fitbot
 preview of every operation in normal training terminology. The explanation is
 context only; the preview is derived from the normalized proposal and current
 draft rather than AI prose.
+
+### Exercise Resolution
+
+`src/services/exerciseResolution.js` is the reusable deterministic boundary
+between an AI exercise description and a trusted provider-backed exercise ID.
+It first applies normalized exact matching and bounded Fitbot-owned aliases,
+then uses conservative token scoring for ordering and wording differences. It
+never accepts an AI-supplied ID. Weak matches are unresolved; multiple
+plausible provider results enter a transient `needs_resolution` state. The
+user selects one displayed provider result, after which Fitbot reruns normal
+proposal validation without making another AI request. No program draft is
+mutated during resolution.
 For routine proposals, the browser supplies only the completed review's bounded
 summary, concerns, and suggested changes, including their bounded routine and
 routine-exercise references. `robProposal` validates that review shape and

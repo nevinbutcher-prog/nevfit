@@ -79,6 +79,7 @@
 - Rob routine proposals require explicit whole-proposal approval or rejection; rejection is non-mutating and approval applies only to the unsaved editable program draft
 - Proposal approval fingerprints the relevant draft, checks freshness and revalidates immediately before the sole `applyRoutineProposal` application boundary; Save Program remains the only persistence commit
 - Selected program builders include Create with Rob for one requested routine with optional duration, equipment, and constraints; proposals use existing provider resolution, human approval, and draft-only persistence boundaries
+- Deterministic Rob exercise resolution supports bounded aliases and conservative similarity matching; ambiguous provider results require user choice before validation
 
 ## Current Known Limitations
 
@@ -86,6 +87,7 @@
 - The local exercise alias layer is intentionally small and is not a full exercise taxonomy.
 - wger equipment metadata can be incomplete, so the equipment filter is hidden for now.
 - wger-selected exercise metadata is cached in memory for the current app session; saved routines retain stable wger IDs and can rehydrate metadata with `getExerciseById`.
+- Some legitimate exercise descriptions may remain unresolved when the provider lacks a sufficiently clear match; Fitbot blocks rather than guesses.
 - Previous performance lookup is derived from cloud-loaded completed workout history state.
 - Timer completion alarm still needs real-device validation with workout music and mobile browser audio policies.
 - Minor mobile viewport movement has been reported on some devices when editing inputs.

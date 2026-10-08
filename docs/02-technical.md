@@ -143,10 +143,12 @@ a later exercise-resolution stage materialises trusted identities and validates
 Whole-program calls use a separately bounded 4,000-token default output budget
 (`AI_PROGRAM_MAX_OUTPUT_TOKENS`, clamped to 1,000-5,000), while advice and
 single-routine calls retain the 1,200-token `AI_MAX_OUTPUT_TOKENS` default.
+For whole-program generation only, the OpenRouter adapter requests strict JSON-schema output and requires a provider that supports that parameter. The current openai/gpt-4o-mini OpenRouter route supports it. Server-side candidate validation remains authoritative.
+
 The OpenRouter adapter retains only safe completion metadata: returned model,
 output-token usage, and finish reason. `robProgramGeneration` logs its requested
 budget, safe response size, safely extractable routine count, and validation
-failure category/reason. It never logs prompts, constraints, raw model output,
+failure category/reason. For exercise validation it logs only routine and exercise indexes, the field name, and a structural reason category. It never logs exercise values, prompts, constraints, raw model output,
 or credentials. A provider `length` finish reason is recorded as
 `output_exhausted`; no automatic generation retry occurs.
 Generated program candidates are inspectable in the intake as transient,

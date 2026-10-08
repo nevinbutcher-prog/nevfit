@@ -15,7 +15,7 @@ function providerError(response) {
 
 export function createOpenRouterProvider({ apiKey, config, fetchImpl = fetch }) {
   return {
-    async generate({ messages, maxOutputTokens = config.maxOutputTokens }) {
+    async generate({ messages, maxOutputTokens = config.maxOutputTokens, responseFormat = null, requireResponseFormat = false }) {
       if (!apiKey) throw new AiError("ai_not_configured");
 
       const controller = new AbortController();
@@ -26,7 +26,7 @@ export function createOpenRouterProvider({ apiKey, config, fetchImpl = fetch }) 
           response = await fetchImpl(endpoint, {
             method: "POST",
             headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model: config.model, messages, max_tokens: maxOutputTokens, stream: false }),
+            body: JSON.stringify({ model: config.model, messages, max_tokens: maxOutputTokens, stream: false, ...(responseFormat ? { response_format: responseFormat } : {}), ...(requireResponseFormat ? { provider: { require_parameters: true } } : {}) }),
             signal: controller.signal,
           });
         } catch (error) {

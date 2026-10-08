@@ -89,9 +89,16 @@ import { buildRoutineCreationInstruction } from "./services/rob/robRoutineCreati
 import {
   getPreselectedReviewProgram,
   getReviewablePrograms,
-  isCurrentReviewRequest,
   ROB_WORKFLOW_STEPS,
 } from "./services/rob/robWorkflow";
+import {
+  createRobReviewFingerprint,
+  createRobReviewLifecycle,
+  invalidateRobReviewRequest,
+  isActiveRobReviewRequest,
+  settleRobReviewRequest,
+  startRobReviewRequest,
+} from "./services/rob/robReviewLifecycle";
 
 const SCHEDULE_STORAGE_KEY = "nevfit_schedule";
 const PROGRAMS_STORAGE_KEY = "nevfit_programs";
@@ -1919,12 +1926,11 @@ function App() {
   const [robCreateForm, setRobCreateForm] = useState({ focus: "", duration: "", equipment: "", considerations: "" });
   const [robCreateState, setRobCreateState] = useState({ open: false, status: "idle", error: null });
   const programDraftsRef = useRef(programDrafts);
-  const robReviewRequestIdRef = useRef(0);
+  const robReviewLifecycleRef = useRef(createRobReviewLifecycle());
   const robSelectedProgramIdRef = useRef(null);
   useEffect(() => {
     programDraftsRef.current = programDrafts;
-    setRobReview(null);
-    setRobReviewError(null);
+    invalidatePendingRobReview();
     setRobProposalState(createRobProposalState());
   }, [programDrafts, selectedProgramId, selectedProgramDayId]);
   const [saveMessage, setSaveMessage] = useState("");
@@ -4282,7 +4288,6 @@ function App() {
   }
 
   async function submitRobReview(requestType, selectedReviewProgramId = null) {
-    if (robReviewStatus === "loading") return;
     const program = requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW
       ? getPreselectedReviewProgram(activeProgramDrafts, selectedReviewProgramId)
       : selectedProgramDraft ?? dashboardProgram;
@@ -4297,8 +4302,15 @@ function App() {
       return;
     }
     if (requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW && !routineId) return;
-    const requestId = ++robReviewRequestIdRef.current;
     const targetProgramId = program.id;
+    invalidatePendingRobReview();
+    const started = startRobReviewRequest(robReviewLifecycleRef.current, {
+      targetProgramId,
+      routineId,
+      fingerprint: createRobReviewFingerprint(program, routineId),
+    });
+    robReviewLifecycleRef.current = started.lifecycle;
+    const request = started.request;
     setRobReviewStatus("loading");
     setRobReviewError(null);
     setRobReview(null);
@@ -4309,22 +4321,54 @@ function App() {
     try {
       const context = buildRobContext({ requestType, program, routineId, completedWorkouts });
       const result = await requestRobReview({ context });
-      if (requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW && !isCurrentReviewRequest(robReviewRequestIdRef.current, requestId, targetProgramId, robSelectedProgramIdRef.current)) return;
+      if (!isFreshRobReviewRequest(request, requestType)) return;
+      robReviewLifecycleRef.current = settleRobReviewRequest(robReviewLifecycleRef.current, request);
       setRobReview({ ...result.review, programName: context.program?.name ?? "Program", routineName: context.program?.routines?.[0]?.name ?? null });
       setRobReviewStatus("success");
     } catch (error) {
-      if (requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW && !isCurrentReviewRequest(robReviewRequestIdRef.current, requestId, targetProgramId, robSelectedProgramIdRef.current)) return;
+      if (!isFreshRobReviewRequest(request, requestType)) return;
+      robReviewLifecycleRef.current = settleRobReviewRequest(robReviewLifecycleRef.current, request);
       setRobReviewError({ requestType, targetProgramId, message: error?.message ?? "Rob couldn't complete the review. Try again.", retryable: error?.retryable !== false });
       setRobReviewStatus("error");
     }
   }
 
+  function invalidatePendingRobReview() {
+    if (!robReviewLifecycleRef.current.activeRequest) return false;
+    robReviewLifecycleRef.current = invalidateRobReviewRequest(robReviewLifecycleRef.current);
+    setRobReviewStatus("idle");
+    setRobReviewError(null);
+    setRobReview(null);
+    return true;
+  }
+
+  function isFreshRobReviewRequest(request, requestType) {
+    if (!isActiveRobReviewRequest(robReviewLifecycleRef.current, request)) return false;
+    const currentProgram = requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW
+      ? getPreselectedReviewProgram(programDraftsRef.current, request.targetProgramId)
+      : programDraftsRef.current.find((item) => item.id === request.targetProgramId && !item.archived) ?? null;
+    const targetStillSelected = requestType !== ROB_CONTEXT_TYPES.PROGRAM_REVIEW || robSelectedProgramIdRef.current === request.targetProgramId;
+    const currentFingerprint = currentProgram ? createRobReviewFingerprint(currentProgram, request.routineId) : null;
+    if (targetStillSelected && currentFingerprint === request.fingerprint) return true;
+    robReviewLifecycleRef.current = invalidateRobReviewRequest(robReviewLifecycleRef.current);
+    setRobReviewStatus("idle");
+    setRobReview(null);
+    setRobReviewError(null);
+    if (requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW) {
+      setRobProgramSelectionError(currentProgram ? "This program changed while Rob was reviewing it. Request a fresh review." : "That program is no longer available. Choose another program to review.");
+      setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_SELECTION);
+    }
+    return false;
+  }
+
   function openRobHome() {
+    invalidatePendingRobReview();
     setRobPanelMode(ROB_WORKFLOW_STEPS.HOME);
     setViewMode("rob");
   }
 
   function openRobProgramReview(programId = null) {
+    invalidatePendingRobReview();
     const selected = getPreselectedReviewProgram(activeProgramDrafts, programId);
     setRobSelectedProgramId(selected?.id ?? null);
     robSelectedProgramIdRef.current = selected?.id ?? null;
@@ -4610,7 +4654,7 @@ function App() {
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_BUILD)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Build me a program</h3><p className="mt-1 text-sm text-slate-300">Work with Rob to design a complete training program.</p></button>
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? <div className="space-y-3">
               {robProgramSelectionError ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">{robProgramSelectionError}</p> : null}
-              {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} disabled={robReviewStatus === "loading"} aria-pressed={robSelectedProgramId === program.id} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition disabled:opacity-50 ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="break-words font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines{isRobReviewingUnsavedDraft(program) ? " · Reviewing unsaved draft" : ""}</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p><button type="button" onClick={() => setViewMode("routines")} className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Go to Programs</button></div>}
+              {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} aria-pressed={robSelectedProgramId === program.id} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="break-words font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines{isRobReviewingUnsavedDraft(program) ? " · Reviewing unsaved draft" : ""}</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p><button type="button" onClick={() => setViewMode("routines")} className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Go to Programs</button></div>}
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">Whole-program design is coming soon.</p><p className="mt-2 text-sm text-slate-300">Rob will soon guide you through a few coaching questions, prepare a complete program for review, and let you approve it before it becomes an editable draft.</p><p className="mt-2 text-sm text-slate-400">For now, you can still create and edit programs manually.</p></div> : robPanelMode !== ROB_WORKFLOW_STEPS.ADVICE ? <>
               {robReviewStatus === "loading" ? <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">Rob is reviewing this {robPanelMode === "routine_review" ? "routine" : "program"}…</p> : null}
               {robPanelMode === "program_review" && getPreselectedReviewProgram(activeProgramDrafts, robSelectedProgramId) && isRobReviewingUnsavedDraft(getPreselectedReviewProgram(activeProgramDrafts, robSelectedProgramId)) ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Rob is reviewing this program&apos;s unsaved draft.</p> : null}

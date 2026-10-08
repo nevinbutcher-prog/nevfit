@@ -113,6 +113,13 @@ silently substituting another program. Program-review requests carry an
 in-memory request identity and target ID so an older response cannot overwrite
 a later selected review.
 
+`src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
+for both program and routine reviews. Starting, replacing, leaving, or
+invalidating an in-flight review releases its loading state without attempting
+to cancel an already-sent provider request. A response or failure can publish
+only while its request remains active and its target fingerprint still matches
+the latest in-memory program/routine context; otherwise it is discarded.
+
 ## Structured Rob Reviews
 
 The authenticated `robReview` callable accepts only a deterministic

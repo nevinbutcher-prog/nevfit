@@ -87,6 +87,7 @@
 - Program review now starts from explicit program selection under Rob while retaining existing review findings, retry handling, and builder shortcuts into the same workflow
 - Build me a program has an honest dedicated entry point and does not invoke the existing single-routine generator
 - Rob review selection uses the current selected in-memory draft, labels unsaved drafts, preserves retry target identity, and ignores out-of-order program-review responses
+- In-flight Rob reviews use an explicit transient lifecycle: changing targets, leaving Rob, or changing a reviewed draft releases loading and discards stale provider responses without creating another request
 
 ## Current Known Limitations
 

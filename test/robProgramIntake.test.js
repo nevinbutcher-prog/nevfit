@@ -47,6 +47,25 @@ test("confirmation returns an independent, serializable requirements snapshot an
   assert.deepEqual(result.intake.confirmedRequirements.priorities, ["shoulders", "arms"]);
 });
 
+test("free text preserves spaces while editing and normalizes only the confirmed snapshot", () => {
+  const typing = updateRobProgramIntake(complete(), { constraints: "Avoid heavy ", constraintsConfirmed: true });
+  assert.equal(typing.constraints, "Avoid heavy ");
+  const continued = updateRobProgramIntake(typing, { constraints: `${typing.constraints}overhead pressing` });
+  assert.equal(continued.constraints, "Avoid heavy overhead pressing");
+  const padded = updateRobProgramIntake(continued, {
+    goal: "other", goalDescription: "  Build muscle and strength  ",
+    priorityNote: "  Keep  legs  balanced  ", equipmentOther: "  Rings  ", constraints: "  Avoid heavy overhead pressing  ",
+  });
+  const result = confirmRobProgramIntake(padded);
+  assert.equal(result.confirmed, true);
+  assert.equal(result.requirements.goalDescription, "Build muscle and strength");
+  assert.equal(result.requirements.priorityNote, "Keep  legs  balanced");
+  assert.equal(result.requirements.equipmentOther, "Rings");
+  assert.equal(result.requirements.constraints, "Avoid heavy overhead pressing");
+  assert.equal(confirmRobProgramIntake(complete({ goal: "other", goalDescription: "   " })).confirmed, false);
+  assert.equal(confirmRobProgramIntake(complete({ constraints: "x".repeat(361) })).confirmed, false);
+});
+
 test("intake domain has no persistence, provider, or static-profile dependency", async () => {
   const source = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../src/services/rob/robProgramIntake.js", import.meta.url), "utf8"));
   assert.doesNotMatch(source, /firebase|firestore|localStorage|requestRob|robTrainingProfile|saveProgram|setDoc/i);

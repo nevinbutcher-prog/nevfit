@@ -89,6 +89,7 @@ import { buildRoutineCreationInstruction } from "./services/rob/robRoutineCreati
 import {
   getPreselectedReviewProgram,
   getReviewablePrograms,
+  isCurrentReviewRequest,
   ROB_WORKFLOW_STEPS,
 } from "./services/rob/robWorkflow";
 
@@ -1912,11 +1913,14 @@ function App() {
   const [robReviewError, setRobReviewError] = useState(null);
   const [robPanelMode, setRobPanelMode] = useState(ROB_WORKFLOW_STEPS.HOME);
   const [robSelectedProgramId, setRobSelectedProgramId] = useState(null);
+  const [robProgramSelectionError, setRobProgramSelectionError] = useState(null);
   const [robReviewOrigin, setRobReviewOrigin] = useState(null);
   const [robProposalState, setRobProposalState] = useState(createRobProposalState);
   const [robCreateForm, setRobCreateForm] = useState({ focus: "", duration: "", equipment: "", considerations: "" });
   const [robCreateState, setRobCreateState] = useState({ open: false, status: "idle", error: null });
   const programDraftsRef = useRef(programDrafts);
+  const robReviewRequestIdRef = useRef(0);
+  const robSelectedProgramIdRef = useRef(null);
   useEffect(() => {
     programDraftsRef.current = programDrafts;
     setRobReview(null);
@@ -4119,6 +4123,11 @@ function App() {
   const activeProgramDrafts = programDrafts.filter(
     (program) => !program.archived,
   );
+  const isRobReviewingUnsavedDraft = (program) => {
+    const savedProgram = programDefinitions.find((item) => item.id === program.id);
+    const normalizedDraft = normalizeProgram(program);
+    return Boolean(savedProgram && normalizedDraft && !areRoutineDaysEqual(normalizedDraft, savedProgram));
+  };
   const selectedProgramDraft = programDrafts.find(
     (program) => program.id === selectedProgramId,
   );
@@ -4272,26 +4281,40 @@ function App() {
     }
   }
 
-  async function submitRobReview(requestType, selectedReviewProgram = null) {
+  async function submitRobReview(requestType, selectedReviewProgramId = null) {
     if (robReviewStatus === "loading") return;
-    const program = selectedReviewProgram ?? selectedProgramDraft ?? dashboardProgram;
+    const program = requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW
+      ? getPreselectedReviewProgram(activeProgramDrafts, selectedReviewProgramId)
+      : selectedProgramDraft ?? dashboardProgram;
     const routineId = requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW
       ? selectedProgramDayDraft?.id
       : null;
-    if (!program || (requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW && !routineId)) return;
+    if (!program) {
+      if (requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW) {
+        setRobProgramSelectionError("That program is no longer available. Choose another program to review.");
+        setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_SELECTION);
+      }
+      return;
+    }
+    if (requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW && !routineId) return;
+    const requestId = ++robReviewRequestIdRef.current;
+    const targetProgramId = program.id;
     setRobReviewStatus("loading");
     setRobReviewError(null);
     setRobReview(null);
+    setRobProgramSelectionError(null);
     setRobPanelMode(requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW ? "routine_review" : "program_review");
     setRobReviewOrigin({ type: requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW ? "routine" : "program", programName: program.name, routineName: selectedProgramDayDraft?.name ?? null });
     setViewMode("rob");
     try {
       const context = buildRobContext({ requestType, program, routineId, completedWorkouts });
       const result = await requestRobReview({ context });
+      if (requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW && !isCurrentReviewRequest(robReviewRequestIdRef.current, requestId, targetProgramId, robSelectedProgramIdRef.current)) return;
       setRobReview({ ...result.review, programName: context.program?.name ?? "Program", routineName: context.program?.routines?.[0]?.name ?? null });
       setRobReviewStatus("success");
     } catch (error) {
-      setRobReviewError({ requestType, program, message: error?.message ?? "Rob couldn't complete the review. Try again.", retryable: error?.retryable !== false });
+      if (requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW && !isCurrentReviewRequest(robReviewRequestIdRef.current, requestId, targetProgramId, robSelectedProgramIdRef.current)) return;
+      setRobReviewError({ requestType, targetProgramId, message: error?.message ?? "Rob couldn't complete the review. Try again.", retryable: error?.retryable !== false });
       setRobReviewStatus("error");
     }
   }
@@ -4304,15 +4327,21 @@ function App() {
   function openRobProgramReview(programId = null) {
     const selected = getPreselectedReviewProgram(activeProgramDrafts, programId);
     setRobSelectedProgramId(selected?.id ?? null);
+    robSelectedProgramIdRef.current = selected?.id ?? null;
+    setRobProgramSelectionError(programId && !selected ? "That program is no longer available. Choose another program to review." : null);
     setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_SELECTION);
     setViewMode("rob");
   }
 
   function startRobProgramReview(programId) {
     const program = getPreselectedReviewProgram(activeProgramDrafts, programId);
-    if (!program) return;
+    if (!program) {
+      setRobProgramSelectionError("That program is no longer available. Choose another program to review.");
+      return;
+    }
     setRobSelectedProgramId(program.id);
-    submitRobReview(ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program);
+    robSelectedProgramIdRef.current = program.id;
+    submitRobReview(ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program.id);
   }
 
   async function submitRobProposal(resolutionSelections = {}, cachedResolution = null) {
@@ -4580,10 +4609,13 @@ function App() {
               <button type="button" onClick={() => openRobProgramReview(robSelectedProgramId)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my program</h3><p className="mt-1 text-sm text-slate-300">Have Rob analyse an existing training program.</p></button>
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_BUILD)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Build me a program</h3><p className="mt-1 text-sm text-slate-300">Work with Rob to design a complete training program.</p></button>
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? <div className="space-y-3">
-              {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} disabled={robReviewStatus === "loading"} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition disabled:opacity-50 ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p></div>}
+              {robProgramSelectionError ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">{robProgramSelectionError}</p> : null}
+              {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} disabled={robReviewStatus === "loading"} aria-pressed={robSelectedProgramId === program.id} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition disabled:opacity-50 ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="break-words font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines{isRobReviewingUnsavedDraft(program) ? " · Reviewing unsaved draft" : ""}</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p><button type="button" onClick={() => setViewMode("routines")} className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Go to Programs</button></div>}
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">Whole-program design is coming soon.</p><p className="mt-2 text-sm text-slate-300">Rob will soon guide you through a few coaching questions, prepare a complete program for review, and let you approve it before it becomes an editable draft.</p><p className="mt-2 text-sm text-slate-400">For now, you can still create and edit programs manually.</p></div> : robPanelMode !== ROB_WORKFLOW_STEPS.ADVICE ? <>
               {robReviewStatus === "loading" ? <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">Rob is reviewing this {robPanelMode === "routine_review" ? "routine" : "program"}…</p> : null}
+              {robPanelMode === "program_review" && getPreselectedReviewProgram(activeProgramDrafts, robSelectedProgramId) && isRobReviewingUnsavedDraft(getPreselectedReviewProgram(activeProgramDrafts, robSelectedProgramId)) ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Rob is reviewing this program&apos;s unsaved draft.</p> : null}
               {robReview ? <><article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</p><p className="mt-2 text-slate-100">{robReview.summary}</p></article>{[["Strengths", robReview.strengths, "border-emerald-400/40", "text-emerald-200"], ["Concerns", robReview.concerns, "border-amber-400/40", "text-amber-200"], ["Suggested changes", robReview.suggestedChanges, "border-slate-700", "text-slate-200"]].map(([title, findings, border, heading]) => <section key={title} className={`rounded-2xl border ${border} bg-slate-900 p-5`}><h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${heading}`}>{title}</h3><div className="mt-3 space-y-4">{findings.length ? findings.map((finding, index) => <div key={`${title}-${index}`}><p className="font-semibold text-white">{finding.title}{finding.priority ? <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs font-medium capitalize text-slate-300">{finding.priority}</span> : null}</p><p className="mt-1 text-sm text-slate-300">{finding.explanation}</p></div>) : <p className="text-sm text-slate-400">No specific findings.</p>}</div></section>)}<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Limitations</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{robReview.limitations.length ? robReview.limitations.map((limitation, index) => <li key={index}>• {limitation}</li>) : <li>• No additional limitations were supplied.</li>}</ul></section></> : null}
+              {robPanelMode === "program_review" ? <button type="button" onClick={() => openRobProgramReview(robSelectedProgramId)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Review another program</button> : null}
               {robPanelMode === "routine_review" && robReview ? <section className="rounded-2xl border border-slate-700 bg-slate-900 p-5">
                 {robProposalState.status === "needs_resolution" && robProposalState.origin === "review" ? renderRobExerciseResolution() : robProposalState.status === "success" || robProposalState.status === "applying" ? <>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">Rob's suggested changes</p>
@@ -4598,7 +4630,7 @@ function App() {
                   <button type="button" onClick={submitRobProposal} disabled={robProposalState.status === "loading"} className="mt-3 rounded-lg border border-emerald-400/60 px-3 py-2 text-sm font-semibold text-emerald-200 disabled:cursor-not-allowed disabled:opacity-50">{robProposalState.status === "loading" ? "Rob is preparing…" : "Prepare routine proposal"}</button>
                 </>}
               </section> : null}
-              {robReviewError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robReviewError.message}</p>{robReviewError.retryable ? <button type="button" onClick={() => submitRobReview(robReviewError.requestType, robReviewError.program)} disabled={robReviewStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}</div> : null}
+              {robReviewError ? <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100"><p>{robReviewError.message}</p>{robReviewError.retryable ? <button type="button" onClick={() => submitRobReview(robReviewError.requestType, robReviewError.targetProgramId)} disabled={robReviewStatus === "loading"} className="mt-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Retry</button> : null}{robReviewError.requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW ? <button type="button" onClick={() => openRobProgramReview()} className="mt-3 ml-3 rounded-lg border border-amber-300/60 px-3 py-2 font-semibold">Choose another program</button> : null}</div> : null}
             </> : robExchange ? (
               <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-5">
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">You</p><p className="mt-1 whitespace-pre-wrap text-slate-100">{robExchange.question}</p></div>

@@ -16,3 +16,7 @@ export function getReviewablePrograms(programs) {
 export function getPreselectedReviewProgram(programs, programId) {
   return getReviewablePrograms(programs).find((program) => program.id === programId) ?? null;
 }
+
+export function isCurrentReviewRequest(currentRequestId, requestId, targetProgramId, selectedProgramId) {
+  return currentRequestId === requestId && targetProgramId === selectedProgramId;
+}

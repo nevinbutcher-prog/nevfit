@@ -86,6 +86,7 @@
 - Rob Home provides one primary coaching destination with Ask Rob a question, Review my program, and Build me a program actions
 - Program review now starts from explicit program selection under Rob while retaining existing review findings, retry handling, and builder shortcuts into the same workflow
 - Build me a program has an honest dedicated entry point and does not invoke the existing single-routine generator
+- Rob review selection uses the current selected in-memory draft, labels unsaved drafts, preserves retry target identity, and ignores out-of-order program-review responses
 
 ## Current Known Limitations
 

@@ -106,6 +106,13 @@ client. The Build me a program state is intentionally informational for now:
 it invokes neither the single-routine creator nor any AI or persistence path.
 Routine-level builder controls remain available as secondary contextual tools.
 
+The selected program ID is resolved against the latest active in-memory drafts
+when a review or retry begins. Unsaved selected drafts are explicitly labelled,
+and an unavailable target returns the user to program selection rather than
+silently substituting another program. Program-review requests carry an
+in-memory request identity and target ID so an older response cannot overwrite
+a later selected review.
+
 ## Structured Rob Reviews
 
 The authenticated `robReview` callable accepts only a deterministic

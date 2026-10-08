@@ -4,6 +4,7 @@ import {
   ROB_WORKFLOW_STEPS,
   getPreselectedReviewProgram,
   getReviewablePrograms,
+  isCurrentReviewRequest,
 } from "../src/services/rob/robWorkflow.js";
 
 test("Rob workflow exposes its shared primary destinations", () => {
@@ -15,6 +16,12 @@ test("Rob workflow exposes its shared primary destinations", () => {
     PROGRAM_BUILD: "program_build",
     ROUTINE_REVIEW: "routine_review",
   });
+});
+
+test("only the current selected program review request may update the workflow", () => {
+  assert.equal(isCurrentReviewRequest(4, 4, "program-b", "program-b"), true);
+  assert.equal(isCurrentReviewRequest(5, 4, "program-b", "program-b"), false);
+  assert.equal(isCurrentReviewRequest(4, 4, "program-a", "program-b"), false);
 });
 
 test("program review requires an available, explicitly selected program", () => {

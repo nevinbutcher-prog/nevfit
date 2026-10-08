@@ -55,6 +55,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Approved Rob proposals update only the editable, unsaved program draft; Save Program remains the sole persistence action
 - Program builders can ask Rob to create one constrained routine, then inspect, approve, or reject the draft-only proposal
 - Rob-proposed exercises use conservative provider resolution: exact and Fitbot-owned alias matches resolve automatically; plausible alternatives require the user to choose a provider-backed exercise before a proposal can be validated
+- A pure, provider-neutral whole-program proposal contract safely represents complete program creation and coordinated multi-routine changes; it is domain support only, with no user-facing whole-program Rob flow yet
 
 ## Current Product Direction
 
@@ -78,6 +79,14 @@ Users can:
 - Download and restore account backups from Settings
 - Ask Rob for practical strength and hypertrophy advice without changing training data
 - Review the visible unsaved routine or program draft with Rob without saving or changing it
+
+Rob is the intended primary home for AI and coaching workflows. Its core future
+actions are Ask Rob a question, Ask Rob to review a program, and Ask Rob to
+build a program. Other screens may later provide contextual shortcuts into
+these shared workflows, but must not create parallel AI experiences.
+
+Whole-program Rob generation, a program-proposal approval UI, the program
+creation conversation, and progression analytics are not implemented yet.
 
 Future expansion:
 

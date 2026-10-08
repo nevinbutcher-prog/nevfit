@@ -357,6 +357,27 @@ services and performs no Firestore, localStorage, workout-history, or active
 workout writes. The existing Save Program path remains the only persistence
 commit for any future approved draft.
 
+## Program Proposal Contract
+
+`src/services/programProposal.js` is a pure provider-neutral contract for
+whole-program candidates. Version 1 supports `create_program` and
+`modify_program`. It validates a bounded complete program or coordinated
+routine changes before applying anything, then returns a new program graph and
+deterministic review metadata. A create appends one program only; a modify
+changes only its target program. Invalid routine changes make the entire
+proposal fail, so neither path can produce a partial result.
+
+Program proposals reuse `validateRoutineProposal()` and
+`applyRoutineProposal()` for the existing operation vocabulary and superset
+semantics. The module accepts already-resolved provider exercise IDs and owns
+no exercise resolution, AI transport, React state, Firebase, Firestore, or
+browser storage dependency. It also does not activate programs, alter planning,
+workout history, or active-workout state.
+
+This is a domain foundation only: Rob does not yet generate whole programs,
+there is no program-proposal approval UI or creation conversation, and no
+whole-program proposal is persisted from this boundary.
+
 The routine builder is search-first and edit-on-demand:
 
 - program management is collapsed into a compact header

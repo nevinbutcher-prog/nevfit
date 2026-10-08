@@ -81,8 +81,13 @@
 - Selected program builders include Create with Rob for one requested routine with optional duration, equipment, and constraints; proposals use existing provider resolution, human approval, and draft-only persistence boundaries
 - Deterministic Rob exercise resolution supports bounded aliases and conservative similarity matching; ambiguous provider results require user choice before validation
 - Pending exercise resolution retains the original generation baseline, so edits made before validation invalidate rather than rebase the cached Rob candidate
+- Pure, versioned provider-neutral program proposal domain contract for safe `create_program` and atomic multi-routine `modify_program` candidates
+- Whole-program proposal validation reuses routine proposal operation semantics, protects unrelated programs and non-domain workout state, and has no AI, provider, persistence, or UI dependency
 
 ## Current Known Limitations
+
+- Rob does not yet generate whole programs, provide a program-proposal approval UI, or run a program creation conversation.
+- Progression analytics are not implemented.
 
 - Exercise search depends on the public wger API.
 - The local exercise alias layer is intentionally small and is not a full exercise taxonomy.

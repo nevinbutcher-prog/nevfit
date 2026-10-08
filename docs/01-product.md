@@ -56,6 +56,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Program builders can ask Rob to create one constrained routine, then inspect, approve, or reject the draft-only proposal
 - Rob-proposed exercises use conservative provider resolution: exact and Fitbot-owned alias matches resolve automatically; plausible alternatives require the user to choose a provider-backed exercise before a proposal can be validated
 - A pure, provider-neutral whole-program proposal contract safely represents complete program creation and coordinated multi-routine changes; it is domain support only, with no user-facing whole-program Rob flow yet
+- Rob has a unified coaching home for questions, explicit program selection and review, and the forthcoming whole-program design workflow
 
 ## Current Product Direction
 
@@ -87,6 +88,10 @@ these shared workflows, but must not create parallel AI experiences.
 
 Whole-program Rob generation, a program-proposal approval UI, the program
 creation conversation, and progression analytics are not implemented yet.
+
+Rob Home is the canonical entry point for coaching. Program-builder review
+actions remain contextual shortcuts into the same Rob review workflow, while
+routine-level coaching remains available as a secondary builder capability.
 
 Future expansion:
 

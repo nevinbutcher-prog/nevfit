@@ -92,6 +92,20 @@ model/provider or override system instructions. Advice responses are plain,
 transient text with explicit retry on recoverable failures. They do not invoke
 proposal, program, workout, planning, health, or persistence services.
 
+## Rob Home Workflow
+
+The Rob navigation destination is a shared client-side workflow with explicit
+states for Home, advice, program selection, program review, and the future
+whole-program design entry point. `src/services/rob/robWorkflow.js` owns the
+small pure selection boundary used by these entry points, so future contextual
+shortcuts can preselect a program without creating a separate coaching stack.
+
+Program review begins only after an active, named program is selected. It
+continues to use the existing deterministic program-review context and callable
+client. The Build me a program state is intentionally informational for now:
+it invokes neither the single-routine creator nor any AI or persistence path.
+Routine-level builder controls remain available as secondary contextual tools.
+
 ## Structured Rob Reviews
 
 The authenticated `robReview` callable accepts only a deterministic

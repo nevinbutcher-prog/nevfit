@@ -83,10 +83,14 @@
 - Pending exercise resolution retains the original generation baseline, so edits made before validation invalidate rather than rebase the cached Rob candidate
 - Pure, versioned provider-neutral program proposal domain contract for safe `create_program` and atomic multi-routine `modify_program` candidates
 - Whole-program proposal validation reuses routine proposal operation semantics, protects unrelated programs and non-domain workout state, and has no AI, provider, persistence, or UI dependency
+- Rob Home provides one primary coaching destination with Ask Rob a question, Review my program, and Build me a program actions
+- Program review now starts from explicit program selection under Rob while retaining existing review findings, retry handling, and builder shortcuts into the same workflow
+- Build me a program has an honest dedicated entry point and does not invoke the existing single-routine generator
 
 ## Current Known Limitations
 
-- Rob does not yet generate whole programs, provide a program-proposal approval UI, or run a program creation conversation.
+- Rob does not yet run an interactive program-design conversation, generate `create_program` candidates, resolve whole-program exercises, or provide whole-program preview and approval.
+- Rob does not yet generate `modify_program` recommendations.
 - Progression analytics are not implemented.
 
 - Exercise search depends on the public wger API.

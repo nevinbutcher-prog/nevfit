@@ -36,6 +36,15 @@ test("other goals, bounded text, equipment confirmation, and explicit no constra
   assert.equal(validateRobProgramIntake(complete({ constraints: "", constraintsConfirmed: true })).valid, true);
 });
 
+test("editing constraints requires reconfirmation", () => {
+  const edited = updateRobProgramIntake(complete({ constraints: "Avoid overhead pressing", constraintsConfirmed: true }), {
+    constraints: "Avoid overhead pressing and deep knee flexion",
+  });
+  assert.equal(edited.constraintsConfirmed, false);
+  assert.equal(validateRobProgramIntake(edited).errors.constraintsConfirmed, "Confirm your constraints or choose no additional constraints.");
+  assert.equal(getNextRobProgramIntakeStep(edited), "constraints");
+});
+
 test("confirmation returns an independent, serializable requirements snapshot and edits invalidate it", () => {
   const result = confirmRobProgramIntake(complete());
   assert.equal(result.confirmed, true);
@@ -56,7 +65,7 @@ test("free text preserves spaces while editing and normalizes only the confirmed
     goal: "other", goalDescription: "  Build muscle and strength  ",
     priorityNote: "  Keep  legs  balanced  ", equipmentOther: "  Rings  ", constraints: "  Avoid heavy overhead pressing  ",
   });
-  const result = confirmRobProgramIntake(padded);
+  const result = confirmRobProgramIntake(updateRobProgramIntake(padded, { constraintsConfirmed: true }));
   assert.equal(result.confirmed, true);
   assert.equal(result.requirements.goalDescription, "Build muscle and strength");
   assert.equal(result.requirements.priorityNote, "Keep  legs  balanced");

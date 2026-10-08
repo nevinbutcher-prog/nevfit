@@ -14,7 +14,9 @@ export function createRobProgramIntake() {
 }
 
 export function updateRobProgramIntake(intake, updates) {
-  return { ...createRobProgramIntake(), ...intake, ...updates, confirmedRequirements: null };
+  const updatedIntake = { ...createRobProgramIntake(), ...intake, ...updates, confirmedRequirements: null };
+  if (Object.hasOwn(updates, "constraints") && updates.constraints !== intake.constraints) updatedIntake.constraintsConfirmed = false;
+  return updatedIntake;
 }
 
 export function validateRobProgramIntake(intake) {

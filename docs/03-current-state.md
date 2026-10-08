@@ -88,10 +88,12 @@
 - Build me a program has an honest dedicated entry point and does not invoke the existing single-routine generator
 - Rob review selection uses the current selected in-memory draft, labels unsaved drafts, preserves retry target identity, and ignores out-of-order program-review responses
 - In-flight Rob reviews use an explicit transient lifecycle: changing targets, leaving Rob, or changing a reviewed draft releases loading and discards stale provider responses without creating another request
+- Build Me a Program now collects and validates a transient, user-confirmed program-design brief through deterministic coaching-style questions; it neither calls AI nor changes program data
 
 ## Current Known Limitations
 
-- Rob does not yet run an interactive program-design conversation, generate `create_program` candidates, resolve whole-program exercises, or provide whole-program preview and approval.
+- Rob does not yet generate `create_program` candidates, resolve whole-program exercises, or provide whole-program preview and approval.
+- Confirmed program-design briefs are transient and reset on a full browser reload; no personal preference profile is persisted for this flow yet.
 - Rob does not yet generate `modify_program` recommendations.
 - Progression analytics are not implemented.
 

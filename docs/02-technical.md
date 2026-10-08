@@ -113,6 +113,22 @@ silently substituting another program. Program-review requests carry an
 in-memory request identity and target ID so an older response cannot overwrite
 a later selected review.
 
+## Rob Program-Design Intake
+
+`src/services/rob/robProgramIntake.js` defines a versioned, serializable, pure
+requirements contract for future whole-program generation. It validates goal,
+weekly frequency, session duration, priorities, environment/equipment, and
+constraints, then produces a separately copied confirmed snapshot. The intake
+does not read the static `robTrainingProfile`: there is no trustworthy persisted
+personal-preference source today, so every value is explicitly supplied and
+confirmed in the current session.
+
+`src/components/rob/RobProgramIntake.jsx` presents one deterministic question
+at a time under Rob Home. Its state is transient React state: it survives
+navigation within the mounted app but is not stored in Firestore, localStorage,
+program drafts, or an AI conversation. Confirmation is a handoff-ready brief
+only; it makes no AI request and creates, activates, or saves no program.
+
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or
 invalidating an in-flight review releases its loading state without attempting

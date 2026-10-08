@@ -63,7 +63,7 @@ files.
 Responses normalize to text, model, and nullable token usage. Errors normalize
 to stable `ai_*` codes and safe messages. Development diagnostics record only
 provider/model, result/error code, duration, usage, and whether authenticated
-context was present—never prompts, outputs, tokens, emails, or health/training
+context was presentâ€”never prompts, outputs, tokens, emails, or health/training
 data. AI responses are transient: this foundation reads or writes no program,
 routine, workout, planning, health, or Firestore domain data.
 
@@ -140,6 +140,15 @@ do not submit another request and intake edits make late responses inert.
 Candidates are transient browser state; they are not executable proposals until
 a later exercise-resolution stage materialises trusted identities and validates
 `programProposal.js`.
+Whole-program calls use a separately bounded 4,000-token default output budget
+(`AI_PROGRAM_MAX_OUTPUT_TOKENS`, clamped to 1,000–5,000), while advice and
+single-routine calls retain the 1,200-token `AI_MAX_OUTPUT_TOKENS` default.
+The OpenRouter adapter retains only safe completion metadata: returned model,
+output-token usage, and finish reason. `robProgramGeneration` logs its requested
+budget, safe response size, safely extractable routine count, and validation
+failure category/reason. It never logs prompts, constraints, raw model output,
+or credentials. A provider `length` finish reason is recorded as
+`output_exhausted`; no automatic generation retry occurs.
 
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or

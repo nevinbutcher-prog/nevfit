@@ -91,5 +91,34 @@ export function createRobProposalHandler({ providerFactory = () => createOpenRou
   };
 }
 export const robProposal = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobProposalHandler());
-export function createRobProgramGenerationHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: aiConfig }) } = {}) { return async (request) => { if (!request.auth) throw new HttpsError("unauthenticated", toClientError(new AiError("ai_unauthenticated")).message); try { return await generateRobProgramCandidate(request.data, { provider: providerFactory() }); } catch (error) { const normalized = normalizeAiError(error); throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized)); } }; }
+export function createRobProgramGenerationHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: aiConfig }), config = aiConfig } = {}) {
+  return async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", toClientError(new AiError("ai_unauthenticated")).message);
+    const startedAt = Date.now();
+    const requestedOutputTokens = config.programMaxOutputTokens;
+    try {
+      const result = await generateRobProgramCandidate(request.data, { provider: providerFactory(), maxOutputTokens: requestedOutputTokens });
+      logger.info("Rob program generation completed", {
+        operation: "rob_program_generation", failureCategory: null, requestedOutputTokens, ...result.diagnostics,
+        durationMs: Date.now() - startedAt, authenticatedUidPresent: true,
+      });
+      return { model: result.model, usage: result.usage, explanation: result.explanation, candidate: result.candidate };
+    } catch (error) {
+      const normalized = normalizeAiError(error);
+      logger.warn("Rob program generation failed", {
+        operation: "rob_program_generation",
+        failureCategory: error.programGenerationFailureCategory ?? (normalized.code === "ai_invalid_request" ? "request_validation" : "provider_or_transport"),
+        requestedOutputTokens,
+        actualModel: error.programGenerationDiagnostic?.actualModel ?? config.model,
+        providerOutputTokens: error.programGenerationDiagnostic?.providerOutputTokens ?? null,
+        providerFinishReason: error.programGenerationDiagnostic?.providerFinishReason ?? null,
+        responseCharacterLength: error.programGenerationDiagnostic?.responseCharacterLength ?? null,
+        candidateValidationFailureReason: normalized.validationDiagnostic?.reason ?? null,
+        routineCount: error.programGenerationDiagnostic?.routineCount ?? null,
+        durationMs: Date.now() - startedAt, authenticatedUidPresent: true,
+      });
+      throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized));
+    }
+  };
+}
 export const robProgramGeneration = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobProgramGenerationHandler());

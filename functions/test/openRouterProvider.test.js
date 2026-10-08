@@ -10,8 +10,8 @@ const provider = (fetchImpl, apiKey = "secret") => createOpenRouterProvider({ ap
 
 test("normalizes a successful OpenRouter completion and keeps controls server-owned", async () => {
   let options;
-  const result = await provider(async (_url, value) => { options = value; return response(200, { model: "returned-model", choices: [{ message: { content: "OK" } }], usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 } }); }).generate(request);
-  assert.deepEqual(result, { text: "OK", model: "returned-model", usage: { inputTokens: 3, outputTokens: 1, totalTokens: 4 } });
+  const result = await provider(async (_url, value) => { options = value; return response(200, { model: "returned-model", choices: [{ message: { content: "OK" }, finish_reason: "stop" }], usage: { prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 } }); }).generate(request);
+  assert.deepEqual(result, { text: "OK", model: "returned-model", usage: { inputTokens: 3, outputTokens: 1, totalTokens: 4 }, finishReason: "stop" });
   assert.deepEqual(JSON.parse(options.body), { model: "test-model", messages: request.messages, max_tokens: 1200, stream: false });
 });
 

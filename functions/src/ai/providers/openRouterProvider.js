@@ -49,6 +49,7 @@ export function createOpenRouterProvider({ apiKey, config, fetchImpl = fetch }) 
             outputTokens: usageValue(body.usage?.completion_tokens),
             totalTokens: usageValue(body.usage?.total_tokens),
           },
+          finishReason: typeof body.choices?.[0]?.finish_reason === "string" ? body.choices[0].finish_reason : null,
         };
       } finally { clearTimeout(timeout); }
     },

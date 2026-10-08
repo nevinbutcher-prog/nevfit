@@ -53,4 +53,30 @@ export function parseProgramCandidate(raw, requirements) {
   if (value.program.days.reduce((count, day) => count + day.exercises.length, 0) > 50) fail("size");
   return { explanation: value.explanation.trim(), candidate: { proposalType: "create_program", program: value.program } };
 }
-export async function generateRobProgramCandidate(data, { provider }) { const { requirements } = validateProgramGenerationRequest(data); const result = await provider.generate({ messages: programGenerationMessages(requirements) }); return { model: result.model, usage: result.usage, ...parseProgramCandidate(result.text, requirements) }; }
+export function programGenerationDiagnostics(result) {
+  const raw = typeof result?.text === "string" ? result.text : "";
+  let routineCount = null;
+  try {
+    const candidate = JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/gi, ""));
+    if (Array.isArray(candidate?.program?.days)) routineCount = candidate.program.days.length;
+  } catch { /* A partial response is intentionally not retained or logged. */ }
+  return {
+    actualModel: typeof result?.model === "string" ? result.model : null,
+    providerOutputTokens: Number.isFinite(result?.usage?.outputTokens) ? result.usage.outputTokens : null,
+    providerFinishReason: typeof result?.finishReason === "string" ? result.finishReason : null,
+    responseCharacterLength: raw.length,
+    routineCount,
+  };
+}
+export async function generateRobProgramCandidate(data, { provider, maxOutputTokens }) {
+  const { requirements } = validateProgramGenerationRequest(data);
+  const result = await provider.generate({ messages: programGenerationMessages(requirements), maxOutputTokens });
+  const diagnostics = programGenerationDiagnostics(result);
+  try {
+    return { model: result.model, usage: result.usage, finishReason: result.finishReason ?? null, diagnostics, ...parseProgramCandidate(result.text, requirements) };
+  } catch (error) {
+    error.programGenerationDiagnostic = diagnostics;
+    error.programGenerationFailureCategory = diagnostics.providerFinishReason === "length" ? "output_exhausted" : "candidate_validation";
+    throw error;
+  }
+}

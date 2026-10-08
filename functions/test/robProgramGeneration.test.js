@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRobProgramGenerationHandler } from "../src/index.js";
-import { parseProgramCandidate, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
+import { generateRobProgramCandidate, parseProgramCandidate, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
 
 const requirements = { version: 1, goal: "hypertrophy", daysPerWeek: 3, sessionMinutes: 60, priorities: ["back"], environment: "commercial_gym", equipment: ["machines", "dumbbells"], constraints: "" };
 const response = JSON.stringify({ version: 1, proposalType: "create_program", explanation: "A balanced three-day plan.", program: { name: "Three Day Build", summary: "A concise program.", days: ["Pull", "Push", "Legs"].map((name) => ({ name, focus: `${name} focus`, exercises: [{ exerciseRef: "Cable row", sets: 3, repRange: "8-12", restSeconds: 90, note: null, proposalGroupKey: null }] })) } });
@@ -81,4 +81,52 @@ test("candidate prescriptions and routine-local supersets are strict", () => {
   const oneInvalidExercise = structuredClone(paired);
   oneInvalidExercise.program.days[0].exercises[1].sets = 0;
   assert.throws(() => parseProgramCandidate(JSON.stringify(oneInvalidExercise), requirements), (error) => error.code === "ai_invalid_response");
+});
+
+test("whole-program generation uses its bounded budget without changing routine generation", async () => {
+  let received;
+  const handler = createRobProgramGenerationHandler({
+    config: { model: "test-model", programMaxOutputTokens: 4000 },
+    providerFactory: () => ({ generate: async (request) => { received = request; return { text: response, model: "test", usage: { outputTokens: 900 }, finishReason: "stop" }; } }),
+  });
+  await handler({ auth: { uid: "verified" }, data: { requirements } });
+  assert.equal(received.maxOutputTokens, 4000);
+});
+
+test("truncated output is classified from the provider finish reason without a retry", async () => {
+  let calls = 0;
+  await assert.rejects(
+    () => generateRobProgramCandidate({ requirements }, { provider: { generate: async () => { calls += 1; return { text: response.slice(0, -20), model: "test", usage: { outputTokens: 1200 }, finishReason: "length" }; } }, maxOutputTokens: 4000 }),
+    (error) => error.code === "ai_invalid_response"
+      && error.programGenerationFailureCategory === "output_exhausted"
+      && error.programGenerationDiagnostic.providerFinishReason === "length"
+      && error.programGenerationDiagnostic.providerOutputTokens === 1200
+      && error.programGenerationDiagnostic.responseCharacterLength > 0,
+  );
+  assert.equal(calls, 1);
+});
+
+test("realistic three-, four-, and five-day candidates remain complete under the program budget", async () => {
+  for (const daysPerWeek of [3, 4, 5]) {
+    const candidate = JSON.parse(response);
+    candidate.program.days = Array.from({ length: daysPerWeek }, (_, day) => ({
+      name: `Day ${day + 1}`,
+      focus: "Hypertrophy focus",
+      exercises: Array.from({ length: 6 }, (_, exercise) => ({ exerciseRef: `Exercise ${day}-${exercise}`, sets: 3, repRange: "8-12", restSeconds: 90, note: "Controlled repetitions.", proposalGroupKey: null })),
+    }));
+    candidate.explanation = "A coordinated progression-focused weekly plan.";
+    const raw = JSON.stringify(candidate);
+    assert.ok(raw.length < 4000 * 4);
+    const result = await generateRobProgramCandidate({ requirements: { ...requirements, daysPerWeek } }, { provider: { generate: async () => ({ text: raw, model: "test", usage: { outputTokens: 2500 }, finishReason: "stop" }) }, maxOutputTokens: 4000 });
+    assert.equal(result.candidate.program.days.length, daysPerWeek);
+  }
+});
+
+test("invalid complete candidate remains rejected with validation diagnostics", async () => {
+  const invalidCandidate = JSON.parse(response);
+  invalidCandidate.program.days[0].exercises[0].sets = 0;
+  await assert.rejects(
+    () => generateRobProgramCandidate({ requirements }, { provider: { generate: async () => ({ text: JSON.stringify(invalidCandidate), model: "test", usage: { outputTokens: 400 }, finishReason: "stop" }) }, maxOutputTokens: 4000 }),
+    (error) => error.code === "ai_invalid_response" && error.programGenerationFailureCategory === "candidate_validation" && error.programGenerationDiagnostic.routineCount === 3,
+  );
 });

@@ -63,7 +63,7 @@ files.
 Responses normalize to text, model, and nullable token usage. Errors normalize
 to stable `ai_*` codes and safe messages. Development diagnostics record only
 provider/model, result/error code, duration, usage, and whether authenticated
-context was presentâ€”never prompts, outputs, tokens, emails, or health/training
+context was present--never prompts, outputs, tokens, emails, or health/training
 data. AI responses are transient: this foundation reads or writes no program,
 routine, workout, planning, health, or Firestore domain data.
 
@@ -141,7 +141,7 @@ Candidates are transient browser state; they are not executable proposals until
 a later exercise-resolution stage materialises trusted identities and validates
 `programProposal.js`.
 Whole-program calls use a separately bounded 4,000-token default output budget
-(`AI_PROGRAM_MAX_OUTPUT_TOKENS`, clamped to 1,000–5,000), while advice and
+(`AI_PROGRAM_MAX_OUTPUT_TOKENS`, clamped to 1,000-5,000), while advice and
 single-routine calls retain the 1,200-token `AI_MAX_OUTPUT_TOKENS` default.
 The OpenRouter adapter retains only safe completion metadata: returned model,
 output-token usage, and finish reason. `robProgramGeneration` logs its requested
@@ -149,6 +149,19 @@ budget, safe response size, safely extractable routine count, and validation
 failure category/reason. It never logs prompts, constraints, raw model output,
 or credentials. A provider `length` finish reason is recorded as
 `output_exhausted`; no automatic generation retry occurs.
+Generated program candidates are inspectable in the intake as transient,
+read-only details: program name and explanation plus expandable routine sections
+with focus, exercise prescriptions, rests, notes, and local superset labels.
+They remain unresolved descriptions only: inspection does not make another AI
+request, resolve exercises, create a draft, save a program, activate it, or
+schedule it. Editing any intake answer clears confirmation and the candidate,
+requiring an explicit reconfirmation.
+
+The whole-program prompt asks hypertrophy candidates to use practical workload
+for the confirmed session duration and context. Around four to seven exercises
+is guidance for a typical 60-minute hypertrophy session, not a validator rule
+or unconditional minimum; the existing per-routine and total-program size
+limits remain authoritative.
 
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or

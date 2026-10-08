@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRobProgramGenerationHandler } from "../src/index.js";
-import { generateRobProgramCandidate, parseProgramCandidate, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
+import { generateRobProgramCandidate, parseProgramCandidate, programGenerationMessages, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
 
 const requirements = { version: 1, goal: "hypertrophy", daysPerWeek: 3, sessionMinutes: 60, priorities: ["back"], environment: "commercial_gym", equipment: ["machines", "dumbbells"], constraints: "" };
 const response = JSON.stringify({ version: 1, proposalType: "create_program", explanation: "A balanced three-day plan.", program: { name: "Three Day Build", summary: "A concise program.", days: ["Pull", "Push", "Legs"].map((name) => ({ name, focus: `${name} focus`, exercises: [{ exerciseRef: "Cable row", sets: 3, repRange: "8-12", restSeconds: 90, note: null, proposalGroupKey: null }] })) } });
@@ -129,4 +129,13 @@ test("invalid complete candidate remains rejected with validation diagnostics", 
     () => generateRobProgramCandidate({ requirements }, { provider: { generate: async () => ({ text: JSON.stringify(invalidCandidate), model: "test", usage: { outputTokens: 400 }, finishReason: "stop" }) }, maxOutputTokens: 4000 }),
     (error) => error.code === "ai_invalid_response" && error.programGenerationFailureCategory === "candidate_validation" && error.programGenerationDiagnostic.routineCount === 3,
   );
+});
+test("four-day hypertrophy instructions encourage practical workload and coverage without a fixed minimum", () => {
+  const messages = programGenerationMessages({ ...requirements, daysPerWeek: 4, sessionMinutes: 60, priorities: ["shoulders", "arms"] });
+  assert.match(messages[0].content, /4–7 exercises/);
+  assert.match(messages[0].content, /priorities and the muscle groups needed for a balanced program/);
+  assert.match(messages[0].content, /not a fixed minimum/);
+  const shortSession = structuredClone(JSON.parse(response));
+  shortSession.program.days = [shortSession.program.days[0]];
+  assert.doesNotThrow(() => parseProgramCandidate(JSON.stringify(shortSession), { ...requirements, daysPerWeek: 1, sessionMinutes: 20 }));
 });

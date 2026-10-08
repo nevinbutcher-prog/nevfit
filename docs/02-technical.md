@@ -131,10 +131,15 @@ only; it makes no AI request and creates, activates, or saves no program.
 
 After confirmation, `robProgramGeneration` is an authenticated Firebase
 callable that accepts only the confirmed requirements and returns a bounded
-Stage-A `create_program` candidate. The server rejects model-supplied Fitbot
-IDs and incomplete routine collections. Candidates are transient browser state;
-they are not executable proposals until a later exercise-resolution stage
-materialises trusted identities and validates `programProposal.js`.
+Stage-A `create_program` candidate. The server independently revalidates all
+intake enums, uniqueness, lengths, and frequency before contacting a provider;
+candidate prescriptions use Fitbot's existing rep-range limits and only permit
+routine-local, valid two-or-more-member superset keys. The client keeps an
+imperative fingerprinted in-flight request identity, so rapid duplicate clicks
+do not submit another request and intake edits make late responses inert.
+Candidates are transient browser state; they are not executable proposals until
+a later exercise-resolution stage materialises trusted identities and validates
+`programProposal.js`.
 
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or

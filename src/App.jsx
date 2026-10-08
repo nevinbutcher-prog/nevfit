@@ -89,6 +89,13 @@ import { buildRoutineCreationInstruction } from "./services/rob/robRoutineCreati
 import RobProgramIntake from "./components/rob/RobProgramIntake";
 import { createRobProgramIntake } from "./services/rob/robProgramIntake";
 import {
+  createRobProgramGenerationLifecycle,
+  invalidateRobProgramGenerationRequest,
+  isActiveRobProgramGenerationRequest,
+  settleRobProgramGenerationRequest,
+  startRobProgramGenerationRequest,
+} from "./services/rob/robProgramGenerationLifecycle";
+import {
   getPreselectedReviewProgram,
   getReviewablePrograms,
   ROB_WORKFLOW_STEPS,
@@ -1933,7 +1940,7 @@ function App() {
   const programDraftsRef = useRef(programDrafts);
   const robReviewLifecycleRef = useRef(createRobReviewLifecycle());
   const robSelectedProgramIdRef = useRef(null);
-  const robProgramGenerationRequestIdRef = useRef(0);
+  const robProgramGenerationLifecycleRef = useRef(createRobProgramGenerationLifecycle());
   useEffect(() => {
     programDraftsRef.current = programDrafts;
     invalidatePendingRobReview();
@@ -4374,23 +4381,27 @@ function App() {
   }
 
   function invalidateRobProgramGeneration() {
-    robProgramGenerationRequestIdRef.current += 1;
+    robProgramGenerationLifecycleRef.current = invalidateRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current);
     setRobProgramGeneration({ status: "idle", candidate: null, error: null, fingerprint: null });
   }
 
   async function generateRobProgram() {
     const requirements = robProgramIntake.confirmedRequirements;
-    if (!requirements || robProgramGeneration.status === "loading") return;
+    if (!requirements) return;
     const fingerprint = JSON.stringify(requirements);
-    const requestId = robProgramGenerationRequestIdRef.current + 1;
-    robProgramGenerationRequestIdRef.current = requestId;
+    const started = startRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, fingerprint);
+    robProgramGenerationLifecycleRef.current = started.lifecycle;
+    const request = started.request;
+    if (!request) return;
     setRobProgramGeneration({ status: "loading", candidate: null, error: null, fingerprint });
     try {
       const result = await requestRobProgramGeneration(requirements);
-      if (robProgramGenerationRequestIdRef.current !== requestId || JSON.stringify(robProgramIntake.confirmedRequirements) !== fingerprint) return;
+      if (!isActiveRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request) || JSON.stringify(robProgramIntake.confirmedRequirements) !== fingerprint) return;
+      robProgramGenerationLifecycleRef.current = settleRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request);
       setRobProgramGeneration({ status: "success", candidate: result, error: null, fingerprint });
     } catch (error) {
-      if (robProgramGenerationRequestIdRef.current !== requestId || JSON.stringify(robProgramIntake.confirmedRequirements) !== fingerprint) return;
+      if (!isActiveRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request) || JSON.stringify(robProgramIntake.confirmedRequirements) !== fingerprint) return;
+      robProgramGenerationLifecycleRef.current = settleRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request);
       setRobProgramGeneration({ status: "error", candidate: null, error: error?.message ?? "Rob couldn't generate a valid program right now.", fingerprint });
     }
   }

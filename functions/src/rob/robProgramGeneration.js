@@ -5,7 +5,33 @@ const text = (value, max) => typeof value === "string" && value.trim() && value.
 const invalid = (reason) => { const error = new AiError("ai_invalid_request"); error.validationDiagnostic = { reason }; throw error; };
 const fail = (reason) => { const error = new AiError("ai_invalid_response", { retryable: true }); error.validationDiagnostic = { reason }; throw error; };
 const allowed = (value, keys) => object(value) && Object.keys(value).every((key) => keys.includes(key));
-const intakeValid = (value) => allowed(value, ["version", "goal", "goalDescription", "daysPerWeek", "sessionMinutes", "priorities", "priorityNote", "environment", "equipment", "equipmentOther", "constraints"]) && value.version === 1 && typeof value.goal === "string" && Number.isInteger(value.daysPerWeek) && value.daysPerWeek >= 1 && value.daysPerWeek <= 6 && Number.isInteger(value.sessionMinutes) && value.sessionMinutes >= 20 && value.sessionMinutes <= 180 && Array.isArray(value.priorities) && Array.isArray(value.equipment) && typeof value.environment === "string" && typeof value.constraints === "string";
+const GOALS = new Set(["hypertrophy", "strength", "general_fitness", "hypertrophy_strength", "other"]);
+const PRIORITIES = new Set(["shoulders", "arms", "chest", "back", "legs", "glutes", "core", "balanced"]);
+const ENVIRONMENTS = new Set(["commercial_gym", "home_gym", "both", "minimal_equipment", "other"]);
+const EQUIPMENT = new Set(["machines", "dumbbells", "barbell", "cables", "bench", "pull_up_equipment"]);
+const identity = (value, max = 160) => typeof value === "string" && value.length <= max && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value.trim());
+const optionalText = (value, max) => value === undefined || (typeof value === "string" && value.trim() && value.length <= max);
+const list = (value, supported, max) => Array.isArray(value) && value.length <= max && value.every((item) => supported.has(item)) && new Set(value).size === value.length;
+const repRange = (value) => {
+  const match = typeof value === "string" ? value.trim().match(/^(\d{1,3})(?:\s*-\s*(\d{1,3}))?$/) : null;
+  if (!match) return false;
+  const minimum = Number(match[1]);
+  const maximum = Number(match[2] ?? match[1]);
+  return minimum >= 1 && maximum <= 100 && minimum <= maximum;
+};
+const intakeValid = (value) => allowed(value, ["version", "goal", "goalDescription", "daysPerWeek", "sessionMinutes", "priorities", "priorityNote", "environment", "equipment", "equipmentOther", "constraints"])
+  && value.version === 1
+  && GOALS.has(value.goal)
+  && (value.goal !== "other" || (typeof value.goalDescription === "string" && value.goalDescription.trim() && value.goalDescription.length <= 160))
+  && optionalText(value.goalDescription, 160)
+  && Number.isInteger(value.daysPerWeek) && value.daysPerWeek >= 1 && value.daysPerWeek <= 6
+  && Number.isInteger(value.sessionMinutes) && value.sessionMinutes >= 20 && value.sessionMinutes <= 180
+  && list(value.priorities, PRIORITIES, 6)
+  && optionalText(value.priorityNote, 240)
+  && ENVIRONMENTS.has(value.environment)
+  && list(value.equipment, EQUIPMENT, 8)
+  && optionalText(value.equipmentOther, 160)
+  && typeof value.constraints === "string" && value.constraints.length <= 360;
 
 export function validateProgramGenerationRequest(data) {
   if (!allowed(data, ["requirements"]) || !intakeValid(data.requirements)) invalid("requirements");
@@ -20,7 +46,7 @@ export function parseProgramCandidate(raw, requirements) {
   const groupCheck = (day) => {
     if (!allowed(day, ["name", "focus", "exercises"]) || !text(day.name, 160) || !text(day.focus, 200) || !Array.isArray(day.exercises) || !day.exercises.length || day.exercises.length > 12) fail("routine");
     const groups = new Map();
-    day.exercises.forEach((exercise) => { if (!allowed(exercise, ["exerciseRef", "sets", "repRange", "restSeconds", "note", "proposalGroupKey"]) || !text(exercise.exerciseRef, 160) || !Number.isInteger(exercise.sets) || exercise.sets < 1 || exercise.sets > 12 || !text(exercise.repRange, 20) || !Number.isInteger(exercise.restSeconds) || exercise.restSeconds < 0 || exercise.restSeconds > 600 || (exercise.note !== null && exercise.note !== undefined && !text(exercise.note, 500))) fail("exercise"); if (exercise.proposalGroupKey) groups.set(exercise.proposalGroupKey, (groups.get(exercise.proposalGroupKey) ?? 0) + 1); });
+    day.exercises.forEach((exercise) => { if (!allowed(exercise, ["exerciseRef", "sets", "repRange", "restSeconds", "note", "proposalGroupKey"]) || !text(exercise.exerciseRef, 160) || !Number.isInteger(exercise.sets) || exercise.sets < 1 || exercise.sets > 12 || !repRange(exercise.repRange) || !Number.isInteger(exercise.restSeconds) || exercise.restSeconds < 0 || exercise.restSeconds > 600 || (exercise.note !== null && exercise.note !== undefined && !text(exercise.note, 500)) || (exercise.proposalGroupKey !== undefined && exercise.proposalGroupKey !== null && !identity(exercise.proposalGroupKey))) fail("exercise"); if (exercise.proposalGroupKey) groups.set(exercise.proposalGroupKey.trim(), (groups.get(exercise.proposalGroupKey.trim()) ?? 0) + 1); });
     if ([...groups.values()].some((count) => count < 2)) fail("superset");
   };
   value.program.days.forEach(groupCheck);

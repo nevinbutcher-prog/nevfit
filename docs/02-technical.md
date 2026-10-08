@@ -129,6 +129,13 @@ navigation within the mounted app but is not stored in Firestore, localStorage,
 program drafts, or an AI conversation. Confirmation is a handoff-ready brief
 only; it makes no AI request and creates, activates, or saves no program.
 
+After confirmation, `robProgramGeneration` is an authenticated Firebase
+callable that accepts only the confirmed requirements and returns a bounded
+Stage-A `create_program` candidate. The server rejects model-supplied Fitbot
+IDs and incomplete routine collections. Candidates are transient browser state;
+they are not executable proposals until a later exercise-resolution stage
+materialises trusted identities and validates `programProposal.js`.
+
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or
 invalidating an in-flight review releases its loading state without attempting

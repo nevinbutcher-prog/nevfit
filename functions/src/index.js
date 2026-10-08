@@ -8,6 +8,7 @@ import { generateAiResponse } from "./ai/aiService.js";
 import { generateRobAdvice } from "./rob/robAdvice.js";
 import { generateRobReview } from "./rob/robReview.js";
 import { generateRobProposal } from "./rob/robProposal.js";
+import { generateRobProgramCandidate } from "./rob/robProgramGeneration.js";
 
 const openRouterApiKey = defineSecret("OPENROUTER_API_KEY");
 
@@ -90,3 +91,5 @@ export function createRobProposalHandler({ providerFactory = () => createOpenRou
   };
 }
 export const robProposal = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobProposalHandler());
+export function createRobProgramGenerationHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: aiConfig }) } = {}) { return async (request) => { if (!request.auth) throw new HttpsError("unauthenticated", toClientError(new AiError("ai_unauthenticated")).message); try { return await generateRobProgramCandidate(request.data, { provider: providerFactory() }); } catch (error) { const normalized = normalizeAiError(error); throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized)); } }; }
+export const robProgramGeneration = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobProgramGenerationHandler());

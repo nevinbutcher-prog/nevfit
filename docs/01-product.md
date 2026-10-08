@@ -55,7 +55,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Approved Rob proposals update only the editable, unsaved program draft; Save Program remains the sole persistence action
 - Program builders can ask Rob to create one constrained routine, then inspect, approve, or reject the draft-only proposal
 - Rob-proposed exercises use conservative provider resolution: exact and Fitbot-owned alias matches resolve automatically; plausible alternatives require the user to choose a provider-backed exercise before a proposal can be validated
-- A pure, provider-neutral whole-program proposal contract safely represents complete program creation and coordinated multi-routine changes; it is domain support only, with no user-facing whole-program Rob flow yet
+- A pure, provider-neutral whole-program proposal contract safely represents complete program creation and coordinated multi-routine changes; Rob can now generate a transient whole-program candidate from a confirmed intake, but it cannot yet resolve exercises, preview it fully, or create a saved program
 - Rob has a unified coaching home for questions, explicit program selection and review, and the forthcoming whole-program design workflow
 - Build Me a Program now guides users through a transient, confirmable program brief covering goals, frequency, session length, priorities, equipment, and constraints
 
@@ -87,9 +87,10 @@ actions are Ask Rob a question, Ask Rob to review a program, and Ask Rob to
 build a program. Other screens may later provide contextual shortcuts into
 these shared workflows, but must not create parallel AI experiences.
 
-Whole-program Rob generation, exercise matching, a program-proposal approval
-UI, program draft creation from Rob, and progression analytics are not
-implemented yet.
+Exercise matching, a full program-proposal approval UI, program draft creation
+from Rob, and progression analytics are not implemented yet. Whole-program
+generation currently returns a transient candidate only after the user
+explicitly confirms their requirements.
 
 Rob Home is the canonical entry point for coaching. Program-builder review
 actions remain contextual shortcuts into the same Rob review workflow, while

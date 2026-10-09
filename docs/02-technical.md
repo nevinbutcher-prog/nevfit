@@ -133,8 +133,9 @@ After confirmation, `robProgramGeneration` is an authenticated Firebase
 callable that accepts only the confirmed requirements and returns a bounded
 Stage-A `create_program` candidate. The server independently revalidates all
 intake enums, uniqueness, lengths, and frequency before contacting a provider;
-candidate prescriptions use Fitbot's existing rep-range limits and only permit
-routine-local, valid two-or-more-member superset keys. The client keeps an
+candidate prescriptions use Fitbot's existing rep-range limits and default to straight sets.
+A valid routine-local two-or-more-member superset key remains available when useful; a
+strictly validated singleton key is safely normalised to null without altering its prescription. The client keeps an
 imperative fingerprinted in-flight request identity, so rapid duplicate clicks
 do not submit another request and intake edits make late responses inert.
 Candidates are transient browser state; they are not executable proposals until

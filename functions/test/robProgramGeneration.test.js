@@ -73,7 +73,8 @@ test("candidate prescriptions and routine-local supersets are strict", () => {
   }
   const singleMember = structuredClone(parsed);
   singleMember.program.days[0].exercises[0].proposalGroupKey = "pair-1";
-  assert.throws(() => parseProgramCandidate(JSON.stringify(singleMember), requirements), (error) => error.code === "ai_invalid_response");
+  const recovered = parseProgramCandidate(JSON.stringify(singleMember), requirements);
+  assert.equal(recovered.candidate.program.days[0].exercises[0].proposalGroupKey, null);
   const paired = structuredClone(parsed);
   paired.program.days[0].exercises.push({ exerciseRef: "Pulldown", sets: 3, repRange: "8-12", restSeconds: 90, note: null, proposalGroupKey: "pair-1" });
   paired.program.days[0].exercises[0].proposalGroupKey = "pair-1";
@@ -81,6 +82,30 @@ test("candidate prescriptions and routine-local supersets are strict", () => {
   const oneInvalidExercise = structuredClone(paired);
   oneInvalidExercise.program.days[0].exercises[1].sets = 0;
   assert.throws(() => parseProgramCandidate(JSON.stringify(oneInvalidExercise), requirements), (error) => error.code === "ai_invalid_response");
+});
+
+test("orphaned supersets are recovered routine-locally without changing prescriptions", () => {
+  const candidate = JSON.parse(response);
+  const first = candidate.program.days[0].exercises[0];
+  first.proposalGroupKey = "shared-key";
+  candidate.program.days[1].exercises[0].proposalGroupKey = "shared-key";
+  const originalPrescription = { exerciseRef: first.exerciseRef, sets: first.sets, repRange: first.repRange, restSeconds: first.restSeconds, note: first.note };
+
+  const parsed = parseProgramCandidate(JSON.stringify(candidate), requirements);
+  const recovered = parsed.candidate.program.days;
+  assert.equal(recovered[0].exercises[0].proposalGroupKey, null);
+  assert.equal(recovered[1].exercises[0].proposalGroupKey, null);
+  assert.deepEqual({ exerciseRef: recovered[0].exercises[0].exerciseRef, sets: recovered[0].exercises[0].sets, repRange: recovered[0].exercises[0].repRange, restSeconds: recovered[0].exercises[0].restSeconds, note: recovered[0].exercises[0].note }, originalPrescription);
+});
+
+test("valid routine-local supersets remain unchanged", () => {
+  const candidate = JSON.parse(response);
+  candidate.program.days[0].exercises.push({ exerciseRef: "Pulldown", sets: 3, repRange: "8-12", restSeconds: 90, note: null, proposalGroupKey: "pair-1" });
+  candidate.program.days[0].exercises[0].proposalGroupKey = "pair-1";
+
+  const parsed = parseProgramCandidate(JSON.stringify(candidate), requirements);
+  assert.equal(parsed.candidate.program.days[0].exercises[0].proposalGroupKey, "pair-1");
+  assert.equal(parsed.candidate.program.days[0].exercises[1].proposalGroupKey, "pair-1");
 });
 
 test("whole-program generation uses its bounded budget without changing routine generation", async () => {

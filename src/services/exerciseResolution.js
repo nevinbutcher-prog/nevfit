@@ -11,6 +11,15 @@ const DEFAULT_ALIASES = [
   { from: ["pull", "down"], to: ["lat", "pulldown"] },
   { from: ["lat", "raise"], to: ["lateral", "raise"] },
   { from: ["cable", "pushdown"], to: ["triceps", "pushdown"] },
+  { from: ["curls"], to: ["curl"] },
+  { from: ["deadlifts"], to: ["deadlift"] },
+  { from: ["extensions"], to: ["extension"] },
+  { from: ["flies"], to: ["fly"] },
+  { from: ["lunges"], to: ["lunge"] },
+  { from: ["presses"], to: ["press"] },
+  { from: ["raises"], to: ["raise"] },
+  { from: ["rows"], to: ["row"] },
+  { from: ["squats"], to: ["squat"] },
 ];
 
 const tokensMatch = (tokens, index, expected) => expected.every((token, offset) => tokens[index + offset] === token);
@@ -36,6 +45,10 @@ const uniqueById = (exercises) => [...new Map(exercises.filter(validProviderExer
 const tokensFor = (value, aliases) => normalizeExerciseText(value, aliases).split(" ").filter(Boolean);
 const candidateTexts = (exercise) => [exercise?.name, exercise?.originalName, ...(Array.isArray(exercise?.aliases) ? exercise.aliases : [])]
   .filter((value) => typeof value === "string" && value.trim());
+const MATERIAL_TERMS = new Set([
+  "curl", "deadlift", "decline", "extension", "flat", "fly", "incline",
+  "lunge", "press", "pulldown", "pushdown", "raise", "row", "squat",
+]);
 
 function scoreExerciseText(requestedName, candidateName, aliases) {
   const requested = tokensFor(requestedName, aliases);
@@ -50,7 +63,15 @@ function scoreExerciseText(requestedName, candidateName, aliases) {
 }
 
 function scoreExercise(requestedName, exercise, aliases) {
-  return Math.max(0, ...candidateTexts(exercise).map((candidateName) => scoreExerciseText(requestedName, candidateName, aliases)));
+  return candidateTexts(exercise)
+    .map((candidateName) => ({ candidateName, score: scoreExerciseText(requestedName, candidateName, aliases) }))
+    .sort((first, second) => second.score - first.score || first.candidateName.localeCompare(second.candidateName))[0] ?? { candidateName: "", score: 0 };
+}
+
+function hasMaterialDifference(requestedName, candidateName, aliases) {
+  const requestedTerms = new Set(tokensFor(requestedName, aliases).filter((token) => MATERIAL_TERMS.has(token)));
+  const candidateTerms = new Set(tokensFor(candidateName, aliases).filter((token) => MATERIAL_TERMS.has(token)));
+  return [...requestedTerms].some((term) => !candidateTerms.has(term)) || [...candidateTerms].some((term) => !requestedTerms.has(term));
 }
 
 /**
@@ -70,11 +91,11 @@ export async function resolveProposedExercise({ requestedName, query, exercisePr
   if (exact.length === 1) return { status: "resolved", exercise: exact[0], candidates: exact, confidence: "exact" };
   if (exact.length > 1) return { status: "ambiguous", exercise: null, candidates: exact, confidence: "none" };
 
-  const scored = candidates.map((exercise) => ({ exercise, score: scoreExercise(name, exercise, aliases) })).filter(({ score }) => score >= 0.6).sort((first, second) => second.score - first.score || first.exercise.name.localeCompare(second.exercise.name));
+  const scored = candidates.map((exercise) => ({ exercise, ...scoreExercise(name, exercise, aliases) })).filter(({ score }) => score >= 0.6).sort((first, second) => second.score - first.score || first.exercise.name.localeCompare(second.exercise.name));
   if (!scored.length) return { status: "unresolved", exercise: null, candidates: [], confidence: "none" };
   const best = scored[0];
   const next = scored[1];
-  if (best.score >= 0.82 && (!next || best.score - next.score >= 0.4)) return { status: "resolved", exercise: best.exercise, candidates: [best.exercise], confidence: "high" };
+  if (best.score >= 0.82 && !hasMaterialDifference(name, best.candidateName, aliases) && (!next || best.score - next.score >= 0.4)) return { status: "resolved", exercise: best.exercise, candidates: [best.exercise], confidence: "high" };
   return { status: "ambiguous", exercise: null, candidates: scored.slice(0, 5).map(({ exercise }) => exercise), confidence: "none" };
 }
 

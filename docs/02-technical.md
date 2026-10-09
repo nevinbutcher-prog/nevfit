@@ -217,8 +217,11 @@ It first applies normalized exact matching across the provider display name,
 original name, and provider-supplied aliases, plus bounded Fitbot-owned
 terminology aliases for unambiguous abbreviations and spelling variants (such
 as `RDL`, `SLDL`, pull-down, and skullcrusher). It then uses conservative token
-scoring for ordering and wording differences. It never accepts an AI-supplied
-ID. Weak matches are unresolved; multiple plausible provider results enter a
+scoring for ordering and wording differences. High-confidence similarity will
+not auto-match when a candidate adds or changes a material movement or pressing
+variant term (for example curl-and-press, row, squat, flat, or incline). It
+never accepts an AI-supplied ID. Weak matches are unresolved; multiple plausible
+provider results enter a
 transient `needs_resolution` state. The October 2026 audit found WGER returns
 920 English records, below Fitbot's 1,500-record pool cap, so no additional
 provider is warranted on catalogue-coverage evidence alone. Persistent personal

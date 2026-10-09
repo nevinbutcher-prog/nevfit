@@ -60,3 +60,29 @@ test("resolves unambiguous common abbreviations while keeping nearby movements d
   const distinct = await resolveProposedExercise({ requestedName: "Deadlift", exerciseProvider: provider([{ id: "wger-rdl", name: "Romanian Deadlift" }, { id: "wger-sldl", name: "Stiff Leg Deadlift" }]) });
   assert.equal(distinct.status, "ambiguous");
 });
+
+test("does not automatically match a curl to a curl and press combination", async () => {
+  const result = await resolveProposedExercise({
+    requestedName: "Dumbbell Bicep Curl",
+    exerciseProvider: provider([{ id: "wger-curl-press", name: "Dumbbell Bicep Curl and Press" }]),
+  });
+  assert.equal(result.status, "ambiguous");
+  assert.deepEqual(result.candidates.map((entry) => entry.id), ["wger-curl-press"]);
+});
+
+test("keeps flat and incline pressing variants out of automatic similarity matches", async () => {
+  const candidate = [{ id: "wger-incline", name: "Incline Dumbbell Bench Press" }];
+  for (const requestedName of ["Dumbbell Bench Press", "Flat Dumbbell Bench Press"]) {
+    const result = await resolveProposedExercise({ requestedName, exerciseProvider: provider(candidate) });
+    assert.equal(result.status, "ambiguous");
+  }
+});
+
+test("automatically matches equivalent reordered and pluralized exercise names", async () => {
+  const result = await resolveProposedExercise({
+    requestedName: "Bicep Dumbbell Curls",
+    exerciseProvider: provider([{ id: "wger-curl", name: "Dumbbell Bicep Curl" }]),
+  });
+  assert.equal(result.status, "resolved");
+  assert.equal(result.confidence, "high");
+});

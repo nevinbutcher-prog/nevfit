@@ -1081,6 +1081,7 @@ function normalizeCompletedWorkout(value) {
         setNumber: set.setNumber,
         weight: set.weight,
         reps: set.reps,
+        ...(typeof set.unit === "string" ? { unit: set.unit } : {}),
       };
     });
 
@@ -1114,6 +1115,7 @@ function normalizeCompletedWorkout(value) {
   return {
     id: value.id,
     completedAt: value.completedAt,
+    ...(typeof value.weightUnit === "string" ? { weightUnit: value.weightUnit } : {}),
     scheduleDayId: value.scheduleDayId,
     routineDayId: value.routineDayId,
     routineDayName: value.routineDayName,

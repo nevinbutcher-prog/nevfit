@@ -49,6 +49,28 @@ const id = (value) => {
 };
 const routinesFor = (program) => Array.isArray(program?.days) ? program.days : Array.isArray(program?.routines) ? program.routines : null;
 const meaningfulSet = (set) => Number(set?.reps) > 0 || Number(set?.weight) > 0;
+const weightUnit = (value) => {
+  const normalized = text(value, 16)?.toLowerCase();
+  if (["kg", "kgs", "kilogram", "kilograms"].includes(normalized)) return "kg";
+  if (["lb", "lbs", "pound", "pounds"].includes(normalized)) return "lb";
+  return null;
+};
+const hasLegacyFitbotMetricShape = (workout) =>
+  id(workout?.scheduleDayId) !== null &&
+  id(workout?.routineDayId) !== null &&
+  text(workout?.routineDayName, ROB_CONTEXT_LIMITS.name) !== null &&
+  Array.isArray(workout?.exercises) &&
+  workout.exercises.every((exercise) =>
+    id(exercise?.exerciseId) !== null &&
+    text(exercise?.exerciseName, ROB_CONTEXT_LIMITS.name) !== null &&
+    Array.isArray(exercise?.sets) &&
+    exercise.sets.every((set) => Number.isInteger(set?.setNumber)),
+  );
+const exerciseWeightUnit = (workout, exercise, set) =>
+  weightUnit(set?.unit) ??
+  weightUnit(exercise?.weightUnit) ??
+  weightUnit(workout?.weightUnit) ??
+  (hasLegacyFitbotMetricShape(workout) ? "kg" : null);
 
 function isoDate(value) {
   const date = value && typeof value.toDate === "function" ? value.toDate() : value;
@@ -111,11 +133,14 @@ function serializeWorkout(workout, limits = ROB_CONTEXT_LIMITS) {
     exercises: workout.exercises.slice(0, limits.exercisesPerWorkout).map((exercise) => {
       const exerciseId = id(exercise?.exerciseId);
       if (!exerciseId) return null;
-      const sets = (Array.isArray(exercise.sets) ? exercise.sets : []).filter(meaningfulSet).slice(0, limits.setsPerExercise).map((set) => ({
-        weight: text(set.weight, ROB_CONTEXT_LIMITS.name),
-        reps: text(set.reps, ROB_CONTEXT_LIMITS.name),
-        ...(text(set.unit ?? exercise.weightUnit ?? workout.weightUnit, 16) ? { unit: text(set.unit ?? exercise.weightUnit ?? workout.weightUnit, 16) } : {}),
-      }));
+      const sets = (Array.isArray(exercise.sets) ? exercise.sets : []).filter(meaningfulSet).slice(0, limits.setsPerExercise).map((set) => {
+        const unit = exerciseWeightUnit(workout, exercise, set);
+        return {
+          weight: text(set.weight, ROB_CONTEXT_LIMITS.name),
+          reps: text(set.reps, ROB_CONTEXT_LIMITS.name),
+          ...(unit ? { unit } : {}),
+        };
+      });
       return sets.length ? { exerciseId, ...(text(exercise.exerciseName ?? exercise.displayNameOverride, ROB_CONTEXT_LIMITS.name) ? { exerciseName: text(exercise.exerciseName ?? exercise.displayNameOverride, ROB_CONTEXT_LIMITS.name) } : {}), ...(id(exercise.originalExerciseId) ? { originalExerciseId: id(exercise.originalExerciseId) } : {}), ...(text(exercise.originalExerciseName, ROB_CONTEXT_LIMITS.name) ? { originalExerciseName: text(exercise.originalExerciseName, ROB_CONTEXT_LIMITS.name) } : {}), ...(text(exercise.note) ? { note: text(exercise.note) } : {}), sets } : null;
     }).filter(Boolean),
   };

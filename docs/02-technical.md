@@ -782,8 +782,12 @@ users/{uid}/completedWorkouts/{workoutId}
 ```
 
 Completed workout records preserve the existing append-only snapshot model:
-`completedAt`, schedule and routine IDs, routine name, performed exercise IDs,
-snapped exercise names, rest seconds, `supersetGroupId`, and set values. Swapped
+`completedAt`, explicit `weightUnit` (`kg` for Fitbot-created snapshots), schedule
+and routine IDs, routine name, performed exercise IDs, snapped exercise names,
+rest seconds, `supersetGroupId`, and set values. Per-set units remain authoritative
+when present. Older records without a stored unit retain their values; Rob infers
+`kg` only for the verified legacy Fitbot snapshot shape, whose tracker always
+displayed kilograms, and otherwise treats the unit as unknown. Swapped
 records also preserve the optional original exercise ID/name. If the cloud
 collection is empty and local completed workouts exist, the local snapshots are
 uploaded once during first migration. Previous performance continues to derive

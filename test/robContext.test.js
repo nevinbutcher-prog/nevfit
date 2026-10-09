@@ -139,3 +139,20 @@ test("advice preserves every set, stored unit, order, and swapped display identi
   assert.deepEqual(workout.exercises[0].sets.map((set) => set.unit), ["kg", "kg", "kg"]);
   assert.equal(workout.exercises[1].sets[0].unit, "lb");
 });
+
+test("advice preserves explicit units, infers kilograms only for the established legacy Fitbot snapshot shape, and leaves unknown units absent", () => {
+  const latest = (workout) => buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, completedWorkouts: [workout] }).history.workouts[0].exercises[0].sets[0];
+  const legacyFitbotWorkout = {
+    id: "legacy-fitbot", completedAt: "2026-10-01T00:00:00Z", scheduleDayId: "wed", routineDayId: "a", routineDayName: "Upper A",
+    exercises: [{ exerciseId: "press", exerciseName: "Press", sets: [{ setNumber: 1, weight: "62.5", reps: "8" }] }],
+  };
+  assert.deepEqual(latest(legacyFitbotWorkout), { weight: "62.5", reps: "8", unit: "kg" });
+  assert.deepEqual(latest({
+    ...legacyFitbotWorkout, id: "explicit-lb", weightUnit: "lb",
+    exercises: [{ exerciseId: "press", exerciseName: "Press", sets: [{ setNumber: 1, weight: "135", reps: "5", unit: "lb" }] }],
+  }), { weight: "135", reps: "5", unit: "lb" });
+  assert.deepEqual(latest({
+    id: "unit-unknown", completedAt: "2026-10-02T00:00:00Z",
+    exercises: [{ exerciseId: "press", exerciseName: "Press", sets: [{ weight: "45.5", reps: "10" }] }],
+  }), { weight: "45.5", reps: "10" });
+});

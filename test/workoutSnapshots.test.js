@@ -30,6 +30,7 @@ test("completion records the performed replacement and original exercise metadat
   assert.equal(record.exercises[0].exerciseId, "wger-hack-squat");
   assert.equal(record.exercises[0].originalExerciseId, "wger-leg-press");
   assert.equal(record.exercises[0].originalExerciseName, "Leg Press");
+  assert.equal(record.weightUnit, "kg");
   assert.equal(record.exercises[0].supersetGroupId, "ss-1");
   assert.deepEqual(record.exercises[0].sets[0], { setNumber: 1, weight: "100", reps: "10" });
 });
@@ -48,4 +49,14 @@ test("previous performance follows the performed replacement ID, not the slot or
   const replacementPerformance = getPreviousExercisePerformance("wger-hack-squat", history, meaningful);
   assert.equal(replacementPerformance.sets[0].weight, "160");
   assert.equal(getPreviousExercisePerformance("wger-leg-press", history, meaningful).sets[0].weight, "200");
+});
+
+test("completion snapshot declares Fitbot metric convention without changing stored set numbers or explicit units", () => {
+  const record = createCompletedWorkoutSnapshot({
+    scheduleDayId: "tue",
+    routineDayId: "routine-b",
+    exercises: [{ exerciseId: "press", exerciseName: "Press", sets: [{ setNumber: 1, weight: "135", reps: "5", unit: "lb" }] }],
+  }, "Upper B", new Date("2026-10-01T00:00:00.000Z"), "workout-2");
+  assert.equal(record.weightUnit, "kg");
+  assert.deepEqual(record.exercises[0].sets[0], { setNumber: 1, weight: "135", reps: "5", unit: "lb" });
 });

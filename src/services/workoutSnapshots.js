@@ -8,6 +8,7 @@ export function createCompletedWorkoutSnapshot(
   return {
     id: workoutId,
     completedAt: completedAt.toISOString(),
+    weightUnit: "kg",
     scheduleDayId: workoutSession.scheduleDayId,
     routineDayId: workoutSession.routineDayId,
     routineDayName,

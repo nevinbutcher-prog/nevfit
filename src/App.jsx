@@ -91,6 +91,7 @@ import {
   clearRobProgramExerciseSelection,
   createRobProgramResolutionSession,
   materializeRobProgramProposal,
+  mergeRobProgramResolutionResult,
   resolveRobProgramExercises,
   searchRobProgramExercises,
   selectRobProgramExercise,
@@ -4414,8 +4415,12 @@ function App() {
       if (session) {
         const resolved = await resolveRobProgramExercises(session, { searchExercises });
         if (JSON.stringify(robProgramIntake.confirmedRequirements) === fingerprint) {
-          const materialized = resolved.error ? resolved : { ...resolved, ...materializeRobProgramProposal(resolved.session, { programs: programDraftsRef.current }) };
-          setRobProgramResolution({ session: materialized.session, error: materialized.error?.message ?? null });
+          setRobProgramResolution((current) => {
+            const session = mergeRobProgramResolutionResult(current.session, resolved);
+            const materialized = resolved.error ? { session, error: resolved.error } : { ...resolved, ...materializeRobProgramProposal(session, { programs: programDraftsRef.current }) };
+            const stale = session === current.session;
+            return { session: materialized.session, error: stale ? current.error : materialized.error?.message ?? null };
+          });
         }
       }
     } catch (error) {
@@ -4428,7 +4433,7 @@ function App() {
   async function handleRobProgramExerciseSearch(key, query) {
     if (!robProgramResolution.session) return;
     const result = await searchRobProgramExercises(robProgramResolution.session, { key, query, searchExercises });
-    setRobProgramResolution({ session: result.session, error: result.error?.message ?? null });
+    setRobProgramResolution((current) => { const session = mergeRobProgramResolutionResult(current.session, result); return { session, error: session === current.session ? current.error : result.error?.message ?? null }; });
   }
   function handleRobProgramExerciseSelect(key, exerciseId) {
     if (!robProgramResolution.session) return;

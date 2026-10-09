@@ -4,6 +4,7 @@ import {
   createRobProgramResolutionSession,
   getRobProgramResolutionProgress,
   materializeRobProgramProposal,
+  mergeRobProgramResolutionResult,
   resolveRobProgramExercises,
   searchRobProgramExercises,
   selectRobProgramExercise,
@@ -37,4 +38,26 @@ test("resolution keys are routine-local, forged selections are rejected, and man
   assert.equal(session.entries["days.1.exercises.0"].selectedExercise.name, "Seated cable row");
   assert.equal(session.candidate.program.days[1].exercises[0].repRange, "8-12");
   assert.equal(selectRobProgramExercise(session, { key: "days.9.exercises.0", exerciseId: "wger-seated" }).error.code, "invalid_resolution_key");
+});
+
+test("late searches merge only unchanged entries and never replace a newer selection", async () => {
+  let release; const pending = new Promise((resolve) => { release = resolve; });
+  const session = createRobProgramResolutionSession({ candidate, requirements });
+  const search = searchRobProgramExercises(session, { key: "days.0.exercises.0", query: "Cable row", searchExercises: async () => pending });
+  const prepared = await searchRobProgramExercises(session, { key: "days.0.exercises.0", query: "Cable row", searchExercises: async () => [{ id: "wger-new", name: "New row" }] });
+  let current = selectRobProgramExercise(prepared.session, { key: "days.0.exercises.0", exerciseId: "wger-new" }).session;
+  release([{ id: "wger-old", name: "Old row" }]);
+  const late = await search;
+  current = mergeRobProgramResolutionResult(current, late);
+  assert.equal(current.entries["days.0.exercises.0"].selectedExercise.id, "wger-new");
+});
+
+test("late results do not cross candidate fingerprints or erase other exercise decisions", async () => {
+  const session = createRobProgramResolutionSession({ candidate, requirements });
+  const result = await searchRobProgramExercises(session, { key: "days.0.exercises.0", query: "Cable row", searchExercises: async () => [{ id: "wger-row", name: "Cable row" }] });
+  let changed = selectRobProgramExercise((await searchRobProgramExercises(session, { key: "days.1.exercises.0", query: "Press 1", searchExercises: provider })).session, { key: "days.1.exercises.0", exerciseId: "wger-press1" }).session;
+  changed = mergeRobProgramResolutionResult(changed, result);
+  assert.equal(changed.entries["days.1.exercises.0"].selectedExercise.id, "wger-press1");
+  const replacement = createRobProgramResolutionSession({ candidate: { ...candidate, program: { ...candidate.program, name: "Different" } }, requirements });
+  assert.equal(mergeRobProgramResolutionResult(replacement, result), replacement);
 });

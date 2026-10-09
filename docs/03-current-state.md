@@ -89,11 +89,11 @@
 - Rob review selection uses the current selected in-memory draft, labels unsaved drafts, preserves retry target identity, and ignores out-of-order program-review responses
 - In-flight Rob reviews use an explicit transient lifecycle: changing targets, leaving Rob, or changing a reviewed draft releases loading and discards stale provider responses without creating another request
 - Build Me a Program now collects and validates a transient, user-confirmed program-design brief through deterministic coaching-style questions; it neither calls AI nor changes program data
-- Confirmed program briefs can now request one authenticated, validated whole-program candidate; candidates remain transient and are not yet exercise-resolved, previewed, approved, or saved
+- Confirmed program briefs can request one authenticated, validated whole-program candidate; transient deterministic matching resolves confident provider results and supports manual library-backed choices or replacements before preparing a validated executable proposal. The proposal is not yet previewed, approved, saved, or applied.
 
 ## Current Known Limitations
 
-- Rob does not yet resolve whole-program exercises or provide whole-program preview and approval.
+- Rob can resolve or manually replace whole-program exercises transiently, but whole-program preview, approval, and saving are not yet available.
 - Confirmed program-design briefs are transient and reset on a full browser reload; no personal preference profile is persisted for this flow yet.
 - Rob does not yet generate `modify_program` recommendations.
 - Progression analytics are not implemented.

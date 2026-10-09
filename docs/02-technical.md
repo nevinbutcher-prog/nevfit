@@ -138,9 +138,7 @@ A valid routine-local two-or-more-member superset key remains available when use
 strictly validated singleton key is safely normalised to null without altering its prescription. The client keeps an
 imperative fingerprinted in-flight request identity, so rapid duplicate clicks
 do not submit another request and intake edits make late responses inert.
-Candidates are transient browser state; they are not executable proposals until
-a later exercise-resolution stage materialises trusted identities and validates
-`programProposal.js`.
+Candidates are transient browser state. `robProgramResolution` keeps a fingerprinted, immutable candidate plus a separate resolution overlay keyed by original routine and exercise indexes. It accepts only provider records returned by the current search session, bounds concurrent initial matching, preserves the original prescriptions and routine-local supersets, and materialises Fitbot-owned IDs only after every exercise is trusted. `validateProgramProposal()` remains the authoritative executable boundary. The result stays transient and awaits a later preview/approval card.
 Whole-program calls use a separately bounded 4,000-token default output budget
 (`AI_PROGRAM_MAX_OUTPUT_TOKENS`, clamped to 1,000-5,000), while advice and
 single-routine calls retain the 1,200-token `AI_MAX_OUTPUT_TOKENS` default.

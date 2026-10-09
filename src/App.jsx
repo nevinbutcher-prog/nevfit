@@ -87,6 +87,14 @@ import {
 } from "./services/rob/robProposalApprovalOrchestrator";
 import { buildRoutineCreationInstruction } from "./services/rob/robRoutineCreation";
 import RobProgramIntake from "./components/rob/RobProgramIntake";
+import {
+  clearRobProgramExerciseSelection,
+  createRobProgramResolutionSession,
+  materializeRobProgramProposal,
+  resolveRobProgramExercises,
+  searchRobProgramExercises,
+  selectRobProgramExercise,
+} from "./services/rob/robProgramResolution";
 import { createRobProgramIntake } from "./services/rob/robProgramIntake";
 import {
   createRobProgramGenerationLifecycle,
@@ -1937,6 +1945,7 @@ function App() {
   const [robProgramIntake, setRobProgramIntake] = useState(createRobProgramIntake);
   const [robProgramIntakeStep, setRobProgramIntakeStep] = useState("goal");
   const [robProgramGeneration, setRobProgramGeneration] = useState({ status: "idle", candidate: null, error: null, fingerprint: null });
+  const [robProgramResolution, setRobProgramResolution] = useState({ session: null, error: null });
   const programDraftsRef = useRef(programDrafts);
   const robReviewLifecycleRef = useRef(createRobReviewLifecycle());
   const robSelectedProgramIdRef = useRef(null);
@@ -4383,6 +4392,7 @@ function App() {
   function invalidateRobProgramGeneration() {
     robProgramGenerationLifecycleRef.current = invalidateRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current);
     setRobProgramGeneration({ status: "idle", candidate: null, error: null, fingerprint: null });
+    setRobProgramResolution({ session: null, error: null });
   }
 
   async function generateRobProgram() {
@@ -4399,11 +4409,37 @@ function App() {
       if (!isActiveRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request) || JSON.stringify(robProgramIntake.confirmedRequirements) !== fingerprint) return;
       robProgramGenerationLifecycleRef.current = settleRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request);
       setRobProgramGeneration({ status: "success", candidate: result, error: null, fingerprint });
+      const session = createRobProgramResolutionSession({ candidate: result, requirements });
+      setRobProgramResolution({ session, error: null });
+      if (session) {
+        const resolved = await resolveRobProgramExercises(session, { searchExercises });
+        if (JSON.stringify(robProgramIntake.confirmedRequirements) === fingerprint) {
+          const materialized = resolved.error ? resolved : { ...resolved, ...materializeRobProgramProposal(resolved.session, { programs: programDraftsRef.current }) };
+          setRobProgramResolution({ session: materialized.session, error: materialized.error?.message ?? null });
+        }
+      }
     } catch (error) {
       if (!isActiveRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request) || JSON.stringify(robProgramIntake.confirmedRequirements) !== fingerprint) return;
       robProgramGenerationLifecycleRef.current = settleRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request);
       setRobProgramGeneration({ status: "error", candidate: null, error: error?.message ?? "Rob couldn't generate a valid program right now.", fingerprint });
     }
+  }
+
+  async function handleRobProgramExerciseSearch(key, query) {
+    if (!robProgramResolution.session) return;
+    const result = await searchRobProgramExercises(robProgramResolution.session, { key, query, searchExercises });
+    setRobProgramResolution({ session: result.session, error: result.error?.message ?? null });
+  }
+  function handleRobProgramExerciseSelect(key, exerciseId) {
+    if (!robProgramResolution.session) return;
+    const selected = selectRobProgramExercise(robProgramResolution.session, { key, exerciseId });
+    const materialized = selected.error ? selected : { ...selected, ...materializeRobProgramProposal(selected.session, { programs: programDraftsRef.current }) };
+    setRobProgramResolution({ session: materialized.session, error: materialized.error?.message ?? null });
+  }
+  function handleRobProgramExerciseClear(key) {
+    if (!robProgramResolution.session) return;
+    const cleared = clearRobProgramExerciseSelection(robProgramResolution.session, { key });
+    setRobProgramResolution({ session: cleared.session, error: cleared.error?.message ?? null });
   }
 
   function openRobProgramReview(programId = null) {
@@ -4694,7 +4730,7 @@ function App() {
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? <div className="space-y-3">
               {robProgramSelectionError ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">{robProgramSelectionError}</p> : null}
               {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} aria-pressed={robSelectedProgramId === program.id} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="break-words font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines{isRobReviewingUnsavedDraft(program) ? " · Reviewing unsaved draft" : ""}</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p><button type="button" onClick={() => setViewMode("routines")} className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Go to Programs</button></div>}
-            </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? <RobProgramIntake intake={robProgramIntake} step={robProgramIntakeStep} setStep={setRobProgramIntakeStep} onChange={(next) => { setRobProgramIntake(next); invalidateRobProgramGeneration(); }} onConfirm={setRobProgramIntake} generation={robProgramGeneration} onGenerate={generateRobProgram} onStartOver={() => { if (!robProgramIntake.confirmedRequirements && window.confirm("Start over and discard the current program brief?")) { setRobProgramIntake(createRobProgramIntake()); setRobProgramIntakeStep("goal"); invalidateRobProgramGeneration(); } else if (robProgramIntake.confirmedRequirements) { setRobProgramIntake(createRobProgramIntake()); setRobProgramIntakeStep("goal"); invalidateRobProgramGeneration(); } }} /> : robPanelMode !== ROB_WORKFLOW_STEPS.ADVICE ? <>
+            </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? <RobProgramIntake intake={robProgramIntake} resolution={robProgramResolution.session} resolutionError={robProgramResolution.error} onSearchExercise={handleRobProgramExerciseSearch} onSelectExercise={handleRobProgramExerciseSelect} onClearExercise={handleRobProgramExerciseClear} step={robProgramIntakeStep} setStep={setRobProgramIntakeStep} onChange={(next) => { setRobProgramIntake(next); invalidateRobProgramGeneration(); }} onConfirm={setRobProgramIntake} generation={robProgramGeneration} onGenerate={generateRobProgram} onStartOver={() => { if (!robProgramIntake.confirmedRequirements && window.confirm("Start over and discard the current program brief?")) { setRobProgramIntake(createRobProgramIntake()); setRobProgramIntakeStep("goal"); invalidateRobProgramGeneration(); } else if (robProgramIntake.confirmedRequirements) { setRobProgramIntake(createRobProgramIntake()); setRobProgramIntakeStep("goal"); invalidateRobProgramGeneration(); } }} /> : robPanelMode !== ROB_WORKFLOW_STEPS.ADVICE ? <>
               {robReviewStatus === "loading" ? <p className="rounded-2xl border border-slate-800 bg-slate-900 p-5 text-slate-300">Rob is reviewing this {robPanelMode === "routine_review" ? "routine" : "program"}…</p> : null}
               {robPanelMode === "program_review" && getPreselectedReviewProgram(activeProgramDrafts, robSelectedProgramId) && isRobReviewingUnsavedDraft(getPreselectedReviewProgram(activeProgramDrafts, robSelectedProgramId)) ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Rob is reviewing this program&apos;s unsaved draft.</p> : null}
               {robReview ? <><article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overall</p><p className="mt-2 text-slate-100">{robReview.summary}</p></article>{[["Strengths", robReview.strengths, "border-emerald-400/40", "text-emerald-200"], ["Concerns", robReview.concerns, "border-amber-400/40", "text-amber-200"], ["Suggested changes", robReview.suggestedChanges, "border-slate-700", "text-slate-200"]].map(([title, findings, border, heading]) => <section key={title} className={`rounded-2xl border ${border} bg-slate-900 p-5`}><h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${heading}`}>{title}</h3><div className="mt-3 space-y-4">{findings.length ? findings.map((finding, index) => <div key={`${title}-${index}`}><p className="font-semibold text-white">{finding.title}{finding.priority ? <span className="ml-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs font-medium capitalize text-slate-300">{finding.priority}</span> : null}</p><p className="mt-1 text-sm text-slate-300">{finding.explanation}</p></div>) : <p className="text-sm text-slate-400">No specific findings.</p>}</div></section>)}<section className="rounded-2xl border border-slate-700 bg-slate-900 p-5"><h3 className="text-sm font-bold uppercase tracking-[0.16em] text-slate-300">Limitations</h3><ul className="mt-3 space-y-2 text-sm text-slate-400">{robReview.limitations.length ? robReview.limitations.map((limitation, index) => <li key={index}>• {limitation}</li>) : <li>• No additional limitations were supplied.</li>}</ul></section></> : null}

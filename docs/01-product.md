@@ -55,7 +55,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Approved Rob proposals update only the editable, unsaved program draft; Save Program remains the sole persistence action
 - Program builders can ask Rob to create one constrained routine, then inspect, approve, or reject the draft-only proposal
 - Rob-proposed exercises use conservative provider resolution: exact and Fitbot-owned alias matches resolve automatically; plausible alternatives require the user to choose a provider-backed exercise before a proposal can be validated
-- A pure, provider-neutral whole-program proposal contract safely represents complete program creation and coordinated multi-routine changes; Rob can now generate a transient whole-program candidate from a confirmed intake, but it cannot yet resolve exercises, preview it fully, or create a saved program
+- Rob whole-program generation now retains a transient candidate while deterministic provider-backed exercise matching resolves each routine; ambiguous or unmatched exercises can be selected or replaced from the existing library before a validated executable proposal is prepared for a later preview and approval step.
 - Rob has a unified coaching home for questions, explicit program selection and review, and the forthcoming whole-program design workflow
 - Build Me a Program now guides users through a transient, confirmable program brief covering goals, frequency, session length, priorities, equipment, and constraints
 

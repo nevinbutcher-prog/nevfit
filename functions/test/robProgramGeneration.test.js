@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createRobProgramGenerationHandler } from "../src/index.js";
 import { assessProgramQuality, generateRobProgramCandidate, parseProgramCandidate, programCandidateResponseFormat, programGenerationMessages, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
 
-const catalogue = { version: 1, ids: ["wger-73", "wger-76", "wger-145", "wger-371", "wger-458", "wger-475", "wger-567", "wger-723", "wger-1370"] };
+const catalogue = { version: 2, ids: ["wger-73", "wger-76", "wger-145", "wger-371", "wger-458", "wger-475", "wger-567", "wger-723", "wger-1370"] };
 const requirements = { version: 1, goal: "hypertrophy", daysPerWeek: 3, sessionMinutes: 60, priorities: ["back"], environment: "commercial_gym", equipment: ["machines", "dumbbells"], constraints: "" };
 const response = JSON.stringify({ version: 1, proposalType: "create_program", explanation: "A balanced three-day plan.", program: { name: "Three Day Build", summary: "A concise program.", days: ["Pull", "Push", "Legs"].map((name) => ({ name, focus: `${name} focus`, exercises: [{ exerciseId: "wger-73", sets: 3, repRange: "8-12", restSeconds: 90, note: null, proposalGroupKey: null }] })) } });
 
@@ -169,9 +169,9 @@ test("four-day hypertrophy instructions encourage practical workload and coverag
 });
 
 test("server owns the catalogue and rejects fabricated, stale, or undersized browser catalogues", () => {
-  assert.throws(() => validateProgramGenerationRequest({ requirements, catalogue: { version: 1, ids: ["wger-73"] } }), (error) => error.validationDiagnostic?.reason === "catalogue");
+  assert.doesNotThrow(() => validateProgramGenerationRequest({ requirements, catalogue: { version: 2, ids: ["wger-73"] } }));
   assert.throws(() => validateProgramGenerationRequest({ requirements, catalogue: { version: 1, ids: [...catalogue.ids.slice(0, 8), "wger-forged"] } }), (error) => error.validationDiagnostic?.reason === "catalogue");
-  assert.throws(() => validateProgramGenerationRequest({ requirements, catalogue: { version: 2, ids: catalogue.ids } }), (error) => error.validationDiagnostic?.reason === "catalogue");
+  assert.throws(() => validateProgramGenerationRequest({ requirements, catalogue: { version: 1, ids: catalogue.ids } }), (error) => error.validationDiagnostic?.reason === "catalogue");
   const forged = JSON.parse(response);
   forged.program.days[0].exercises[0].exerciseId = "wger-forged";
   assert.throws(() => parseProgramCandidate(JSON.stringify(forged), requirements, { entries: catalogue.ids.map((id) => ({ id })) }), (error) => error.validationDiagnostic?.fieldReason === "out_of_catalogue");

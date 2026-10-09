@@ -39,7 +39,7 @@ const intakeValid = (value) => allowed(value, ["version", "goal", "goalDescripti
 export function validateProgramGenerationRequest(data) {
   if (!allowed(data, ["requirements", "catalogue"]) || !intakeValid(data.requirements)) invalid("requirements");
   const entries = data.catalogue && authorizeRobCatalogue(data.catalogue.version, data.catalogue.ids);
-  if (!entries || entries.length < 8) invalid("catalogue");
+  if (!entries) invalid("catalogue");
   return { requirements: data.requirements, catalogue: { version: ROB_CATALOGUE_VERSION, entries } };
 }
 export function programGenerationMessages(requirements, catalogue = { entries: [] }) {

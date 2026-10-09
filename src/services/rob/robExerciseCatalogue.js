@@ -1,47 +1,43 @@
-export const ROB_CATALOGUE_VERSION = 1;
-export const ROB_CATALOGUE_MAX_SIZE = 32;
-export const ROB_CATALOGUE_MIN_SIZE = 8;
+import catalogue from "../../../functions/src/rob/robExerciseCatalogue.v2.json" with { type: "json" };
 
-// Reviewed WGER identities. The browser only includes records returned by the
-// existing provider; the callable independently owns the same identifier set.
-export const ROB_CATALOGUE_IDS = new Set([
-  "wger-73", "wger-76", "wger-145", "wger-148", "wger-237", "wger-371",
-  "wger-458", "wger-475", "wger-530", "wger-538", "wger-567", "wger-577",
-  "wger-723", "wger-822", "wger-1088", "wger-1193", "wger-1370", "wger-1466",
-  "wger-1691", "wger-1690", "wger-1695", "wger-1801", "wger-2626", "wger-2628",
-  "wger-2669", "wger-500", "wger-580", "wger-1001", "wger-1288", "wger-1307",
-  "wger-1406", "wger-1410", "wger-1489", "wger-1766", "wger-1911",
-]);
-const text = (value) => typeof value === "string" ? value.trim() : "";
-const EQUIPMENT = { dumbbells: "dumbbell", barbell: "barbell", cables: "cable", machines: "machine", bench: "bench", pull_up_equipment: "pull up" };
-const PRIORITY = { chest: ["chest", "pectoral"], back: ["back", "lat"], legs: ["quad", "hamstring", "leg"], glutes: ["glute"], shoulders: ["shoulder", "delt"], arms: ["bicep", "tricep"], core: ["abs", "core", "oblique"] };
-const record = (exercise) => exercise && ROB_CATALOGUE_IDS.has(exercise.id) && text(exercise.name) && Array.isArray(exercise.equipment)
-  ? { id: exercise.id, name: text(exercise.name), equipment: exercise.equipment.map(text).filter(Boolean), primaryMuscle: text(exercise.primaryMuscle), bodyPart: text(exercise.bodyPart), source: "wger" }
-  : null;
-const equipmentMatches = (exercise, requirements) => {
-  const selected = Array.isArray(requirements?.equipment) ? requirements.equipment : [];
-  const actual = exercise.equipment.join(" ").toLowerCase();
-  if (requirements?.environment === "minimal_equipment") return /bodyweight|band|none/.test(actual);
-  if (!selected.length || requirements?.environment === "commercial_gym" || requirements?.environment === "both") return true;
-  return selected.some((entry) => actual.includes(EQUIPMENT[entry] ?? ""));
+export const ROB_CATALOGUE_VERSION = catalogue.version;
+export const ROB_CATALOGUE_INPUT_CHAR_BUDGET = 36000;
+const capabilities = { dumbbells: "dumbbell", barbell: "barbell", cables: "cable", machines: "machine", bench: "bench", pull_up_equipment: "pull up" };
+const movement = (entry) => {
+  const n = entry.name.toLowerCase();
+  if (/squat|lunge|leg press|step.up/.test(n)) return "knee_dominant";
+  if (/deadlift|good morning|hip thrust|glute bridge|pull through/.test(n)) return "hinge";
+  if (/bench press|chest press|push.?up|dip/.test(n)) return "horizontal_push";
+  if (/shoulder press|overhead press|military press/.test(n)) return "vertical_push";
+  if (/row/.test(n)) return "horizontal_pull";
+  if (/pull.?up|pulldown/.test(n)) return "vertical_pull";
+  if (/curl|extension|raise|fly|calf/.test(n)) return "isolation";
+  if (/plank|twist|crunch|woodchop/.test(n)) return "core";
+  return "other";
 };
-const relevance = (exercise, requirements) => {
-  const haystack = [exercise.name, exercise.primaryMuscle, exercise.bodyPart].join(" ").toLowerCase();
-  return (requirements?.priorities ?? []).reduce((score, priority) => score + (PRIORITY[priority]?.some((word) => haystack.includes(word)) ? 3 : 0), 0);
+const eligible = (entry, requirements, excluded) => {
+  if (excluded.has(entry.id) || !entry.name || !Array.isArray(entry.equipment)) return false;
+  const actual = entry.equipment.join(" ").toLowerCase();
+  if (requirements.environment === "minimal_equipment") return /bodyweight|band|none/.test(actual);
+  const selected = requirements.equipment ?? [];
+  if (!selected.length) return requirements.environment === "commercial_gym" || requirements.environment === "both";
+  return selected.every((item) => item === "bench" ? /bench/.test(actual) || !actual : actual.includes(capabilities[item] ?? item));
 };
-export function buildRobExerciseCatalogue(exercises, { requirements = {}, excludedExerciseIds = [] } = {}) {
+const score = (entry, requirements) => {
+  const terms = [entry.name, entry.primaryMuscle, entry.bodyPart].join(" ").toLowerCase();
+  const emphasis = (requirements.priorities ?? []).some((item) => terms.includes(item.replace(/s$/, ""))) ? 4 : 0;
+  return emphasis + (movement(entry) !== "other" ? 2 : 0) - (/isometric|stretch|test|warm.?up/i.test(entry.name) ? 5 : 0);
+};
+export function buildRobExerciseCatalogue({ requirements = {}, excludedExerciseIds = [] } = {}) {
   const excluded = new Set(Array.isArray(excludedExerciseIds) ? excludedExerciseIds.filter((id) => typeof id === "string") : []);
-  const byName = new Map();
-  for (const source of Array.isArray(exercises) ? exercises : []) {
-    const exercise = record(source);
-    if (!exercise || excluded.has(exercise.id) || !equipmentMatches(exercise, requirements)) continue;
-    const key = exercise.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    const existing = byName.get(key);
-    if (!existing || exercise.id.localeCompare(existing.id) < 0) byName.set(key, exercise);
-  }
-  const entries = [...byName.values()].sort((a, b) => relevance(b, requirements) - relevance(a, requirements) || a.name.localeCompare(b.name)).slice(0, ROB_CATALOGUE_MAX_SIZE);
-  return { version: ROB_CATALOGUE_VERSION, entries, excludedExerciseIds: [...excluded].filter((id) => ROB_CATALOGUE_IDS.has(id)) };
+  const unique = new Map();
+  for (const entry of catalogue.exercises) if (eligible(entry, requirements, excluded)) { const key = entry.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); if (!unique.has(key) || score(entry, requirements) > score(unique.get(key), requirements)) unique.set(key, entry); }
+  return { version: catalogue.version, entries: [...unique.values()], excludedExerciseIds: [...excluded].filter((id) => catalogue.exercises.some((entry) => entry.id === id)) };
 }
-export function catalogueFingerprint(catalogue, requirements) {
-  return JSON.stringify({ version: catalogue?.version, ids: (catalogue?.entries ?? []).map((entry) => entry.id), requirements });
+export function selectRobGenerationCandidates(full, requirements) {
+  const ranked = [...(full?.entries ?? [])].sort((a, b) => score(b, requirements) - score(a, requirements) || a.name.localeCompare(b.name));
+  const entries = [], used = new Set(); let serializedChars = 0;
+  for (const kind of ["horizontal_push", "vertical_push", "horizontal_pull", "vertical_pull", "knee_dominant", "hinge", "core", "isolation"]) { const entry = ranked.find((candidate) => movement(candidate) === kind && !used.has(candidate.id)); if (entry) { entries.push(entry); used.add(entry.id); serializedChars += JSON.stringify(entry).length; } }
+  for (const entry of ranked) { const size = JSON.stringify(entry).length + 1; if (!used.has(entry.id) && serializedChars + size <= ROB_CATALOGUE_INPUT_CHAR_BUDGET) { entries.push(entry); used.add(entry.id); serializedChars += size; } }
+  return { version: full?.version, entries, serializedChars, coverage: [...new Set(entries.map(movement))] };
 }

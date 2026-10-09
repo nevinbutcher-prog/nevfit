@@ -4,7 +4,7 @@ const DEFAULT_REP_RANGE = "8-12";
 const DEFAULT_REST_SECONDS = 120;
 const ENGLISH_LANGUAGE_ID = 2;
 const SEARCH_POOL_LIMIT = 1500;
-import { buildRobExerciseCatalogue } from "./rob/robExerciseCatalogue.js";
+import { buildRobExerciseCatalogue, selectRobGenerationCandidates } from "./rob/robExerciseCatalogue.js";
 let wgerExercisePoolPromise = null;
 
 const SEARCH_TOKEN_ALIASES = new Map([
@@ -669,7 +669,12 @@ export async function searchExercises(query = "", filters = {}) {
 
 export async function getVerifiedRobExerciseCatalogue(requirements, options = {}) {
   wgerExercisePoolPromise ??= fetchWgerExercisePool();
-  try { return buildRobExerciseCatalogue(await wgerExercisePoolPromise, { requirements, excludedExerciseIds: options.excludedExerciseIds }); }
+  try {
+    // The versioned catalogue is authoritative; the provider pool is only an
+    // availability/enrichment source and never expands trusted identities.
+    const full = buildRobExerciseCatalogue({ requirements, excludedExerciseIds: options.excludedExerciseIds });
+    return selectRobGenerationCandidates(full, requirements);
+  }
   catch (error) { wgerExercisePoolPromise = null; throw error; }
 }
 

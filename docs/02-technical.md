@@ -213,11 +213,20 @@ draft rather than AI prose.
 
 `src/services/exerciseResolution.js` is the reusable deterministic boundary
 between an AI exercise description and a trusted provider-backed exercise ID.
-It first applies normalized exact matching and bounded Fitbot-owned aliases,
-then uses conservative token scoring for ordering and wording differences. It
-never accepts an AI-supplied ID. Weak matches are unresolved; multiple
-plausible provider results enter a transient `needs_resolution` state. The
-user selects one displayed provider result, after which Fitbot reruns normal
+It first applies normalized exact matching across the provider display name,
+original name, and provider-supplied aliases, plus bounded Fitbot-owned
+terminology aliases for unambiguous abbreviations and spelling variants (such
+as `RDL`, `SLDL`, pull-down, and skullcrusher). It then uses conservative token
+scoring for ordering and wording differences. It never accepts an AI-supplied
+ID. Weak matches are unresolved; multiple plausible provider results enter a
+transient `needs_resolution` state. The October 2026 audit found WGER returns
+920 English records, below Fitbot's 1,500-record pool cap, so no additional
+provider is warranted on catalogue-coverage evidence alone. Persistent personal
+mappings remain deferred: a confirmed substitution is not necessarily a shared
+synonym and must not become an automatic match without an explicit future
+user-controlled mapping model.
+
+The user selects one displayed provider result, after which Fitbot reruns normal
 proposal validation without making another AI request. No program draft is
 mutated during resolution.
 

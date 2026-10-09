@@ -79,7 +79,7 @@
 - Rob routine proposals require explicit whole-proposal approval or rejection; rejection is non-mutating and approval applies only to the unsaved editable program draft
 - Proposal approval fingerprints the relevant draft, checks freshness and revalidates immediately before the sole `applyRoutineProposal` application boundary; Save Program remains the only persistence commit
 - Selected program builders include Create with Rob for one requested routine with optional duration, equipment, and constraints; proposals use existing provider resolution, human approval, and draft-only persistence boundaries
-- Deterministic Rob exercise resolution supports bounded aliases and conservative similarity matching; ambiguous provider results require user choice before validation
+- Deterministic Rob exercise resolution uses provider display/original names and provider aliases plus bounded Fitbot terminology aliases; conservative similarity still leaves ambiguous provider results for user choice before validation
 - Pending exercise resolution retains the original generation baseline, so edits made before validation invalidate rather than rebase the cached Rob candidate
 - Pure, versioned provider-neutral program proposal domain contract for safe `create_program` and atomic multi-routine `modify_program` candidates
 - Whole-program proposal validation reuses routine proposal operation semantics, protects unrelated programs and non-domain workout state, and has no AI, provider, persistence, or UI dependency

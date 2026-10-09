@@ -44,3 +44,19 @@ test("returns unresolved for weak or missing provider matches", async () => {
   const result = await resolveProposedExercise({ requestedName: "Mystery movement", query: "mystery", exerciseProvider: provider([{ id: "wger-1", name: "Cable Curl" }]) });
   assert.equal(result.status, "unresolved");
 });
+
+test("resolves provider-backed aliases without trusting an AI identity", async () => {
+  const result = await resolveProposedExercise({
+    requestedName: "Skullcrusher",
+    exerciseProvider: provider([{ id: "wger-1", name: "Lying Triceps Extension", originalName: "Lying Triceps Extension", aliases: ["Skull crusher"] }]),
+  });
+  assert.equal(result.status, "resolved");
+  assert.equal(result.exercise.id, "wger-1");
+});
+
+test("resolves unambiguous common abbreviations while keeping nearby movements distinct", async () => {
+  const rdl = await resolveProposedExercise({ requestedName: "DB RDL", exerciseProvider: provider([{ id: "wger-rdl", name: "Dumbbell Romanian Deadlift" }]) });
+  assert.equal(rdl.status, "resolved");
+  const distinct = await resolveProposedExercise({ requestedName: "Deadlift", exerciseProvider: provider([{ id: "wger-rdl", name: "Romanian Deadlift" }, { id: "wger-sldl", name: "Stiff Leg Deadlift" }]) });
+  assert.equal(distinct.status, "ambiguous");
+});

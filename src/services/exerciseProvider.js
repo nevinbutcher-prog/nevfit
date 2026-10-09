@@ -12,6 +12,10 @@ const SEARCH_TOKEN_ALIASES = new Map([
   ["dumbbells", "dumbbell"],
   ["bb", "barbell"],
   ["barbells", "barbell"],
+  ["rdl", "romanian deadlift"],
+  ["rdls", "romanian deadlift"],
+  ["sldl", "stiff leg deadlift"],
+  ["skullcrusher", "skull crusher"],
   ["presses", "press"],
 ]);
 
@@ -58,12 +62,12 @@ function normalizeFilterValue(value) {
     .trim();
 }
 
-function normalizeSearchValue(value) {
+export function normalizeExerciseSearchText(value) {
   const normalizedValue = normalizeText(value)
     .toLowerCase()
     .replace(/&/g, "and")
     .replace(/\bbench\s*[- ]?\s*press(es)?\b/g, "bench press")
-    .replace(/\bpull\s*[- ]\s*downs?\b/g, "pulldown")
+    .replace(/\bpull\s*[- ]?\s*downs?\b/g, "pulldown")
     .replace(/\bpush\s*[- ]\s*downs?\b/g, "pushdown")
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
@@ -77,11 +81,11 @@ function normalizeSearchValue(value) {
 }
 
 function getSearchTokens(value) {
-  return normalizeSearchValue(value).split(" ").filter(Boolean);
+  return normalizeExerciseSearchText(value).split(" ").filter(Boolean);
 }
 
 function getCanonicalText(value) {
-  return normalizeSearchValue(value);
+  return normalizeExerciseSearchText(value);
 }
 
 function hasTokenPhrase(value, queryTokens) {

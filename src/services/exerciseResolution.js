@@ -1,8 +1,14 @@
 const DEFAULT_ALIASES = [
   { from: ["db", "bench", "press"], to: ["dumbbell", "bench", "press"] },
   { from: ["db", "bench"], to: ["dumbbell", "bench", "press"] },
+  { from: ["db", "rdl"], to: ["dumbbell", "romanian", "deadlift"] },
   { from: ["db"], to: ["dumbbell"] },
   { from: ["bb"], to: ["barbell"] },
+  { from: ["rdl"], to: ["romanian", "deadlift"] },
+  { from: ["sldl"], to: ["stiff", "leg", "deadlift"] },
+  { from: ["skullcrusher"], to: ["skull", "crusher"] },
+  { from: ["lat", "pull", "down"], to: ["lat", "pulldown"] },
+  { from: ["pull", "down"], to: ["lat", "pulldown"] },
   { from: ["lat", "raise"], to: ["lateral", "raise"] },
   { from: ["cable", "pushdown"], to: ["triceps", "pushdown"] },
 ];
@@ -28,10 +34,12 @@ export function normalizeExerciseText(value, aliases = DEFAULT_ALIASES) {
 const validProviderExercise = (exercise) => exercise && /^wger-[A-Za-z0-9._:-]+$/.test(exercise.id) && typeof exercise.name === "string";
 const uniqueById = (exercises) => [...new Map(exercises.filter(validProviderExercise).map((exercise) => [exercise.id, exercise])).values()];
 const tokensFor = (value, aliases) => normalizeExerciseText(value, aliases).split(" ").filter(Boolean);
+const candidateTexts = (exercise) => [exercise?.name, exercise?.originalName, ...(Array.isArray(exercise?.aliases) ? exercise.aliases : [])]
+  .filter((value) => typeof value === "string" && value.trim());
 
-function scoreExercise(requestedName, exercise, aliases) {
+function scoreExerciseText(requestedName, candidateName, aliases) {
   const requested = tokensFor(requestedName, aliases);
-  const candidate = tokensFor(exercise.name, aliases);
+  const candidate = tokensFor(candidateName, aliases);
   if (!requested.length || !candidate.length) return 0;
   const overlap = requested.filter((token) => candidate.includes(token)).length;
   const sameTokens = overlap === requested.length && overlap === candidate.length;
@@ -39,6 +47,10 @@ function scoreExercise(requestedName, exercise, aliases) {
   // Requested-token coverage is intentionally used here: a close but not
   // identical candidate becomes ambiguous instead of disappearing.
   return Number(Math.min(1, overlap / requested.length + (sameTokens ? 0.35 : 0) + orderBonus).toFixed(3));
+}
+
+function scoreExercise(requestedName, exercise, aliases) {
+  return Math.max(0, ...candidateTexts(exercise).map((candidateName) => scoreExerciseText(requestedName, candidateName, aliases)));
 }
 
 /**
@@ -54,7 +66,7 @@ export async function resolveProposedExercise({ requestedName, query, exercisePr
   const batches = await Promise.all(queries.map((value) => search(value)));
   const candidates = uniqueById(batches.flatMap((result) => Array.isArray(result) ? result : []));
   const normalizedName = normalizeExerciseText(name, aliases);
-  const exact = candidates.filter((exercise) => normalizeExerciseText(exercise.name, aliases) === normalizedName);
+  const exact = candidates.filter((exercise) => candidateTexts(exercise).some((candidateName) => normalizeExerciseText(candidateName, aliases) === normalizedName));
   if (exact.length === 1) return { status: "resolved", exercise: exact[0], candidates: exact, confidence: "exact" };
   if (exact.length > 1) return { status: "ambiguous", exercise: null, candidates: exact, confidence: "none" };
 

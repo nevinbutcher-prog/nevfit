@@ -3,6 +3,7 @@ const DEFAULT_ALIASES = [
   { from: ["db", "bench"], to: ["dumbbell", "bench", "press"] },
   { from: ["db", "rdl"], to: ["dumbbell", "romanian", "deadlift"] },
   { from: ["db"], to: ["dumbbell"] },
+  { from: ["dumbbells"], to: ["dumbbell"] },
   { from: ["bb"], to: ["barbell"] },
   { from: ["rdl"], to: ["romanian", "deadlift"] },
   { from: ["sldl"], to: ["stiff", "leg", "deadlift"] },
@@ -11,21 +12,28 @@ const DEFAULT_ALIASES = [
   { from: ["pull", "down"], to: ["lat", "pulldown"] },
   { from: ["lat", "raise"], to: ["lateral", "raise"] },
   { from: ["cable", "pushdown"], to: ["triceps", "pushdown"] },
+  // Verified WGER terminology: Side Dumbbell Trunk Flexion (ID 577) is listed
+  // with the provider alias "Side bends" and Dumbbell equipment.
+  { from: ["dumbbell", "side", "bends"], to: ["side", "dumbbell", "trunk", "flexion"] },
+  { from: ["dumbbell", "side", "bend"], to: ["side", "dumbbell", "trunk", "flexion"] },
   { from: ["curls"], to: ["curl"] },
   { from: ["deadlifts"], to: ["deadlift"] },
   { from: ["extensions"], to: ["extension"] },
   { from: ["flies"], to: ["fly"] },
+  { from: ["flyes"], to: ["fly"] },
   { from: ["lunges"], to: ["lunge"] },
   { from: ["presses"], to: ["press"] },
   { from: ["raises"], to: ["raise"] },
   { from: ["rows"], to: ["row"] },
   { from: ["squats"], to: ["squat"] },
+  { from: ["twists"], to: ["twist"] },
+  { from: ["sprints"], to: ["sprint"] },
 ];
 
 const tokensMatch = (tokens, index, expected) => expected.every((token, offset) => tokens[index + offset] === token);
 
 export function normalizeExerciseText(value, aliases = DEFAULT_ALIASES) {
-  const tokens = (typeof value === "string" ? value.toLowerCase() : "").replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter(Boolean);
+  const tokens = (typeof value === "string" ? value.toLowerCase() : "").replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter((token) => token && !["a", "an", "and", "on", "the", "with"].includes(token));
   const rules = Array.isArray(aliases) ? aliases : DEFAULT_ALIASES;
   const canonical = [];
   for (let index = 0; index < tokens.length;) {
@@ -46,9 +54,11 @@ const tokensFor = (value, aliases) => normalizeExerciseText(value, aliases).spli
 const candidateTexts = (exercise) => [exercise?.name, exercise?.originalName, ...(Array.isArray(exercise?.aliases) ? exercise.aliases : [])]
   .filter((value) => typeof value === "string" && value.trim());
 const MATERIAL_TERMS = new Set([
-  "curl", "deadlift", "decline", "extension", "flat", "fly", "incline",
-  "lunge", "press", "pulldown", "pushdown", "raise", "row", "squat",
+  "curl", "deadlift", "decline", "extension", "flat", "fly", "hackenschmitt",
+  "incline", "lunge", "press", "pulldown", "pushdown", "raise", "row",
+  "run", "seated", "sprint", "squat", "standing", "weight",
 ]);
+const EQUIPMENT_TERMS = new Set(["band", "barbell", "bench", "bodyweight", "cable", "dumbbell", "kettlebell", "machine", "treadmill"]);
 
 function scoreExerciseText(requestedName, candidateName, aliases) {
   const requested = tokensFor(requestedName, aliases);
@@ -62,8 +72,16 @@ function scoreExerciseText(requestedName, candidateName, aliases) {
   return Number(Math.min(1, overlap / requested.length + (sameTokens ? 0.35 : 0) + orderBonus).toFixed(3));
 }
 
+const providerEquipment = (exercise) => Array.isArray(exercise?.equipment)
+  ? exercise.equipment.filter((value) => typeof value === "string" && value.trim())
+  : [];
+const scoringTexts = (exercise) => {
+  const equipment = providerEquipment(exercise);
+  return [...candidateTexts(exercise), ...candidateTexts(exercise).map((candidateName) => [candidateName, ...equipment].join(" "))];
+};
+
 function scoreExercise(requestedName, exercise, aliases) {
-  return candidateTexts(exercise)
+  return scoringTexts(exercise)
     .map((candidateName) => ({ candidateName, score: scoreExerciseText(requestedName, candidateName, aliases) }))
     .sort((first, second) => second.score - first.score || first.candidateName.localeCompare(second.candidateName))[0] ?? { candidateName: "", score: 0 };
 }
@@ -72,6 +90,13 @@ function hasMaterialDifference(requestedName, candidateName, aliases) {
   const requestedTerms = new Set(tokensFor(requestedName, aliases).filter((token) => MATERIAL_TERMS.has(token)));
   const candidateTerms = new Set(tokensFor(candidateName, aliases).filter((token) => MATERIAL_TERMS.has(token)));
   return [...requestedTerms].some((term) => !candidateTerms.has(term)) || [...candidateTerms].some((term) => !requestedTerms.has(term));
+}
+
+function hasEquipmentMismatch(requestedName, exercise, aliases) {
+  const requestedEquipment = new Set(tokensFor(requestedName, aliases).filter((token) => EQUIPMENT_TERMS.has(token)));
+  if (!requestedEquipment.size) return false;
+  const providerEvidence = new Set([...candidateTexts(exercise), ...providerEquipment(exercise)].flatMap((value) => tokensFor(value, aliases)));
+  return [...requestedEquipment].some((term) => !providerEvidence.has(term));
 }
 
 /**
@@ -95,7 +120,7 @@ export async function resolveProposedExercise({ requestedName, query, exercisePr
   if (!scored.length) return { status: "unresolved", exercise: null, candidates: [], confidence: "none" };
   const best = scored[0];
   const next = scored[1];
-  if (best.score >= 0.82 && !hasMaterialDifference(name, best.candidateName, aliases) && (!next || best.score - next.score >= 0.4)) return { status: "resolved", exercise: best.exercise, candidates: [best.exercise], confidence: "high" };
+  if (best.score >= 0.82 && !hasMaterialDifference(name, best.candidateName, aliases) && !hasEquipmentMismatch(name, best.exercise, aliases) && (!next || best.score - next.score >= 0.4)) return { status: "resolved", exercise: best.exercise, candidates: [best.exercise], confidence: "high" };
   return { status: "ambiguous", exercise: null, candidates: scored.slice(0, 5).map(({ exercise }) => exercise), confidence: "none" };
 }
 

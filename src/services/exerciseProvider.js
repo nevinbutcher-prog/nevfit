@@ -10,12 +10,23 @@ const SEARCH_TOKEN_ALIASES = new Map([
   ["db", "dumbbell"],
   ["dbs", "dumbbell"],
   ["dumbbells", "dumbbell"],
+  ["flyes", "fly"],
   ["bb", "barbell"],
   ["barbells", "barbell"],
   ["rdl", "romanian deadlift"],
   ["rdls", "romanian deadlift"],
   ["sldl", "stiff leg deadlift"],
   ["skullcrusher", "skull crusher"],
+  ["curls", "curl"],
+  ["deadlifts", "deadlift"],
+  ["extensions", "extension"],
+  ["flies", "fly"],
+  ["lunges", "lunge"],
+  ["raises", "raise"],
+  ["rows", "row"],
+  ["squats", "squat"],
+  ["twists", "twist"],
+  ["sprints", "sprint"],
   ["presses", "press"],
 ]);
 
@@ -29,6 +40,10 @@ const LOCAL_EXERCISE_ALIAS_RULES = [
       "flat dumbbell bench press",
       "flat db bench",
     ],
+  },
+  {
+    requiredTokens: ["side", "dumbbell", "trunk", "flexion"],
+    aliases: ["side bend", "side bends", "dumbbell side bend", "dumbbell side bends"],
   },
   {
     requiredTokens: ["bench", "press", "barbell"],
@@ -75,7 +90,7 @@ export function normalizeExerciseSearchText(value) {
 
   return normalizedValue
     .split(" ")
-    .filter(Boolean)
+    .filter((token) => token && !["a", "an", "and", "on", "the", "with"].includes(token))
     .map((token) => SEARCH_TOKEN_ALIASES.get(token) ?? token)
     .join(" ");
 }
@@ -453,26 +468,11 @@ function normalizeWgerExercise(sourceExercise) {
   };
 }
 
-function getDedupeKey(exercise) {
-  return [
-    getCanonicalText(exercise.name),
-    getCanonicalText(exercise.primaryMuscle),
-    ...(exercise.equipment ?? []).map(getCanonicalText).sort(),
-  ].join("|");
-}
-
 function dedupeExercises(exercises) {
-  const exercisesByKey = new Map();
-
-  exercises.forEach((exercise) => {
-    const key = getDedupeKey(exercise);
-
-    if (!exercisesByKey.has(key)) {
-      exercisesByKey.set(key, exercise);
-    }
-  });
-
-  return Array.from(exercisesByKey.values());
+  // Provider IDs remain distinct even when names and metadata coincide: resolving
+  // an AI description must surface duplicate records as an ambiguity, not choose
+  // whichever response happened to arrive first.
+  return Array.from(new Map(exercises.map((exercise) => [exercise.id, exercise])).values());
 }
 
 function hasEveryToken(value, queryTokens) {

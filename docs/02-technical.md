@@ -229,6 +229,18 @@ mappings remain deferred: a confirmed substitution is not necessarily a shared
 synonym and must not become an automatic match without an explicit future
 user-controlled mapping model.
 
+A captured 16-exercise production-QA fixture records real WGER identities and
+metadata in `test/robExerciseMatchingQa.test.js`. It improved the observed baseline from
+7 automatic matches to 10 safe automatic matches; five safety-sensitive cases
+remain ambiguous (general cable fly, seated shoulder press, weighted Russian
+twist, leg press emphasis, and Hackenschmitt calf raise), and treadmill sprints
+remain unresolved because ordinary treadmill running does not establish sprint
+intensity. The fixture has zero known unsafe automatic matches. Provider
+metadata may supply missing equipment wording when it agrees with the request,
+but missing or conflicting equipment blocks automatic selection. WGER records
+with distinct IDs are no longer semantically deduplicated before resolution, so
+identically named records remain an explicit ambiguity.
+
 The user selects one displayed provider result, after which Fitbot reruns normal
 proposal validation without making another AI request. No program draft is
 mutated during resolution.

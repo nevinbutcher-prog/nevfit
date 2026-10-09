@@ -17,9 +17,9 @@ export const ROB_CONTEXT_LIMITS = Object.freeze({
   id: 200,
 });
 export const ROB_ADVICE_CONTEXT_LIMITS = Object.freeze({
-  historyWorkouts: 2,
-  exercisesPerWorkout: 5,
-  setsPerExercise: 2,
+  historyWorkouts: 1,
+  exercisesPerWorkout: 20,
+  setsPerExercise: 12,
 });
 export const ROB_REVIEW_CONTEXT_LIMITS = Object.freeze({
   historyWorkouts: 3,
@@ -114,8 +114,9 @@ function serializeWorkout(workout, limits = ROB_CONTEXT_LIMITS) {
       const sets = (Array.isArray(exercise.sets) ? exercise.sets : []).filter(meaningfulSet).slice(0, limits.setsPerExercise).map((set) => ({
         weight: text(set.weight, ROB_CONTEXT_LIMITS.name),
         reps: text(set.reps, ROB_CONTEXT_LIMITS.name),
+        ...(text(set.unit ?? exercise.weightUnit ?? workout.weightUnit, 16) ? { unit: text(set.unit ?? exercise.weightUnit ?? workout.weightUnit, 16) } : {}),
       }));
-      return sets.length ? { exerciseId, exerciseName: text(exercise.exerciseName, ROB_CONTEXT_LIMITS.name), originalExerciseId: id(exercise.originalExerciseId), sets } : null;
+      return sets.length ? { exerciseId, ...(text(exercise.exerciseName ?? exercise.displayNameOverride, ROB_CONTEXT_LIMITS.name) ? { exerciseName: text(exercise.exerciseName ?? exercise.displayNameOverride, ROB_CONTEXT_LIMITS.name) } : {}), ...(id(exercise.originalExerciseId) ? { originalExerciseId: id(exercise.originalExerciseId) } : {}), ...(text(exercise.originalExerciseName, ROB_CONTEXT_LIMITS.name) ? { originalExerciseName: text(exercise.originalExerciseName, ROB_CONTEXT_LIMITS.name) } : {}), ...(text(exercise.note) ? { note: text(exercise.note) } : {}), sets } : null;
     }).filter(Boolean),
   };
 }

@@ -51,9 +51,9 @@ test("advice context stays compact for realistic routine and history data", () =
   const history = Array.from({ length: 8 }, (_, workoutIndex) => ({ id: `workout-${workoutIndex}`, completedAt: `2026-02-${String(8 - workoutIndex).padStart(2, "0")}T00:00:00Z`, routineDayId: "a", exercises: Array.from({ length: 10 }, (_, exerciseIndex) => ({ exerciseId: `exercise-${exerciseIndex}`, exerciseName: `Exercise ${exerciseIndex}`, sets: Array.from({ length: 6 }, () => ({ weight: "22.5", reps: "10" })) })) }));
   const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program: current, routineId: "a", completedWorkouts: history });
   assert.equal(context.history.workouts.length, ROB_ADVICE_CONTEXT_LIMITS.historyWorkouts);
-  assert.equal(context.history.workouts[0].exercises.length, ROB_ADVICE_CONTEXT_LIMITS.exercisesPerWorkout);
-  assert.equal(context.history.workouts[0].exercises[0].sets.length, ROB_ADVICE_CONTEXT_LIMITS.setsPerExercise);
-  assert.ok(JSON.stringify(context).length < 4000);
+  assert.equal(context.history.workouts[0].exercises.length, 10);
+  assert.equal(context.history.workouts[0].exercises[0].sets.length, 6);
+  assert.ok(JSON.stringify(context).length < 5000);
 });
 
 test("full-program advice remains below the server prompt cap", () => {
@@ -119,4 +119,23 @@ test("bounds exercises and sets within each serialized history workout", () => {
   const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, completedWorkouts: [{ id: "large-history", completedAt: "2026-02-01T00:00:00Z", exercises }] });
   assert.equal(context.history.workouts[0].exercises.length, ROB_ADVICE_CONTEXT_LIMITS.exercisesPerWorkout);
   assert.equal(context.history.workouts[0].exercises[0].sets.length, ROB_ADVICE_CONTEXT_LIMITS.setsPerExercise);
+});
+
+test("advice preserves every set, stored unit, order, and swapped display identity from the latest workout", () => {
+  const history = [
+    { id: "older", completedAt: "2026-04-01T00:00:00Z", routineDayId: "a", exercises: [{ exerciseId: "press", exerciseName: "Old press", sets: [{ weight: "20", reps: "8", unit: "lb" }] }] },
+    { id: "latest", completedAt: "2026-05-01T00:00:00Z", routineDayId: "a", routineDayName: "Upper A", exercises: [
+      { exerciseId: "swap", exerciseName: "Seated Cable Row", originalExerciseId: "row", originalExerciseName: "Barbell Row", sets: [{ weight: "50", reps: "10", unit: "kg" }, { weight: "50", reps: "10", unit: "kg" }, { weight: "50", reps: "9", unit: "kg" }] },
+      ...Array.from({ length: 6 }, (_, index) => ({ exerciseId: "extra-" + index, exerciseName: "Exercise " + index, sets: [{ weight: "10", reps: "12", unit: "lb" }] })),
+    ] },
+  ];
+  const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ADVICE, program, routineId: "a", completedWorkouts: history });
+  const workout = context.history.workouts[0];
+  assert.equal(workout.id, "latest");
+  assert.equal(workout.routineName, "Upper A");
+  assert.equal(workout.exercises.length, 7);
+  assert.equal(workout.exercises[0].exerciseName, "Seated Cable Row");
+  assert.equal(workout.exercises[0].sets.length, 3);
+  assert.deepEqual(workout.exercises[0].sets.map((set) => set.unit), ["kg", "kg", "kg"]);
+  assert.equal(workout.exercises[1].sets[0].unit, "lb");
 });

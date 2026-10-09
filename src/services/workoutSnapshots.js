@@ -26,6 +26,7 @@ export function createCompletedWorkoutSnapshot(
         setNumber: set.setNumber,
         weight: set.weight,
         reps: set.reps,
+        ...(typeof set.unit === "string" ? { unit: set.unit } : {}),
       })),
     })),
   };

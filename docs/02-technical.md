@@ -79,7 +79,7 @@ The builder uses the explicit non-editable coaching profile in
 It excludes identity and credentials, has no network or persistence imports,
 and never mutates supplied state. History is meaningful-workout-only,
 target-relevant where association data exists, capped at eight records, and
-ordered newest first. Program, routine, exercise, note, set, and history sizes
+ordered newest first. Advice includes one complete latest completed workout (rather than a lossy multi-workout summary), retaining logged exercise order, sets, units, and swap display identity. Program, routine, exercise, note, set, and history sizes
 are independently bounded to keep future AI context predictable.
 
 ## Rob Training Advice

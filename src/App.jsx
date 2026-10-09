@@ -64,7 +64,7 @@ import {
 } from "./services/workoutHistoryStore";
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
-import { getExerciseById, searchExercises } from "./services/exerciseProvider";
+import { getExerciseById, getVerifiedRobExerciseCatalogue, searchExercises } from "./services/exerciseProvider";
 import {
   getInitialViewMode,
   getViewModeForLoadedActiveWorkout,
@@ -4408,13 +4408,19 @@ function App() {
     if (!request) return;
     setRobProgramGeneration({ status: "loading", candidate: null, error: null, fingerprint });
     try {
-      const result = await requestRobProgramGeneration(requirements);
+      const catalogue = await getVerifiedRobExerciseCatalogue(requirements);
+      if (catalogue.entries.length < 8) throw new Error("Fitbot could not prepare enough verified exercises for this equipment and program brief. Adjust the equipment selection and try again.");
+      const result = await requestRobProgramGeneration(requirements, catalogue);
       if (!isActiveRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request) || JSON.stringify(robProgramIntake.confirmedRequirements) !== fingerprint) return;
       robProgramGenerationLifecycleRef.current = settleRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request);
       setRobProgramGeneration({ status: "success", candidate: result, error: null, fingerprint });
-      const session = createRobProgramResolutionSession({ candidate: result, requirements });
+      const session = createRobProgramResolutionSession({ candidate: result, requirements, catalogue: result.catalogue });
       setRobProgramResolution({ session, error: null });
-      if (session) {
+      if (session?.catalogueGrounded) {
+        const materialized = materializeRobProgramProposal(session, { programs: programDraftsRef.current });
+        setRobProgramResolution({ session: materialized.session, error: materialized.error?.message ?? null });
+      }
+      if (session && !session.catalogueGrounded) {
         const resolved = await resolveRobProgramExercises(session, { searchExercises });
         if (JSON.stringify(robProgramIntake.confirmedRequirements) === fingerprint) {
           setRobProgramResolution((current) => {

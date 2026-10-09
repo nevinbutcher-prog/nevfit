@@ -11,12 +11,18 @@ const dedupe = (items) => { const seen = new Set(); return (Array.isArray(items)
 
 export const ROB_PROGRAM_RESOLUTION_VERSION = 1;
 export function createRobProgramResolutionFingerprint({ candidate, requirements }) { return JSON.stringify({ candidate: sourceFor(candidate), requirements: requirements ?? null }); }
-export function createRobProgramResolutionSession({ candidate, requirements }) {
+export function createRobProgramResolutionSession({ candidate, requirements, catalogue } = {}) {
   const source = sourceFor(candidate); const program = source?.program;
   if (!source || source.proposalType !== "create_program" || !Array.isArray(program?.days)) return null;
+  const trusted = new Map((Array.isArray(catalogue?.entries) ? catalogue.entries : []).filter(validExercise).map((exercise) => [exercise.id, clone(exercise)]));
+  const catalogueGrounded = trusted.size > 0;
   const entries = {};
-  program.days.forEach((day, routineIndex) => (day.exercises ?? []).forEach((exercise, exerciseIndex) => { const key = "days." + routineIndex + ".exercises." + exerciseIndex; entries[key] = { key, routineIndex, exerciseIndex, requestedName: text(exercise.exerciseRef), status: "unresolved", candidates: [], selectedExercise: null, error: null, revision: 0 }; }));
-  return { version: ROB_PROGRAM_RESOLUTION_VERSION, candidate: clone(source), requirements: clone(requirements ?? null), fingerprint: createRobProgramResolutionFingerprint({ candidate: source, requirements }), entries, status: "not_started", proposal: null, validation: null };
+  program.days.forEach((day, routineIndex) => (day.exercises ?? []).forEach((exercise, exerciseIndex) => {
+    const key = "days." + routineIndex + ".exercises." + exerciseIndex;
+    const selectedExercise = catalogueGrounded && typeof exercise.exerciseId === "string" ? trusted.get(exercise.exerciseId) ?? null : null;
+    entries[key] = { key, routineIndex, exerciseIndex, requestedName: text(exercise.exerciseRef) || text(selectedExercise?.name), status: selectedExercise ? "resolved" : "unresolved", candidates: selectedExercise ? [clone(selectedExercise)] : [], selectedExercise, error: null, revision: 0 };
+  }));
+  return { version: ROB_PROGRAM_RESOLUTION_VERSION, candidate: clone(source), requirements: clone(requirements ?? null), fingerprint: createRobProgramResolutionFingerprint({ candidate: source, requirements }), catalogueGrounded, entries, status: "not_started", proposal: null, validation: null };
 }
 const current = (session) => session?.version === ROB_PROGRAM_RESOLUTION_VERSION && session.fingerprint === createRobProgramResolutionFingerprint({ candidate: session.candidate, requirements: session.requirements });
 const getEntry = (session, key) => current(session) && typeof key === "string" ? session.entries?.[key] ?? null : null;

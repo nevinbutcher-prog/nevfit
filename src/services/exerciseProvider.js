@@ -4,6 +4,7 @@ const DEFAULT_REP_RANGE = "8-12";
 const DEFAULT_REST_SECONDS = 120;
 const ENGLISH_LANGUAGE_ID = 2;
 const SEARCH_POOL_LIMIT = 1500;
+import { buildRobExerciseCatalogue } from "./rob/robExerciseCatalogue.js";
 let wgerExercisePoolPromise = null;
 
 const SEARCH_TOKEN_ALIASES = new Map([
@@ -664,6 +665,12 @@ export async function searchExercises(query = "", filters = {}) {
       sortBySearchRelevance(firstExercise, secondExercise, normalizedQuery),
     )
     .slice(0, 100);
+}
+
+export async function getVerifiedRobExerciseCatalogue(requirements, options = {}) {
+  wgerExercisePoolPromise ??= fetchWgerExercisePool();
+  try { return buildRobExerciseCatalogue(await wgerExercisePoolPromise, { requirements, excludedExerciseIds: options.excludedExerciseIds }); }
+  catch (error) { wgerExercisePoolPromise = null; throw error; }
 }
 
 export async function getExerciseById(id) {

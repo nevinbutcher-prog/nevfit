@@ -82,6 +82,12 @@ target-relevant where association data exists, capped at eight records, and
 ordered newest first. Advice includes one complete latest completed workout (rather than a lossy multi-workout summary), retaining logged exercise order, sets, units, and swap display identity. Program, routine, exercise, note, set, and history sizes
 are independently bounded to keep future AI context predictable.
 
+## Catalogue-grounded Rob Program Generation
+
+Whole-program generation prepares a bounded browser-side selection from the existing WGER pool, filtered by confirmed equipment and explicit supplied exclusions. The browser submits only catalogue IDs and a version; Firebase independently maps those IDs through its reviewed server-owned WGER catalogue before creating the AI prompt. Client names, equipment, and eligibility claims are ignored. AI output must use only those exact IDs, and fabricated, stale, malformed, or out-of-catalogue IDs are rejected before a transient executable proposal is materialised.
+
+Catalogue records are capped at 32, carry provider identity, display name, equipment, and muscle metadata, and are deduplicated by display name. The eligibility interface accepts an equipment context and explicit exclusions, ready for a future My Gym adapter without persistence or facility-profile implementation. Successful catalogue-grounded candidates populate trusted resolution entries directly and bypass mandatory name matching. The legacy resolver remains for old free-text candidates and voluntary manual replacements. A conservative deterministic quality assessment reports, but does not reject, clearly underfilled 45-, 60-, and 75-minute sessions.
+
 ## Rob Training Advice
 
 The authenticated `robAdvice` callable is the user-facing AI boundary. Its

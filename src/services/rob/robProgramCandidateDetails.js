@@ -12,6 +12,7 @@ export function createRobProgramCandidateDetails(generation) {
   const candidate = generation?.candidate;
   const program = candidate?.candidate?.program;
   if (generation?.status !== "success" || !program || !Array.isArray(program.days)) return null;
+  const catalogue = new Map((candidate.catalogue?.entries ?? generation?.catalogue?.entries ?? []).map((entry) => [entry.id, entry]));
   const groupLabels = new Map();
   let nextGroup = 1;
   const labelForGroup = (key) => {
@@ -32,7 +33,7 @@ export function createRobProgramCandidateDetails(generation) {
       focus: text(day.focus),
       exercises: Array.isArray(day.exercises) ? day.exercises.map((exercise, exerciseIndex) => ({
         key: `${exerciseIndex}-${text(exercise.exerciseRef)}`,
-        name: text(exercise.exerciseRef),
+        name: text(catalogue.get(exercise.exerciseId)?.name) || text(exercise.exerciseRef) || text(exercise.exerciseId),
         prescription: `${exercise.sets} sets · ${text(exercise.repRange)}`,
         rest: formatProgramRestPeriod(exercise.restSeconds),
         note: text(exercise.note),

@@ -1,5 +1,7 @@
 # Current State
 
+- Rob whole-program generation is catalogue-grounded: a bounded verified WGER selection is filtered for the confirmed equipment context, validated again by Firebase against a server-owned reviewed ID catalogue, and used directly to materialise a transient executable proposal. Ordinary generated programs no longer enter mandatory exercise-name matching; legacy matching remains available for exceptional and older flows.
+
 ## Implemented
 
 - Dashboard default landing screen

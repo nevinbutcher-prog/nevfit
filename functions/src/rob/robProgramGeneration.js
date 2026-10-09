@@ -1,11 +1,12 @@
 import { AiError } from "../ai/aiErrors.js";
+import { ROB_CATALOGUE_VERSION, SERVER_CATALOGUE, authorizeRobCatalogue } from "./robExerciseCatalogue.js";
 
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
 const text = (value, max) => typeof value === "string" && value.trim() && value.trim().length <= max ? value.trim() : null;
 const invalid = (reason) => { const error = new AiError("ai_invalid_request"); error.validationDiagnostic = { reason }; throw error; };
 const fail = (reason) => { const error = new AiError("ai_invalid_response", { retryable: true }); error.validationDiagnostic = { reason }; throw error; };
 const allowed = (value, keys) => object(value) && Object.keys(value).every((key) => keys.includes(key));
-const EXERCISE_FIELDS = ["exerciseRef", "sets", "repRange", "restSeconds", "note", "proposalGroupKey"];
+const EXERCISE_FIELDS = ["exerciseId", "sets", "repRange", "restSeconds", "note", "proposalGroupKey"];
 const failExercise = (routineIndex, exerciseIndex, field, fieldReason) => {
   const error = new AiError("ai_invalid_response", { retryable: true });
   // Structural metadata only: never include an exercise value or provider output.
@@ -36,17 +37,19 @@ const intakeValid = (value) => allowed(value, ["version", "goal", "goalDescripti
   && typeof value.constraints === "string" && value.constraints.length <= 360;
 
 export function validateProgramGenerationRequest(data) {
-  if (!allowed(data, ["requirements"]) || !intakeValid(data.requirements)) invalid("requirements");
-  return { requirements: data.requirements };
+  if (!allowed(data, ["requirements", "catalogue"]) || !intakeValid(data.requirements)) invalid("requirements");
+  const entries = data.catalogue && authorizeRobCatalogue(data.catalogue.version, data.catalogue.ids);
+  if (!entries || entries.length < 8) invalid("catalogue");
+  return { requirements: data.requirements, catalogue: { version: ROB_CATALOGUE_VERSION, entries } };
 }
-export function programGenerationMessages(requirements) {
-  return [{ role: "system", content: `You are Rob. Return exactly one JSON object, no markdown. Design one complete coordinated training program for the confirmed requirements. Return exactly ${requirements.daysPerWeek} routines. Every exercise must use this complete schema: {"exerciseRef":"exercise name","sets":3,"repRange":"8-12","restSeconds":120,"note":null,"proposalGroupKey":null}. exerciseRef must be a non-empty exercise-name string. sets must be an integer from 1 to 12. repRange must be a string formatted like "8-12" or "10" (whole repetitions, 1 to 100, ascending when ranged). restSeconds must be an integer number of seconds from 0 to 600. note must be a string or null. proposalGroupKey must be null by default: use a non-null valid group-key string only when a superset has a clear practical benefit. A non-null key uses letters, digits, dot, underscore, colon, or hyphen (starting with a letter or digit), and the same key must be used for two or more exercises in the same routine. All exercises use this schema. Do not include Fitbot IDs, exerciseId, program metadata, scheduling, or unsupported fields. Return schema: {"version":1,"proposalType":"create_program","program":{"name":"Name","summary":"Short summary","days":[{"name":"Routine name","focus":"Short focus","exercises":[{"exerciseRef":"Cable row","sets":3,"repRange":"8-12","restSeconds":90,"note":"Pause at contraction.","proposalGroupKey":null},{"exerciseRef":"Lat pulldown","sets":3,"repRange":"10","restSeconds":90,"note":null,"proposalGroupKey":null},{"exerciseRef":"Rear delt fly","sets":3,"repRange":"12-15","restSeconds":60,"note":null,"proposalGroupKey":"pair-1"},{"exerciseRef":"Biceps curl","sets":3,"repRange":"10-12","restSeconds":60,"note":null,"proposalGroupKey":"pair-1"}]}]},"explanation":"Short explanation"}. Design coherent routines that cover the requested priorities and the muscle groups needed for a balanced program, while respecting the confirmed duration, frequency, equipment, and constraints. For hypertrophy goals, make each session practically useful: a typical 60-minute session often uses about 4-7 exercises, adjusted down or up for the actual duration, sets, rest periods, exercise complexity, frequency, equipment, and constraints. This is workload guidance, not a fixed minimum. Use user constraints and equipment; do not claim durations are measured.` }, { role: "user", content: `CONFIRMED REQUIREMENTS:\n${JSON.stringify(requirements)}` }];
+export function programGenerationMessages(requirements, catalogue = { entries: [] }) {
+  return [{ role: "system", content: `You are Rob. Return exactly one JSON object, no markdown. Design one complete coordinated training program for the confirmed requirements. Return exactly ${requirements.daysPerWeek} routines. Every exercise must use this complete schema: {"exerciseId":"wger-73","sets":3,"repRange":"8-12","restSeconds":120,"note":null,"proposalGroupKey":null}. exerciseId must be one of the supplied verified catalogue IDs, exactly as provided. Never invent an ID or use an exercise name. sets must be an integer from 1 to 12. repRange must be a string formatted like "8-12" or "10" (whole repetitions, 1 to 100, ascending when ranged). restSeconds must be an integer number of seconds from 0 to 600. note must be a string or null. proposalGroupKey must be null by default: use a non-null valid group-key string only when a superset has a clear practical benefit. A non-null key uses letters, digits, dot, underscore, colon, or hyphen (starting with a letter or digit), and the same key must be used for two or more exercises in the same routine. All exercises use this schema. Do not include exercise names in exercise objects, provider metadata, program scheduling, or unsupported fields. Return schema: {"version":1,"proposalType":"create_program","program":{"name":"Name","summary":"Short summary","days":[{"name":"Routine name","focus":"Short focus","exercises":[{"exerciseId":"wger-723","sets":3,"repRange":"8-12","restSeconds":90,"note":"Pause at contraction.","proposalGroupKey":null},{"exerciseId":"wger-73","sets":3,"repRange":"10","restSeconds":90,"note":null,"proposalGroupKey":null},{"exerciseId":"wger-822","sets":3,"repRange":"12-15","restSeconds":60,"note":null,"proposalGroupKey":"pair-1"},{"exerciseId":"wger-567","sets":3,"repRange":"10-12","restSeconds":60,"note":null,"proposalGroupKey":"pair-1"}]}]},"explanation":"Short explanation"}. Design coherent routines that cover the requested priorities and the muscle groups needed for a balanced program, while respecting the confirmed duration, frequency, equipment, and constraints. For hypertrophy goals, make each session practically useful: a typical 60-minute session often uses about 4-7 exercises, adjusted down or up for the actual duration, sets, rest periods, exercise complexity, frequency, equipment, and constraints. This is workload guidance, not a fixed minimum. Use user constraints and equipment; do not claim durations are measured.` }, { role: "user", content: `CONFIRMED REQUIREMENTS:\n${JSON.stringify(requirements)}\nVERIFIED CATALOGUE (use only these IDs):\n${JSON.stringify(catalogue.entries)}` }];
 }
 export const programCandidateResponseFormat = (() => {
   const exercise = {
     type: "object", additionalProperties: false, required: EXERCISE_FIELDS,
     properties: {
-      exerciseRef: { type: "string", minLength: 1, maxLength: 160 },
+      exerciseId: { type: "string", minLength: 1, maxLength: 160 },
       sets: { type: "integer", minimum: 1, maximum: 12 },
       repRange: { type: "string", pattern: "^\\d{1,3}(?:\\s*-\\s*\\d{1,3})?$" },
       restSeconds: { type: "integer", minimum: 0, maximum: 600 },
@@ -71,7 +74,8 @@ export const programCandidateResponseFormat = (() => {
       },
     },
   });
-})();export function parseProgramCandidate(raw, requirements) {
+})();export function parseProgramCandidate(raw, requirements, catalogue) {
+  const authorisedIds = new Set(catalogue?.entries?.map((entry) => entry.id) ?? [...SERVER_CATALOGUE.keys()]);
   let value; try { value = JSON.parse(typeof raw === "string" ? raw.trim().replace(/^```(?:json)?\s*|\s*```$/gi, "") : ""); } catch { fail("json"); }
   if (!allowed(value, ["version", "proposalType", "program", "explanation"]) || value.version !== 1 || value.proposalType !== "create_program" || !text(value.explanation, 1000) || !allowed(value.program, ["name", "summary", "days"]) || !text(value.program.name, 160) || !text(value.program.summary, 600) || !Array.isArray(value.program.days) || value.program.days.length !== requirements.daysPerWeek || value.program.days.length > 6) fail("candidate");
   const groupCheck = (day, routineIndex) => {
@@ -82,8 +86,8 @@ export const programCandidateResponseFormat = (() => {
       const unexpected = Object.keys(exercise).find((key) => !EXERCISE_FIELDS.includes(key));
       if (unexpected) failExercise(routineIndex, exerciseIndex, ["exerciseId", "id"].includes(unexpected) ? unexpected : "unexpected_field", "unexpected_field");
       for (const field of EXERCISE_FIELDS) if (!(field in exercise)) failExercise(routineIndex, exerciseIndex, field, "missing");
-      if (typeof exercise.exerciseRef !== "string") failExercise(routineIndex, exerciseIndex, "exerciseRef", "wrong_type");
-      if (!text(exercise.exerciseRef, 160)) failExercise(routineIndex, exerciseIndex, "exerciseRef", "unsupported_format");
+      if (typeof exercise.exerciseId !== "string") failExercise(routineIndex, exerciseIndex, "exerciseId", "wrong_type");
+      if (!authorisedIds.has(exercise.exerciseId)) failExercise(routineIndex, exerciseIndex, "exerciseId", "out_of_catalogue");
       if (!Number.isInteger(exercise.sets)) failExercise(routineIndex, exerciseIndex, "sets", "wrong_type");
       if (exercise.sets < 1 || exercise.sets > 12) failExercise(routineIndex, exerciseIndex, "sets", "unsupported_format");
       if (typeof exercise.repRange !== "string") failExercise(routineIndex, exerciseIndex, "repRange", "wrong_type");
@@ -104,6 +108,18 @@ export const programCandidateResponseFormat = (() => {
   if (value.program.days.reduce((count, day) => count + day.exercises.length, 0) > 50) fail("size");
   return { explanation: value.explanation.trim(), candidate: { proposalType: "create_program", program: value.program } };
 }
+export function assessProgramQuality(candidate, requirements) {
+  const concerns = [];
+  for (const [routineIndex, day] of candidate.program.days.entries()) {
+    const exerciseCount = day.exercises.length;
+    const totalSets = day.exercises.reduce((sum, exercise) => sum + exercise.sets, 0);
+    if (requirements.sessionMinutes >= 75 && (exerciseCount < 4 || totalSets < 12)) concerns.push({ routineIndex, code: "underfilled_duration" });
+    else if (requirements.sessionMinutes >= 60 && (exerciseCount < 3 || totalSets < 8)) concerns.push({ routineIndex, code: "limited_workload" });
+    else if (requirements.sessionMinutes >= 45 && (exerciseCount < 2 || totalSets < 5)) concerns.push({ routineIndex, code: "limited_workload" });
+  }
+  return { concerns };
+}
+
 export function programGenerationDiagnostics(result) {
   const raw = typeof result?.text === "string" ? result.text : "";
   let routineCount = null;
@@ -111,8 +127,11 @@ export function programGenerationDiagnostics(result) {
   return { actualModel: typeof result?.model === "string" ? result.model : null, providerOutputTokens: Number.isFinite(result?.usage?.outputTokens) ? result.usage.outputTokens : null, providerFinishReason: typeof result?.finishReason === "string" ? result.finishReason : null, responseCharacterLength: raw.length, routineCount };
 }
 export async function generateRobProgramCandidate(data, { provider, maxOutputTokens }) {
-  const { requirements } = validateProgramGenerationRequest(data);
-  const result = await provider.generate({ messages: programGenerationMessages(requirements), maxOutputTokens, responseFormat: programCandidateResponseFormat, requireResponseFormat: true });
+  const { requirements, catalogue } = validateProgramGenerationRequest(data);
+  const result = await provider.generate({ messages: programGenerationMessages(requirements, catalogue), maxOutputTokens, responseFormat: programCandidateResponseFormat, requireResponseFormat: true });
   const diagnostics = programGenerationDiagnostics(result);
-  try { return { model: result.model, usage: result.usage, finishReason: result.finishReason ?? null, diagnostics, ...parseProgramCandidate(result.text, requirements) }; } catch (error) { error.programGenerationDiagnostic = diagnostics; error.programGenerationFailureCategory = diagnostics.providerFinishReason === "length" ? "output_exhausted" : "candidate_validation"; throw error; }
+  try {
+    const parsed = parseProgramCandidate(result.text, requirements, catalogue);
+    return { model: result.model, usage: result.usage, finishReason: result.finishReason ?? null, diagnostics, ...parsed, catalogue, quality: assessProgramQuality(parsed.candidate, requirements) };
+  } catch (error) { error.programGenerationDiagnostic = diagnostics; error.programGenerationFailureCategory = diagnostics.providerFinishReason === "length" ? "output_exhausted" : "candidate_validation"; throw error; }
 }

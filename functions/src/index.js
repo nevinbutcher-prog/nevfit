@@ -105,6 +105,7 @@ export function createRobProgramGenerationHandler({ providerFactory = () => crea
       return { model: result.model, usage: result.usage, explanation: result.explanation, candidate: result.candidate };
     } catch (error) {
       const normalized = normalizeAiError(error);
+      const candidateValidation = error.programGenerationFailureCategory === "candidate_validation" && normalized.validationDiagnostic?.reason === "exercise" ? normalized.validationDiagnostic : null;
       logger.warn("Rob program generation failed", {
         operation: "rob_program_generation",
         failureCategory: error.programGenerationFailureCategory ?? (normalized.code === "ai_invalid_request" ? "request_validation" : "provider_or_transport"),
@@ -114,6 +115,10 @@ export function createRobProgramGenerationHandler({ providerFactory = () => crea
         providerFinishReason: error.programGenerationDiagnostic?.providerFinishReason ?? null,
         responseCharacterLength: error.programGenerationDiagnostic?.responseCharacterLength ?? null,
         candidateValidationFailureReason: normalized.validationDiagnostic?.reason ?? null,
+        candidateValidationRoutineIndex: Number.isInteger(candidateValidation?.routineIndex) ? candidateValidation.routineIndex : null,
+        candidateValidationExerciseIndex: Number.isInteger(candidateValidation?.exerciseIndex) ? candidateValidation.exerciseIndex : null,
+        candidateValidationField: typeof candidateValidation?.field === "string" ? candidateValidation.field : null,
+        candidateValidationFieldReason: typeof candidateValidation?.fieldReason === "string" ? candidateValidation.fieldReason : null,
         routineCount: error.programGenerationDiagnostic?.routineCount ?? null,
         durationMs: Date.now() - startedAt, authenticatedUidPresent: true,
       });

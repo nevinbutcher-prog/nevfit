@@ -85,6 +85,28 @@ test("candidate prescriptions and routine-local supersets are strict", () => {
   assert.throws(() => parseProgramCandidate(JSON.stringify(oneInvalidExercise), requirements), (error) => error.code === "ai_invalid_response");
 });
 
+test("exercise notes require null or non-whitespace text across the schema and parser", async () => {
+  const note = programCandidateResponseFormat.json_schema.schema.properties.program.properties.days.items.properties.exercises.items.properties.note;
+  assert.equal(note.minLength, 1);
+  assert.equal(note.pattern, "\\S");
+  const parsed = JSON.parse(response);
+  for (const invalidNote of ["", "   "]) {
+    const candidate = structuredClone(parsed);
+    candidate.program.days[0].exercises[0].note = invalidNote;
+    assert.throws(() => parseProgramCandidate(JSON.stringify(candidate), requirements), (error) => error.validationDiagnostic?.field === "note" && error.validationDiagnostic?.fieldReason === "unsupported_format");
+  }
+  const nullNote = structuredClone(parsed);
+  nullNote.program.days[0].exercises[0].note = null;
+  assert.doesNotThrow(() => parseProgramCandidate(JSON.stringify(nullNote), requirements));
+
+  const mockedEmptyNote = structuredClone(parsed);
+  mockedEmptyNote.program.days[0].exercises[0].note = "";
+  await assert.rejects(
+    () => generateRobProgramCandidate({ requirements, catalogue }, { provider: { generate: async () => ({ text: JSON.stringify(mockedEmptyNote), model: "test", usage: {}, finishReason: "stop" }) }, maxOutputTokens: 4000 }),
+    (error) => error.programGenerationFailureCategory === "candidate_validation" && error.validationDiagnostic?.field === "note",
+  );
+});
+
 test("orphaned supersets are recovered routine-locally without changing prescriptions", () => {
   const candidate = JSON.parse(response);
   const first = candidate.program.days[0].exercises[0];

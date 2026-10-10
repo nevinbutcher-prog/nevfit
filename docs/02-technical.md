@@ -88,6 +88,14 @@ Whole-program generation prepares a bounded browser-side selection from the exis
 
 Catalogue records are capped at 32, carry provider identity, display name, equipment, and muscle metadata, and are deduplicated by display name. The eligibility interface accepts an equipment context and explicit exclusions, ready for a future My Gym adapter without persistence or facility-profile implementation. Successful catalogue-grounded candidates populate trusted resolution entries directly and bypass mandatory name matching. The legacy resolver remains for old free-text candidates and voluntary manual replacements. A conservative deterministic quality assessment reports, but does not reject, clearly underfilled 45-, 60-, and 75-minute sessions.
 
+## Isolated Rob Blueprint Fulfilment
+
+`functions/src/rob/robBlueprintFulfilment.js` is the Card 5, server-side foundation between a validated weekly blueprint and the existing strict program candidate parser. It accepts the confirmed requirements plus a version-matched authorised catalogue ID snapshot. Server catalogue records remain the only exercise identity and metadata source; browser display metadata is ignored.
+
+The engine shares `eligibleRobCatalogueEntry()` with catalogue authorisation, so exclusions, incomplete equipment metadata, and confirmed equipment capabilities have one eligibility interpretation. Each blueprint slot is matched exactly against trusted planning-taxonomy primary muscle, movement pattern, and role. Deterministic ranking prefers conventional, confident, low-setup matches and modestly favours complementary choices over repeated identities, without prohibiting legitimate repetitions. It preserves declared slot order, sets, repetitions, and rest; an unmatched slot returns a structured diagnostic rather than substituting another movement.
+
+Successful selections are revalidated by `parseProgramCandidate()` and assessed with the advisory-only quality scorecard. This module has no callable export, provider request, UI, Firestore, or persistence dependency until a later reviewed integration card.
+
 ## Rob Training Advice
 
 The authenticated `robAdvice` callable is the user-facing AI boundary. Its

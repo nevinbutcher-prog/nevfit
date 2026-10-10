@@ -3,7 +3,7 @@ import catalogue from "./robExerciseCatalogue.v2.json" with { type: "json" };
 export const ROB_CATALOGUE_VERSION = catalogue.version;
 export const SERVER_CATALOGUE = new Map(catalogue.exercises.map((entry) => [entry.id, entry]));
 const capabilities = { dumbbells: "dumbbell", barbell: "barbell", cables: "cable", machines: "machine", bench: "bench", pull_up_equipment: "pull up" };
-const eligible = (entry, requirements, exclusions) => {
+export const eligibleRobCatalogueEntry = (entry, requirements, exclusions = new Set()) => {
   if (exclusions.has(entry.id)) return false;
   const actual = entry.equipment.join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ");
   if (!actual) return false;
@@ -17,5 +17,5 @@ export function authorizeRobCatalogue(version, ids, requirements = {}, excludedE
   if (version !== ROB_CATALOGUE_VERSION || !Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length) return null;
   const entries = ids.map((id) => SERVER_CATALOGUE.get(id));
   const exclusions = new Set(Array.isArray(excludedExerciseIds) ? excludedExerciseIds : []);
-  return entries.every(Boolean) && entries.every((entry) => eligible(entry, requirements, exclusions)) ? entries : null;
+  return entries.every(Boolean) && entries.every((entry) => eligibleRobCatalogueEntry(entry, requirements, exclusions)) ? entries : null;
 }

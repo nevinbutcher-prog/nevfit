@@ -92,6 +92,7 @@
 - In-flight Rob reviews use an explicit transient lifecycle: changing targets, leaving Rob, or changing a reviewed draft releases loading and discards stale provider responses without creating another request
 - Build Me a Program now collects and validates a transient, user-confirmed program-design brief through deterministic coaching-style questions; it neither calls AI nor changes program data
 - Confirmed program briefs can request one authenticated, validated whole-program candidate; transient deterministic matching resolves confident provider results and supports manual library-backed choices or replacements before preparing a validated executable proposal. The proposal is not yet previewed, approved, saved, or applied.
+- Catalogue-grounded whole-program generation balances conventional movement-pattern coverage with modest selected-muscle emphasis. Its trusted-metadata quality assessment returns advisory structured concerns for weekly coverage, concentration, redundancy, movement-pattern gaps, and clearly underfilled sessions; it does not reject or regenerate a candidate.
 
 ## Current Known Limitations
 

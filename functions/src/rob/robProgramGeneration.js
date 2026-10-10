@@ -35,6 +35,30 @@ const intakeValid = (value) => allowed(value, ["version", "goal", "goalDescripti
   && list(value.priorities, PRIORITIES, 6) && optionalText(value.priorityNote, 240) && ENVIRONMENTS.has(value.environment)
   && list(value.equipment, EQUIPMENT, 8) && optionalText(value.equipmentOther, 160)
   && typeof value.constraints === "string" && value.constraints.length <= 360;
+const movement = (entry) => {
+  const name = String(entry?.name ?? "").toLowerCase();
+  if (/crawl|punch/.test(name)) return "other";
+  if (/squat|lunge|leg press|step.up/.test(name)) return "knee_dominant";
+  if (/deadlift|good morning|hip thrust|glute bridge|pull through/.test(name)) return "hinge";
+  if (/bench press|chest press|push.?up|dip/.test(name)) return "horizontal_push";
+  if (/shoulder press|overhead press|military press/.test(name)) return "vertical_push";
+  if (/row/.test(name)) return "horizontal_pull";
+  if (/pull.?up|pulldown/.test(name)) return "vertical_pull";
+  if (/curl|extension|raise|fly|calf/.test(name)) return "isolation";
+  if (/plank|twist|crunch|woodchop/.test(name)) return "core";
+  return "other";
+};
+const muscleGroup = (entry) => {
+  const terms = [entry?.primaryMuscle, entry?.bodyPart].filter(Boolean).join(" ").toLowerCase();
+  if (/shoulder/.test(terms)) return "shoulders";
+  if (/bicep|tricep|forearm|arms?/.test(terms)) return "arms";
+  if (/chest|pectoral/.test(terms)) return "chest";
+  if (/lat|back|trapez/.test(terms)) return "back";
+  if (/quad|hamstring|calf|leg/.test(terms)) return "legs";
+  if (/glute/.test(terms)) return "glutes";
+  if (/abs|obliqu|core/.test(terms)) return "core";
+  return "other";
+};
 
 export function validateProgramGenerationRequest(data) {
   if (!allowed(data, ["requirements", "catalogue"]) || !intakeValid(data.requirements)) invalid("requirements");
@@ -43,7 +67,7 @@ export function validateProgramGenerationRequest(data) {
   return { requirements: data.requirements, catalogue: { version: ROB_CATALOGUE_VERSION, entries } };
 }
 export function programGenerationMessages(requirements, catalogue = { entries: [] }) {
-  return [{ role: "system", content: `You are Rob. Return exactly one JSON object, no markdown. Design one complete coordinated training program for the confirmed requirements. Return exactly ${requirements.daysPerWeek} routines. Every exercise must use this complete schema: {"exerciseId":"wger-73","sets":3,"repRange":"8-12","restSeconds":120,"note":null,"proposalGroupKey":null}. exerciseId must be one of the supplied verified catalogue IDs, exactly as provided. Never invent an ID or use an exercise name. sets must be an integer from 1 to 12. repRange must be a string formatted like "8-12" or "10" (whole repetitions, 1 to 100, ascending when ranged). restSeconds must be an integer number of seconds from 0 to 600. note must be null when no exercise-specific note is needed; otherwise it must be non-empty text. proposalGroupKey must be null by default: use a non-null valid group-key string only when a superset has a clear practical benefit. A non-null key uses letters, digits, dot, underscore, colon, or hyphen (starting with a letter or digit), and the same key must be used for two or more exercises in the same routine. All exercises use this schema. Do not include exercise names in exercise objects, provider metadata, program scheduling, or unsupported fields. Return schema: {"version":1,"proposalType":"create_program","program":{"name":"Name","summary":"Short summary","days":[{"name":"Routine name","focus":"Short focus","exercises":[{"exerciseId":"wger-723","sets":3,"repRange":"8-12","restSeconds":90,"note":"Pause at contraction.","proposalGroupKey":null},{"exerciseId":"wger-73","sets":3,"repRange":"10","restSeconds":90,"note":null,"proposalGroupKey":null},{"exerciseId":"wger-822","sets":3,"repRange":"12-15","restSeconds":60,"note":null,"proposalGroupKey":"pair-1"},{"exerciseId":"wger-567","sets":3,"repRange":"10-12","restSeconds":60,"note":null,"proposalGroupKey":"pair-1"}]}]},"explanation":"Short explanation"}. Design coherent routines that cover the requested priorities and the muscle groups needed for a balanced program, while respecting the confirmed duration, frequency, equipment, and constraints. For hypertrophy goals, make each session practically useful: a typical 60-minute session often uses about 4-7 exercises, adjusted down or up for the actual duration, sets, rest periods, exercise complexity, frequency, equipment, and constraints. This is workload guidance, not a fixed minimum. Use user constraints and equipment; do not claim durations are measured.` }, { role: "user", content: `CONFIRMED REQUIREMENTS:\n${JSON.stringify(requirements)}\nVERIFIED CATALOGUE (use only these IDs):\n${JSON.stringify(catalogue.entries)}` }];
+  return [{ role: "system", content: `You are Rob. Return exactly one JSON object, no markdown. Design one complete coordinated training program for the confirmed requirements. Plan the whole week before choosing exercises: distribute demanding patterns across routines, use conventional foundational exercises where suitable, and avoid near-identical variations without a clear role. If priorities include "balanced", it is a whole-week coverage requirement: cover the major muscle groups and movement patterns. Other selected muscle priorities receive modest additional emphasis within that balanced week, not a dedicated routine every day. Return exactly ${requirements.daysPerWeek} routines. Every exercise must use this complete schema: {"exerciseId":"wger-73","sets":3,"repRange":"8-12","restSeconds":120,"note":null,"proposalGroupKey":null}. exerciseId must be one of the supplied verified catalogue IDs, exactly as provided. Never invent an ID or use an exercise name. sets must be an integer from 1 to 12. repRange must be a string formatted like "8-12" or "10" (whole repetitions, 1 to 100, ascending when ranged). restSeconds must be an integer number of seconds from 0 to 600. note must be null when no exercise-specific note is needed; otherwise it must be non-empty text. proposalGroupKey must be null by default: use a non-null valid group-key string only when a superset has a clear practical benefit. A non-null key uses letters, digits, dot, underscore, colon, or hyphen (starting with a letter or digit), and the same key must be used for two or more exercises in the same routine. All exercises use this schema. Do not include exercise names in exercise objects, provider metadata, program scheduling, or unsupported fields. Return schema: {"version":1,"proposalType":"create_program","program":{"name":"Name","summary":"Short summary","days":[{"name":"Routine name","focus":"Short focus","exercises":[{"exerciseId":"wger-723","sets":3,"repRange":"8-12","restSeconds":90,"note":null,"proposalGroupKey":null}]}]},"explanation":"Short explanation"}. For hypertrophy, make practical use of the confirmed duration, sets, rests, complexity, frequency, equipment, and constraints. Typical 45-, 60-, and 75-minute sessions often need progressively more work; 5-8 exercises is common for 60-75 minutes and about 6-8 is a useful 75-minute starting point, not a mandatory target. Do not pad a session to reach a count or claim duration is measured.` }, { role: "user", content: `CONFIRMED REQUIREMENTS:\n${JSON.stringify(requirements)}\nVERIFIED CATALOGUE (use only these IDs):\n${JSON.stringify(catalogue.entries)}` }];
 }
 export function programCandidateResponseFormat(catalogue = { entries: [] }) {
   const authorisedIds = catalogue.entries.map((entry) => entry.id);
@@ -110,15 +134,58 @@ export function parseProgramCandidate(raw, requirements, catalogue) {
   if (value.program.days.reduce((count, day) => count + day.exercises.length, 0) > 50) fail("size");
   return { explanation: value.explanation.trim(), candidate: { proposalType: "create_program", program: value.program } };
 }
-export function assessProgramQuality(candidate, requirements) {
+export function estimateRoutineWorkloadMinutes(day) {
+  const exercises = Array.isArray(day?.exercises) ? day.exercises : [];
+  const groupSizes = new Map();
+  for (const exercise of exercises) if (exercise?.proposalGroupKey) groupSizes.set(exercise.proposalGroupKey, (groupSizes.get(exercise.proposalGroupKey) ?? 0) + 1);
+  const exerciseMinutes = exercises.reduce((total, exercise) => {
+    const sets = Number.isInteger(exercise?.sets) ? exercise.sets : 0;
+    const restMinutes = Number.isInteger(exercise?.restSeconds) ? (exercise.restSeconds * Math.max(sets - 1, 0)) / 60 : 0;
+    return total + (sets * 0.6) + restMinutes + 1.5;
+  }, 8);
+  // Pairing trims setup transitions only; it never assumes a superset removes prescribed recovery.
+  const pairedTransitionSavings = [...groupSizes.values()].reduce((total, size) => total + (size >= 2 ? (size - 1) * 0.5 : 0), 0);
+  return Math.max(0, Math.round((exerciseMinutes - pairedTransitionSavings) * 10) / 10);
+}
+export function assessProgramQuality(candidate, requirements, catalogue = { entries: [] }) {
   const concerns = [];
+  const entries = new Map((catalogue.entries ?? []).map((entry) => [entry.id, entry]));
+  const programExercises = candidate?.program?.days?.flatMap((day, routineIndex) => (day.exercises ?? []).map((exercise, exerciseIndex) => ({ ...exercise, routineIndex, exerciseIndex, entry: entries.get(exercise.exerciseId) }))) ?? [];
+  const setsFor = (items) => items.reduce((total, item) => total + (Number.isInteger(item.sets) ? item.sets : 0), 0);
   for (const [routineIndex, day] of candidate.program.days.entries()) {
     const exerciseCount = day.exercises.length;
     const totalSets = day.exercises.reduce((sum, exercise) => sum + exercise.sets, 0);
-    if (requirements.sessionMinutes >= 75 && (exerciseCount < 4 || totalSets < 12)) concerns.push({ routineIndex, code: "underfilled_duration" });
-    else if (requirements.sessionMinutes >= 60 && (exerciseCount < 3 || totalSets < 8)) concerns.push({ routineIndex, code: "limited_workload" });
-    else if (requirements.sessionMinutes >= 45 && (exerciseCount < 2 || totalSets < 5)) concerns.push({ routineIndex, code: "limited_workload" });
+    const estimatedWorkloadMinutes = estimateRoutineWorkloadMinutes(day);
+    if (requirements.sessionMinutes >= 75 && (exerciseCount < 5 || totalSets < 14 || estimatedWorkloadMinutes < requirements.sessionMinutes * 0.55)) concerns.push({ routineIndex, code: "underfilled_duration", estimatedWorkloadMinutes });
+    else if (requirements.sessionMinutes >= 60 && (exerciseCount < 3 || totalSets < 8)) concerns.push({ routineIndex, code: "limited_workload", estimatedWorkloadMinutes });
+    else if (requirements.sessionMinutes >= 45 && (exerciseCount < 2 || totalSets < 5)) concerns.push({ routineIndex, code: "limited_workload", estimatedWorkloadMinutes });
+    const routineItems = programExercises.filter((item) => item.routineIndex === routineIndex && item.entry);
+    const groups = new Map();
+    for (const item of routineItems) groups.set(muscleGroup(item.entry), (groups.get(muscleGroup(item.entry)) ?? 0) + item.sets);
+    const dominant = [...groups.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (dominant && totalSets >= 12 && dominant[1] / totalSets > 0.65) concerns.push({ routineIndex, code: "routine_muscle_concentration", muscleGroup: dominant[0] });
   }
+  if (!programExercises.length || !entries.size) return { concerns };
+  const totalSets = setsFor(programExercises);
+  const groupSets = new Map();
+  for (const item of programExercises) { const group = muscleGroup(item.entry); groupSets.set(group, (groupSets.get(group) ?? 0) + item.sets); }
+  if ((requirements.priorities ?? []).includes("balanced")) {
+    for (const group of ["chest", "back", "legs"]) if ((groupSets.get(group) ?? 0) < 4) concerns.push({ code: "major_muscle_group_underrepresented", muscleGroup: group, workingSets: groupSets.get(group) ?? 0 });
+    const patterns = new Set(programExercises.map((item) => movement(item.entry)));
+    const foundational = ["horizontal_push", "horizontal_pull", "knee_dominant", "hinge"].filter((pattern) => patterns.has(pattern));
+    if (foundational.length < 3) concerns.push({ code: "limited_movement_pattern_coverage", patterns: foundational });
+  }
+  const priorities = (requirements.priorities ?? []).filter((priority) => priority !== "balanced");
+  for (const priority of priorities) {
+    const prioritySets = groupSets.get(priority) ?? 0;
+    if (totalSets >= 20 && prioritySets / totalSets > 0.45) concerns.push({ code: "priority_overconcentration", muscleGroup: priority, workingSets: prioritySets, totalWorkingSets: totalSets });
+  }
+  const repeated = new Map();
+  for (const item of programExercises) {
+    const key = `${movement(item.entry)}:${muscleGroup(item.entry)}`;
+    repeated.set(key, (repeated.get(key) ?? []).concat(item));
+  }
+  for (const [key, items] of repeated) if (items.length >= 5 && setsFor(items) / totalSets > 0.4) concerns.push({ code: "redundant_exercise_selection", movementPattern: key.split(":")[0], muscleGroup: key.split(":")[1], exerciseCount: items.length });
   return { concerns };
 }
 
@@ -134,6 +201,6 @@ export async function generateRobProgramCandidate(data, { provider, maxOutputTok
   const diagnostics = programGenerationDiagnostics(result);
   try {
     const parsed = parseProgramCandidate(result.text, requirements, catalogue);
-    return { model: result.model, usage: result.usage, finishReason: result.finishReason ?? null, diagnostics, ...parsed, catalogue, quality: assessProgramQuality(parsed.candidate, requirements) };
+    return { model: result.model, usage: result.usage, finishReason: result.finishReason ?? null, diagnostics, ...parsed, catalogue, quality: assessProgramQuality(parsed.candidate, requirements, catalogue) };
   } catch (error) { error.programGenerationDiagnostic = diagnostics; error.programGenerationFailureCategory = diagnostics.providerFinishReason === "length" ? "output_exhausted" : "candidate_validation"; throw error; }
 }

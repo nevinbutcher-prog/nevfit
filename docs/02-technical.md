@@ -164,11 +164,20 @@ request, resolve exercises, create a draft, save a program, activate it, or
 schedule it. Editing any intake answer clears confirmation and the candidate,
 requiring an explicit reconfirmation.
 
-The whole-program prompt asks hypertrophy candidates to use practical workload
-for the confirmed session duration and context. Around four to seven exercises
-is guidance for a typical 60-minute hypertrophy session, not a validator rule
-or unconditional minimum; the existing per-routine and total-program size
-limits remain authoritative.
+The whole-program prompt asks hypertrophy candidates to plan a coordinated week
+before choosing exercises. `balanced` is a whole-week coverage requirement,
+while named muscle priorities are modest emphasis rather than a reason to make
+every routine about one area. Catalogue selection seeds conventional movement
+patterns, then uses diminishing-return coverage scoring instead of fixed muscle
+quotas or an exercise-count target. Typical 60–75-minute hypertrophy sessions
+often use five to eight exercises, with six to eight a useful 75-minute
+starting point; this remains workload guidance, not a validator rule.
+
+Firebase returns an advisory, trusted-metadata program-quality assessment with
+the transient candidate. It reports structured coverage, concentration,
+redundancy, pattern, and underfilled-workload concerns without rejecting,
+regenerating, saving, or otherwise changing the candidate. Strict schema,
+catalogue-ID, prescription, and proposal validation remain authoritative.
 
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or

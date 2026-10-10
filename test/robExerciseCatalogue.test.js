@@ -30,3 +30,13 @@ test("coverage-aware selection preserves major patterns within a metadata budget
     assert.ok(selected.coverage.includes("knee_dominant"));
   }
 });
+
+test("balanced development keeps a shoulder emphasis modest and favours conventional movement patterns", () => {
+  const requirements = { environment: "commercial_gym", equipment: ["machines", "cables", "dumbbells", "barbell", "bench", "pull_up_equipment"], priorities: ["balanced", "shoulders"], daysPerWeek: 4 };
+  const selected = selectRobGenerationCandidates(buildRobExerciseCatalogue({ requirements }), requirements);
+  const shoulders = selected.entries.filter((entry) => entry.primaryMuscle === "Shoulders").length;
+  assert.ok(selected.entries.length > 20);
+  assert.ok(shoulders < selected.entries.length / 3);
+  assert.equal(selected.entries.some((entry) => /bear crawl|punch/i.test(entry.name)), false);
+  for (const pattern of ["horizontal_push", "horizontal_pull", "knee_dominant", "hinge"]) assert.ok(selected.coverage.includes(pattern));
+});

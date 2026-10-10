@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRobProgramGenerationHandler } from "../src/index.js";
-import { assessProgramQuality, generateRobProgramCandidate, parseProgramCandidate, programCandidateResponseFormat, programGenerationMessages, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
+import { assessProgramQuality, estimateRoutineWorkloadMinutes, generateRobProgramCandidate, parseProgramCandidate, programCandidateResponseFormat, programGenerationMessages, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
 
 const catalogue = { version: 2, ids: ["wger-73", "wger-76", "wger-145", "wger-538", "wger-458", "wger-475", "wger-567", "wger-723", "wger-1370"] };
 const requirements = { version: 1, goal: "hypertrophy", daysPerWeek: 3, sessionMinutes: 60, priorities: ["back"], environment: "commercial_gym", equipment: ["machines", "dumbbells", "barbell", "cables", "bench", "pull_up_equipment"], constraints: "" };
@@ -17,6 +17,7 @@ test("authenticated whole-program generation returns a transient bounded candida
   assert.equal(result.candidate.program.days[0].exercises[0].exerciseId, "wger-73");
   assert.equal(result.catalogue.version, 2);
   assert.equal(result.catalogue.entries.find((entry) => entry.id === "wger-73")?.name.length > 0, true);
+  assert.ok(Array.isArray(result.quality?.concerns));
 });
 
 test("whole-program candidates reject wrong routine counts and provider-supplied IDs", () => {
@@ -192,11 +193,11 @@ test("invalid complete candidate remains rejected with validation diagnostics", 
     (error) => error.code === "ai_invalid_response" && error.programGenerationFailureCategory === "candidate_validation" && error.programGenerationDiagnostic.routineCount === 3 && error.validationDiagnostic.routineIndex === 0 && error.validationDiagnostic.exerciseIndex === 0 && error.validationDiagnostic.field === "sets" && error.validationDiagnostic.fieldReason === "unsupported_format",
   );
 });
-test("four-day hypertrophy instructions encourage practical workload and coverage without a fixed minimum", () => {
-  const messages = programGenerationMessages({ ...requirements, daysPerWeek: 4, sessionMinutes: 60, priorities: ["shoulders", "arms"] });
-  assert.match(messages[0].content, /4-7 exercises/);
-  assert.match(messages[0].content, /priorities and the muscle groups needed for a balanced program/);
-  assert.match(messages[0].content, /not a fixed minimum/);
+test("four-day hypertrophy instructions establish balanced weekly planning without a fixed exercise target", () => {
+  const messages = programGenerationMessages({ ...requirements, daysPerWeek: 4, sessionMinutes: 75, priorities: ["shoulders", "balanced"] });
+  assert.match(messages[0].content, /whole-week coverage requirement/);
+  assert.match(messages[0].content, /modest additional emphasis/);
+  assert.match(messages[0].content, /6-8 is a useful 75-minute starting point, not a mandatory target/);
   const shortSession = structuredClone(JSON.parse(response));
   shortSession.program.days = [shortSession.program.days[0]];
   assert.doesNotThrow(() => parseProgramCandidate(JSON.stringify(shortSession), { ...requirements, daysPerWeek: 1, sessionMinutes: 20 }));
@@ -216,4 +217,57 @@ test("quality assessment flags clearly underfilled longer sessions without rejec
   assert.ok(assessProgramQuality({ program: candidate }, { sessionMinutes: 45 }).concerns.length > 0);
   assert.ok(assessProgramQuality({ program: candidate }, { sessionMinutes: 60 }).concerns.length > 0);
   assert.ok(assessProgramQuality({ program: candidate }, { sessionMinutes: 75 }).concerns.every((concern) => concern.code === "underfilled_duration"));
+});
+
+test("advisory quality assessment flags the shoulder-heavy balanced-program regression but not balanced shoulder emphasis", () => {
+  const trustedCatalogue = { entries: [
+    { id: "shoulder-press", name: "Dumbbell Shoulder Press", primaryMuscle: "Shoulders", bodyPart: "Shoulders" },
+    { id: "front-raise", name: "Dumbbell Front Raise", primaryMuscle: "Shoulders", bodyPart: "Shoulders" },
+    { id: "lateral-raise", name: "Dumbbell Lateral Raise", primaryMuscle: "Shoulders", bodyPart: "Shoulders" },
+    { id: "rear-fly", name: "Rear Delt Fly", primaryMuscle: "Shoulders", bodyPart: "Shoulders" },
+    { id: "bench", name: "Barbell Bench Press", primaryMuscle: "Chest", bodyPart: "Chest" },
+    { id: "row", name: "Barbell Row", primaryMuscle: "Lats", bodyPart: "Back" },
+    { id: "squat", name: "Barbell Squat", primaryMuscle: "Quads", bodyPart: "Legs" },
+    { id: "deadlift", name: "Romanian Deadlift", primaryMuscle: "Hamstrings", bodyPart: "Legs" },
+    { id: "curl", name: "Dumbbell Curl", primaryMuscle: "Biceps", bodyPart: "Arms" },
+    { id: "extension", name: "Cable Triceps Extension", primaryMuscle: "Triceps", bodyPart: "Arms" },
+  ] };
+  const day = (ids) => ({ exercises: ids.map((exerciseId) => ({ exerciseId, sets: 3 })) });
+  const shoulderHeavy = { program: { days: [
+    day(["shoulder-press", "front-raise", "lateral-raise", "rear-fly"]),
+    day(["shoulder-press", "front-raise", "lateral-raise", "rear-fly"]),
+    day(["shoulder-press", "front-raise", "lateral-raise", "rear-fly"]),
+    day(["shoulder-press", "front-raise", "lateral-raise", "rear-fly"]),
+  ] } };
+  const balancedShoulders = { program: { days: [
+    day(["bench", "row", "shoulder-press", "curl", "extension", "front-raise"]),
+    day(["squat", "deadlift", "row", "shoulder-press", "curl", "extension"]),
+    day(["bench", "row", "squat", "deadlift", "lateral-raise", "curl"]),
+    day(["bench", "row", "squat", "deadlift", "shoulder-press", "extension"]),
+  ] } };
+  const brief = { sessionMinutes: 75, priorities: ["balanced", "shoulders"] };
+  const negativeCodes = assessProgramQuality(shoulderHeavy, brief, trustedCatalogue).concerns.map((concern) => concern.code);
+  const positiveCodes = assessProgramQuality(balancedShoulders, brief, trustedCatalogue).concerns.map((concern) => concern.code);
+  assert.ok(negativeCodes.includes("major_muscle_group_underrepresented"));
+  assert.ok(negativeCodes.includes("priority_overconcentration"));
+  assert.ok(negativeCodes.includes("redundant_exercise_selection"));
+  assert.equal(positiveCodes.includes("major_muscle_group_underrepresented"), false);
+  assert.equal(positiveCodes.includes("priority_overconcentration"), false);
+  assert.equal(positiveCodes.includes("redundant_exercise_selection"), false);
+});
+
+test("advisory quality assessment supports balanced priorities across frequencies and uses superset-aware workload estimates", () => {
+  const entries = [
+    ["bench", "Bench Press", "Chest", "Chest"], ["row", "Barbell Row", "Lats", "Back"], ["squat", "Squat", "Quads", "Legs"], ["hinge", "Romanian Deadlift", "Hamstrings", "Legs"], ["press", "Shoulder Press", "Shoulders", "Shoulders"], ["curl", "Dumbbell Curl", "Biceps", "Arms"],
+  ].map(([id, name, primaryMuscle, bodyPart]) => ({ id, name, primaryMuscle, bodyPart }));
+  const exercises = entries.map((entry) => ({ exerciseId: entry.id, sets: 3, restSeconds: 90, proposalGroupKey: null }));
+  for (const [daysPerWeek, sessionMinutes, priority] of [[3, 45, "arms"], [4, 60, "back"], [5, 75, "shoulders"]]) {
+    const candidate = { program: { days: Array.from({ length: daysPerWeek }, () => ({ exercises })) } };
+    const codes = assessProgramQuality(candidate, { daysPerWeek, sessionMinutes, priorities: ["balanced", priority] }, { entries }).concerns.map((concern) => concern.code);
+    assert.equal(codes.includes("major_muscle_group_underrepresented"), false);
+    assert.equal(codes.includes("priority_overconcentration"), false);
+  }
+  const straight = { exercises: exercises.slice(0, 2) };
+  const superset = { exercises: straight.exercises.map((exercise) => ({ ...exercise, proposalGroupKey: "pair-1" })) };
+  assert.ok(estimateRoutineWorkloadMinutes(superset) < estimateRoutineWorkloadMinutes(straight));
 });

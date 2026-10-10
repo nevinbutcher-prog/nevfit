@@ -5,6 +5,7 @@ export const ROB_CATALOGUE_INPUT_CHAR_BUDGET = 36000;
 const capabilities = { dumbbells: "dumbbell", barbell: "barbell", cables: "cable", machines: "machine", bench: "bench", pull_up_equipment: "pull up" };
 const movement = (entry) => {
   const n = entry.name.toLowerCase();
+  if (/crawl|punch/.test(n)) return "other";
   if (/squat|lunge|leg press|step.up/.test(n)) return "knee_dominant";
   if (/deadlift|good morning|hip thrust|glute bridge|pull through/.test(n)) return "hinge";
   if (/bench press|chest press|push.?up|dip/.test(n)) return "horizontal_push";
@@ -13,6 +14,17 @@ const movement = (entry) => {
   if (/pull.?up|pulldown/.test(n)) return "vertical_pull";
   if (/curl|extension|raise|fly|calf/.test(n)) return "isolation";
   if (/plank|twist|crunch|woodchop/.test(n)) return "core";
+  return "other";
+};
+const muscleGroup = (entry) => {
+  const terms = [entry.primaryMuscle, entry.bodyPart].filter(Boolean).join(" ").toLowerCase();
+  if (/shoulder/.test(terms)) return "shoulders";
+  if (/bicep|tricep|forearm|arms?/.test(terms)) return "arms";
+  if (/chest|pectoral/.test(terms)) return "chest";
+  if (/lat|back|trapez/.test(terms)) return "back";
+  if (/quad|hamstring|calf|leg/.test(terms)) return "legs";
+  if (/glute/.test(terms)) return "glutes";
+  if (/abs|obliqu|core/.test(terms)) return "core";
   return "other";
 };
 const eligible = (entry, requirements, excluded) => {
@@ -29,9 +41,11 @@ const eligible = (entry, requirements, excluded) => {
   return required.length > 0 && required.every((item) => available.includes(item));
 };
 const score = (entry, requirements) => {
-  const terms = [entry.name, entry.primaryMuscle, entry.bodyPart].join(" ").toLowerCase();
-  const emphasis = (requirements.priorities ?? []).some((item) => terms.includes(item.replace(/s$/, ""))) ? 4 : 0;
-  return emphasis + (movement(entry) !== "other" ? 2 : 0) - (/isometric|stretch|test|warm.?up/i.test(entry.name) ? 5 : 0);
+  const priorities = new Set((requirements.priorities ?? []).filter((item) => item !== "balanced"));
+  // A selected muscle is an emphasis, not a reason to crowd out the rest of the catalogue.
+  const emphasis = priorities.has(muscleGroup(entry)) ? 0.25 : 0;
+  const conventional = movement(entry) === "other" ? -2 : 2;
+  return emphasis + conventional - (/isometric|stretch|test|warm.?up/i.test(entry.name) ? 5 : 0);
 };
 export function buildRobExerciseCatalogue({ requirements = {}, excludedExerciseIds = [] } = {}) {
   const excluded = new Set(Array.isArray(excludedExerciseIds) ? excludedExerciseIds.filter((id) => typeof id === "string") : []);
@@ -41,8 +55,17 @@ export function buildRobExerciseCatalogue({ requirements = {}, excludedExerciseI
 }
 export function selectRobGenerationCandidates(full, requirements) {
   const ranked = [...(full?.entries ?? [])].sort((a, b) => score(b, requirements) - score(a, requirements) || a.name.localeCompare(b.name));
-  const entries = [], used = new Set(); let serializedChars = 0;
-  for (const kind of ["horizontal_push", "vertical_push", "horizontal_pull", "vertical_pull", "knee_dominant", "hinge", "core", "isolation"]) { const entry = ranked.find((candidate) => movement(candidate) === kind && !used.has(candidate.id)); if (entry) { entries.push(entry); used.add(entry.id); serializedChars += JSON.stringify(entry).length; } }
-  for (const entry of ranked) { const size = JSON.stringify(entry).length + 1; if (!used.has(entry.id) && serializedChars + size <= ROB_CATALOGUE_INPUT_CHAR_BUDGET) { entries.push(entry); used.add(entry.id); serializedChars += size; } }
+  const entries = [], used = new Set(), movementCounts = new Map(), muscleCounts = new Map(); let serializedChars = 0;
+  const add = (entry) => { entries.push(entry); used.add(entry.id); serializedChars += JSON.stringify(entry).length + 1; movementCounts.set(movement(entry), (movementCounts.get(movement(entry)) ?? 0) + 1); muscleCounts.set(muscleGroup(entry), (muscleCounts.get(muscleGroup(entry)) ?? 0) + 1); };
+  // Establish a usable conventional movement base before allowing a priority to add variety.
+  for (const kind of ["horizontal_push", "vertical_push", "horizontal_pull", "vertical_pull", "knee_dominant", "hinge", "core", "isolation"]) { const entry = ranked.find((candidate) => movement(candidate) === kind && !used.has(candidate.id)); if (entry) add(entry); }
+  // Diminishing returns keep a large source catalogue balanced without imposing muscle quotas or a fixed exercise count.
+  while (true) {
+    const next = ranked.filter((entry) => !used.has(entry.id)).map((entry) => ({ entry, value: score(entry, requirements) + (3 / (1 + (movementCounts.get(movement(entry)) ?? 0))) + (3 / (1 + (muscleCounts.get(muscleGroup(entry)) ?? 0))) })).sort((a, b) => b.value - a.value || a.entry.name.localeCompare(b.entry.name))[0];
+    if (!next || next.value < 3) break;
+    const size = JSON.stringify(next.entry).length + 1;
+    if (serializedChars + size > ROB_CATALOGUE_INPUT_CHAR_BUDGET) break;
+    add(next.entry);
+  }
   return { version: full?.version, entries, serializedChars, coverage: [...new Set(entries.map(movement))] };
 }

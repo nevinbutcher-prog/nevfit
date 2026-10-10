@@ -94,6 +94,7 @@
 - Confirmed program briefs can request one authenticated, validated whole-program candidate; transient deterministic matching resolves confident provider results and supports manual library-backed choices or replacements before preparing a validated executable proposal. The proposal is not yet previewed, approved, saved, or applied.
 - Catalogue-grounded whole-program generation balances conventional movement-pattern coverage with modest selected-muscle emphasis. Its trusted-metadata quality assessment returns advisory structured concerns for weekly coverage, concentration, redundancy, movement-pattern gaps, and clearly underfilled sessions; it does not reject or regenerate a candidate.
 - A separate, versioned Rob exercise-planning taxonomy now provides provenance-aware primary/secondary stimulus, movement, role, fatigue, sequencing, setup, conventionality, confidence, overlap, and audit metadata for all catalogue records. It is foundation-only and is not yet used by generation or catalogue authorisation.
+- A separate, versioned weekly programming-policy engine now turns confirmed intake requirements into an advisory pre-selection envelope for coverage, priorities, movement needs, session workload, recovery, and exercise interactions. It is foundation-only: it selects no exercises, changes no active generation, and exposes uncertainty rather than inventing missing calendar, recovery, equipment, or taxonomy facts.
 
 ## Current Known Limitations
 

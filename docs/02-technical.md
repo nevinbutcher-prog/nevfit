@@ -192,6 +192,18 @@ stale-review audit finding. `scripts/auditRobExercisePlanningTaxonomy.mjs`
 reports coverage, uncertainty, contradictions, and stale reviewed exceptions
 after `scripts/refreshRobCatalogue.mjs` produces a new catalogue snapshot.
 
+### Weekly Programming Policy
+
+`src/services/rob/robWeeklyProgrammingPolicy.js` is the pure, versioned Card 2
+planning-policy layer. It turns validated program-intake requirements into an
+advisory weekly envelope before exercise IDs are selected. Direct working sets
+remain the quantitative volume signal; meaningful and supporting secondary
+stimulus provide overlap context only, and unknown taxonomy data remains
+explicit uncertainty. The module supplies duration-sensitive workload,
+coverage, movement, distribution, recovery, and compatibility guidance without
+choosing exercises, hardcoding a split, rejecting proposals, or importing
+React, Firebase, or AI code.
+
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or
 invalidating an in-flight review releases its loading state without attempting

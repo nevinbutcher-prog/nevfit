@@ -17,11 +17,16 @@ const movement = (entry) => {
 };
 const eligible = (entry, requirements, excluded) => {
   if (excluded.has(entry.id) || !entry.name || !Array.isArray(entry.equipment)) return false;
-  const actual = entry.equipment.join(" ").toLowerCase();
+  const actual = entry.equipment.join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  // Empty WGER metadata is unknown, not evidence of bodyweight eligibility.
+  if (!actual) return false;
   if (requirements.environment === "minimal_equipment") return /bodyweight|band|none/.test(actual);
   const selected = requirements.equipment ?? [];
-  if (!selected.length) return requirements.environment === "commercial_gym" || requirements.environment === "both";
-  return selected.every((item) => item === "bench" ? /bench/.test(actual) || !actual : actual.includes(capabilities[item] ?? item));
+  if (!selected.length) return false;
+  const available = selected.map((item) => capabilities[item] ?? item);
+  if (actual.includes("bodyweight") || actual.includes("none")) return true;
+  const required = Object.values(capabilities).filter((item) => actual.includes(item));
+  return required.length > 0 && required.every((item) => available.includes(item));
 };
 const score = (entry, requirements) => {
   const terms = [entry.name, entry.primaryMuscle, entry.bodyPart].join(" ").toLowerCase();

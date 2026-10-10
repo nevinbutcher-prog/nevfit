@@ -8,6 +8,6 @@ export async function requestRobProposal({ context, request, review }) {
   catch (error) { throw new RobClientError(error?.details && typeof error.details === "object" ? error.details : {}); }
 }
 export async function requestRobProgramGeneration(requirements, catalogue) {
-  try { return (await httpsCallable(functions, "robProgramGeneration")({ requirements, catalogue: { version: catalogue?.version, ids: catalogue?.entries?.map((entry) => entry.id) } })).data; }
+  try { return (await httpsCallable(functions, "robProgramGeneration")({ requirements, catalogue: { version: catalogue?.version, ids: catalogue?.entries?.map((entry) => entry.id), excludedExerciseIds: catalogue?.excludedExerciseIds ?? [] } })).data; }
   catch (error) { throw new RobClientError(error?.details && typeof error.details === "object" ? error.details : {}); }
 }

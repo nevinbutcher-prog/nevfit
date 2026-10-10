@@ -93,3 +93,22 @@ test("constraints controls preserve text, require reconfirmation after edits, an
     await server.close();
   }
 });
+
+test("catalogue-grounded generation renders one readable preview without legacy matching UI", async () => {
+  const server = await createServer({ server: { middlewareMode: true }, optimizeDeps: { noDiscovery: true }, appType: "custom" });
+  try {
+    const { default: RobProgramIntake } = await server.ssrLoadModule("/src/components/rob/RobProgramIntake.jsx");
+    const intake = { ...createRobProgramIntake(), confirmedRequirements: { version: 1, goal: "hypertrophy", daysPerWeek: 1, sessionMinutes: 60, priorities: [], environment: "home_gym", equipment: ["dumbbells"], constraints: "" } };
+    const generation = { status: "success", catalogue: { entries: [{ id: "wger-567", name: "Shoulder Press, Dumbbells", equipment: ["Dumbbell"] }] }, candidate: { explanation: "A focused plan.", candidate: { proposalType: "create_program", program: { name: "Strength Day", summary: "One readable preview.", days: [{ name: "Upper", focus: "Shoulders", exercises: [{ exerciseId: "wger-567", sets: 3, repRange: "8-12", restSeconds: 90, note: null, proposalGroupKey: null }] }] } } } };
+    const markup = renderToStaticMarkup(React.createElement(RobProgramIntake, { intake, step: "summary", setStep: () => {}, onChange: () => {}, onConfirm: () => {}, onStartOver: () => {}, onGenerate: () => {}, generation, resolution: { catalogueGrounded: true } }));
+    assert.match(markup, /Shoulder Press, Dumbbells/);
+    assert.doesNotMatch(markup, />wger-567</);
+    assert.doesNotMatch(markup, /Match every exercise|Search exercises|Choose an exercise/);
+    assert.equal((markup.match(/Generated[^<]*/g) ?? []).length, 1);
+
+    const missing = structuredClone(generation); missing.catalogue.entries = [];
+    const recoverable = renderToStaticMarkup(React.createElement(RobProgramIntake, { intake, step: "summary", setStep: () => {}, onChange: () => {}, onConfirm: () => {}, onStartOver: () => {}, onGenerate: () => {}, generation: missing, resolution: { catalogueGrounded: true } }));
+    assert.match(recoverable, /Verified exercise details unavailable/);
+    assert.doesNotMatch(recoverable, />wger-567</);
+  } finally { await server.close(); }
+});

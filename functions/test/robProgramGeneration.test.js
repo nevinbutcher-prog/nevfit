@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { createRobProgramGenerationHandler } from "../src/index.js";
 import { assessProgramQuality, generateRobProgramCandidate, parseProgramCandidate, programCandidateResponseFormat, programGenerationMessages, validateProgramGenerationRequest } from "../src/rob/robProgramGeneration.js";
 
-const catalogue = { version: 2, ids: ["wger-73", "wger-76", "wger-145", "wger-371", "wger-458", "wger-475", "wger-567", "wger-723", "wger-1370"] };
-const requirements = { version: 1, goal: "hypertrophy", daysPerWeek: 3, sessionMinutes: 60, priorities: ["back"], environment: "commercial_gym", equipment: ["machines", "dumbbells"], constraints: "" };
+const catalogue = { version: 2, ids: ["wger-73", "wger-76", "wger-145", "wger-538", "wger-458", "wger-475", "wger-567", "wger-723", "wger-1370"] };
+const requirements = { version: 1, goal: "hypertrophy", daysPerWeek: 3, sessionMinutes: 60, priorities: ["back"], environment: "commercial_gym", equipment: ["machines", "dumbbells", "barbell", "cables", "bench", "pull_up_equipment"], constraints: "" };
 const response = JSON.stringify({ version: 1, proposalType: "create_program", explanation: "A balanced three-day plan.", program: { name: "Three Day Build", summary: "A concise program.", days: ["Pull", "Push", "Legs"].map((name) => ({ name, focus: `${name} focus`, exercises: [{ exerciseId: "wger-73", sets: 3, repRange: "8-12", restSeconds: 90, note: null, proposalGroupKey: null }] })) } });
 
 test("authenticated whole-program generation returns a transient bounded candidate", async () => {

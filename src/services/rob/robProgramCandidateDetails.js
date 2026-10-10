@@ -33,7 +33,7 @@ export function createRobProgramCandidateDetails(generation) {
       focus: text(day.focus),
       exercises: Array.isArray(day.exercises) ? day.exercises.map((exercise, exerciseIndex) => ({
         key: `${exerciseIndex}-${text(exercise.exerciseRef)}`,
-        name: text(catalogue.get(exercise.exerciseId)?.name) || text(exercise.exerciseRef) || text(exercise.exerciseId),
+        name: text(catalogue.get(exercise.exerciseId)?.name) || text(exercise.exerciseRef) || "Verified exercise details unavailable",
         prescription: `${exercise.sets} sets · ${text(exercise.repRange)}`,
         rest: formatProgramRestPeriod(exercise.restSeconds),
         note: text(exercise.note),

@@ -231,6 +231,13 @@ diagnostics; deterministic blueprint-quality concerns remain advisory. The
 module is not exported from a Firebase callable, imported by the active
 generator, or connected to any UI or persistence path.
 
+Its isolated 4,000-token output allowance is evidence-based: conservative
+serialized-fixture estimates are approximately 3,100 tokens for a four-day
+blueprint and 3,768 for a five-day blueprint. Blueprint secondary-stimulus
+fields are declared planning intentions only; Card 5 must resolve any actual
+exercise against the trusted taxonomy and cannot let the blueprint override
+catalogue-derived physiology.
+
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or
 invalidating an in-flight review releases its loading state without attempting

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assessRobWeeklyBlueprint, blueprintMessages, blueprintResponseFormat, generateRobWeeklyBlueprint, parseRobWeeklyBlueprint } from "../src/rob/robWeeklyBlueprint.js";
+import { ROB_WEEKLY_BLUEPRINT_MAX_OUTPUT_TOKENS, assessRobWeeklyBlueprint, blueprintMessages, blueprintResponseFormat, estimateRobWeeklyBlueprintOutputTokens, generateRobWeeklyBlueprint, parseRobWeeklyBlueprint } from "../src/rob/robWeeklyBlueprint.js";
 
 const requirements = (overrides = {}) => ({ version: 1, goal: "hypertrophy", daysPerWeek: 4, sessionMinutes: 75, priorities: ["balanced", "shoulders"], environment: "commercial_gym", equipment: ["machines", "cables", "dumbbells", "barbell", "bench"], constraints: "", ...overrides });
 const slot = (primaryMuscle, movementPattern, role, sets = 3, secondaryStimulus = []) => ({ primaryMuscle, secondaryStimulus, movementPattern, role, sets, repRange: "8-12", restSeconds: role === "compound" ? 120 : 75, priority: role === "compound" ? "primary" : "accessory", sequencing: { order: 1, rationale: "Place the highest-priority demanding role before related accessory work." }, fatigueConsideration: "Keep related roles purposeful and manage accumulated local fatigue.", flexibility: null });
@@ -21,7 +21,7 @@ test("mocked strict generation returns a blueprint before exercise selection and
   assert.equal(result.blueprint.sessions.length, 4);
   assert.equal(result.quality.advisoryOnly, true);
   assert.equal(request.requireResponseFormat, true);
-  assert.equal(request.maxOutputTokens, 3200);
+  assert.equal(request.maxOutputTokens, ROB_WEEKLY_BLUEPRINT_MAX_OUTPUT_TOKENS);
   assert.equal(JSON.stringify(request.messages).includes("wger-"), false);
   assert.equal(JSON.stringify(result.blueprint).includes("wger-"), false);
 });
@@ -34,6 +34,17 @@ test("strict contract rejects malformed routines, unsupported slot fields, presc
   const badPrescription = fullBlueprint(); badPrescription.sessions[0].slots[0].repRange = "bad";
   assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(badPrescription), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
   assert.throws(() => parseRobWeeklyBlueprint("{", requirements()), (error) => error.validationDiagnostic.reason === "json");
+});
+
+test("semantic contract requires confirmed priorities, contiguous sequencing, compatible roles, and consistent declarations", () => {
+  const priorityMismatch = fullBlueprint({ priorities: ["balanced"] });
+  assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(priorityMismatch), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
+  const unordered = fullBlueprint(); unordered.sessions[0].slots[1].sequencing.order = 4;
+  assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(unordered), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
+  const incompatible = fullBlueprint(); incompatible.sessions[0].slots[1].role = "isolation";
+  assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(incompatible), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
+  const inconsistent = fullBlueprint(); inconsistent.movementPatterns = inconsistent.movementPatterns.filter((pattern) => pattern !== "hinge");
+  assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(inconsistent), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
 });
 
 test("challenging 21-set chest-emphasis session is plausible inside a balanced week", () => {
@@ -68,13 +79,21 @@ test("goals, frequencies, durations, multiple priorities, and policy messages re
   for (const [goal, daysPerWeek, sessionMinutes] of [["hypertrophy", 3, 45], ["strength", 4, 60], ["hypertrophy_strength", 5, 75], ["general_fitness", 3, 60]]) {
     const req = requirements({ goal, daysPerWeek, sessionMinutes, priorities: ["balanced", "shoulders", "back"] });
     const baseSessions = fullBlueprint().sessions;
-    const blueprint = fullBlueprint({ goal, daysPerWeek, sessions: Array.from({ length: daysPerWeek }, (_, index) => structuredClone(baseSessions[index % baseSessions.length])) });
+    const blueprint = fullBlueprint({ goal, daysPerWeek, priorities: req.priorities, sessions: Array.from({ length: daysPerWeek }, (_, index) => structuredClone(baseSessions[index % baseSessions.length])) });
     assert.doesNotThrow(() => parseRobWeeklyBlueprint(JSON.stringify(blueprint), req));
     const messages = blueprintMessages(req);
     assert.equal(messages.length, 2);
     assert.ok(messages[1].content.length < 12000);
+    assert.match(messages[0].content, /planning intentions, not verified exercise physiology/);
   }
   const schema = blueprintResponseFormat().json_schema.schema;
   assert.equal(schema.additionalProperties, false);
   assert.equal(schema.properties.sessions.items.properties.slots.items.properties.primaryMuscle.enum.includes("chest"), true);
+});
+
+const representativeFourDayOutputTokens = estimateRobWeeklyBlueprintOutputTokens(fullBlueprint());
+const representativeFiveDayOutputTokens = estimateRobWeeklyBlueprintOutputTokens(fullBlueprint({ daysPerWeek: 5, sessions: [...fullBlueprint().sessions, structuredClone(fullBlueprint().sessions[3])] }));
+test("representative four- and five-day blueprints fit the evidence-based output budget", () => {
+  assert.ok(representativeFourDayOutputTokens <= ROB_WEEKLY_BLUEPRINT_MAX_OUTPUT_TOKENS, `${representativeFourDayOutputTokens} estimated tokens`);
+  assert.ok(representativeFiveDayOutputTokens <= ROB_WEEKLY_BLUEPRINT_MAX_OUTPUT_TOKENS, `${representativeFiveDayOutputTokens} estimated tokens`);
 });

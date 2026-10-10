@@ -179,6 +179,19 @@ redundancy, pattern, and underfilled-workload concerns without rejecting,
 regenerating, saving, or otherwise changing the candidate. Strict schema,
 catalogue-ID, prescription, and proposal validation remain authoritative.
 
+### Exercise Planning Taxonomy
+
+`src/services/rob/robExercisePlanningTaxonomy.js` is a pure, versioned planning
+overlay. It never changes WGER identities, catalogue eligibility, or the active
+generation path. It normalizes source muscle data, represents absent secondary
+stimulus explicitly as unknown, and provides inferred movement, role, fatigue,
+sequencing, setup, and conventionality metadata with per-field provenance and
+confidence. A small reviewed-exceptions file applies only when both the stable
+WGER ID and expected display name still match; refreshes otherwise surface a
+stale-review audit finding. `scripts/auditRobExercisePlanningTaxonomy.mjs`
+reports coverage, uncertainty, contradictions, and stale reviewed exceptions
+after `scripts/refreshRobCatalogue.mjs` produces a new catalogue snapshot.
+
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or
 invalidating an in-flight review releases its loading state without attempting

@@ -1,6 +1,8 @@
 // Usage: node scripts/refreshRobCatalogue.mjs path/to/wger-exerciseinfo.json
 // Deliberately offline: download/review the WGER response separately, then commit
-// the generated diff and version bump with its tests.
+// the generated diff and version bump with its tests. Follow it with
+// `node scripts/auditRobExercisePlanningTaxonomy.mjs`; reviewed planning
+// exceptions apply only when the refreshed ID and display name still agree.
 import { readFile, writeFile } from "node:fs/promises";
 
 const input = process.argv[2];

@@ -15,6 +15,15 @@ test("normalizes a successful OpenRouter completion and keeps controls server-ow
   assert.deepEqual(JSON.parse(options.body), { model: "test-model", messages: request.messages, max_tokens: 1200, stream: false });
 });
 
+test("requires structured-output support rather than falling back to unconstrained generation", async () => {
+  let options;
+  const responseFormat = { type: "json_schema", json_schema: { name: "exercise", strict: true, schema: { type: "object", additionalProperties: false, required: ["exerciseId"], properties: { exerciseId: { type: "string", enum: ["wger-73"] } } } } };
+  await provider(async (_url, value) => { options = value; return response(200, { model: "returned-model", choices: [{ message: { content: "{\"exerciseId\":\"wger-73\"}" }, finish_reason: "stop" }] }); }).generate({ ...request, responseFormat, requireResponseFormat: true });
+  const body = JSON.parse(options.body);
+  assert.deepEqual(body.response_format, responseFormat);
+  assert.deepEqual(body.provider, { require_parameters: true });
+});
+
 for (const [name, status, code, retryable] of [["authentication error", 401, "ai_provider_auth", false], ["rate limit", 429, "ai_rate_limited", true], ["provider unavailable", 503, "ai_provider_unavailable", true]]) {
   test(`maps ${name}`, async () => {
     await assert.rejects(() => provider(async () => response(status, {})).generate(request), (error) => error instanceof AiError && error.code === code && error.retryable === retryable);

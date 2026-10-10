@@ -86,7 +86,7 @@ test("candidate prescriptions and routine-local supersets are strict", () => {
 });
 
 test("exercise notes require null or non-whitespace text across the schema and parser", async () => {
-  const note = programCandidateResponseFormat.json_schema.schema.properties.program.properties.days.items.properties.exercises.items.properties.note;
+  const note = programCandidateResponseFormat({ entries: catalogue.ids.map((id) => ({ id })) }).json_schema.schema.properties.program.properties.days.items.properties.exercises.items.properties.note;
   assert.equal(note.minLength, 1);
   assert.equal(note.pattern, "\\S");
   const parsed = JSON.parse(response);
@@ -139,8 +139,18 @@ test("whole-program generation uses its bounded budget without changing routine 
   });
   await handler({ auth: { uid: "verified" }, data: { requirements, catalogue } });
   assert.equal(received.maxOutputTokens, 4000);
-  assert.equal(received.responseFormat, programCandidateResponseFormat);
+  const exerciseId = received.responseFormat.json_schema.schema.properties.program.properties.days.items.properties.exercises.items.properties.exerciseId;
+  assert.deepEqual(exerciseId.enum, catalogue.ids);
   assert.equal(received.requireResponseFormat, true);
+});
+
+test("response schema enumerates only the request-authorised catalogue IDs", () => {
+  const first = programCandidateResponseFormat({ entries: [{ id: "wger-73" }, { id: "wger-76" }] });
+  const second = programCandidateResponseFormat({ entries: [{ id: "wger-145" }] });
+  const idSchema = (format) => format.json_schema.schema.properties.program.properties.days.items.properties.exercises.items.properties.exerciseId;
+  assert.deepEqual(idSchema(first).enum, ["wger-73", "wger-76"]);
+  assert.deepEqual(idSchema(second).enum, ["wger-145"]);
+  assert.equal(idSchema(first).enum.includes("wger-145"), false);
 });
 
 test("truncated output is classified from the provider finish reason without a retry", async () => {

@@ -219,6 +219,18 @@ nonadjacent accumulated session fatigue; substantial meaningful secondary
 involvement can qualitatively support balanced coverage for arms, shoulders,
 and glutes without being converted into fractional direct-set credits.
 
+### Structured Weekly Blueprint
+
+`functions/src/rob/robWeeklyBlueprint.js` is an isolated Card 4 foundation
+for strict, provider-backed weekly planning before exercise selection. It uses
+the Card 2 policy envelope and Card 1-compatible muscle, movement, role, and
+secondary-stimulus vocabulary, with no WGER catalogue in its AI context. Its
+versioned JSON-schema contract contains program, session, and role-slot data
+only—never exercise IDs or names. Structural errors are rejected with safe
+diagnostics; deterministic blueprint-quality concerns remain advisory. The
+module is not exported from a Firebase callable, imported by the active
+generator, or connected to any UI or persistence path.
+
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or
 invalidating an in-flight review releases its loading state without attempting

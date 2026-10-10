@@ -96,6 +96,7 @@
 - A separate, versioned Rob exercise-planning taxonomy now provides provenance-aware primary/secondary stimulus, movement, role, fatigue, sequencing, setup, conventionality, confidence, overlap, and audit metadata for all catalogue records. It is foundation-only and is not yet used by generation or catalogue authorisation.
 - A separate, versioned weekly programming-policy engine now turns confirmed intake requirements into an advisory pre-selection envelope for coverage, priorities, movement needs, session workload, recovery, and exercise interactions. It is foundation-only: it selects no exercises, changes no active generation, and exposes uncertainty rather than inventing missing calendar, recovery, equipment, or taxonomy facts.
 - A separate Program Quality Scorecard v2 can deterministically assess a complete candidate against the taxonomy and weekly policy, returning explainable advisory coverage, workload, diversity, sequencing, fatigue, and metadata-uncertainty findings. It is not integrated with production generation or the existing quality heuristic.
+- An isolated strict weekly-blueprint foundation can ask an AI provider to plan program/session/role-slot structure before exercise selection, using the deterministic policy envelope and advisory quality assessment. It has no Firebase callable, UI, persistence, or active-generator integration; constrained exercise fulfilment remains deferred to Card 5.
 
 ## Current Known Limitations
 

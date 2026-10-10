@@ -13,6 +13,13 @@ export const eligibleRobCatalogueEntry = (entry, requirements, exclusions = new 
   const required = Object.values(capabilities).filter((item) => actual.includes(item));
   return required.length > 0 && required.every((item) => available.includes(item));
 };
+// Future fulfilment integration must construct this inside Firebase from
+// confirmed requirements and server-owned exclusions. It deliberately accepts
+// no browser catalogue snapshot, display metadata, or browser exclusion claim.
+export function createServerAuthorisedRobCatalogue(requirements, serverExcludedExerciseIds = []) {
+  const exclusions = new Set(Array.isArray(serverExcludedExerciseIds) ? serverExcludedExerciseIds.filter((id) => typeof id === "string") : []);
+  return Object.freeze({ version: ROB_CATALOGUE_VERSION, ids: [...SERVER_CATALOGUE.values()].filter((entry) => eligibleRobCatalogueEntry(entry, requirements, exclusions)).map((entry) => entry.id), excludedExerciseIds: [...exclusions].filter((id) => SERVER_CATALOGUE.has(id)) });
+}
 export function authorizeRobCatalogue(version, ids, requirements = {}, excludedExerciseIds = []) {
   if (version !== ROB_CATALOGUE_VERSION || !Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length) return null;
   const entries = ids.map((id) => SERVER_CATALOGUE.get(id));

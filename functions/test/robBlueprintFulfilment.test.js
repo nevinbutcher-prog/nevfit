@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fulfilRobWeeklyBlueprint } from "../src/rob/robBlueprintFulfilment.js";
+import { SERVER_CATALOGUE, createServerAuthorisedRobCatalogue } from "../src/rob/robExerciseCatalogue.js";
 
 const requirements = (overrides = {}) => ({ version: 1, goal: "hypertrophy", daysPerWeek: 4, sessionMinutes: 75, priorities: ["balanced", "shoulders"], environment: "commercial_gym", equipment: ["machines", "cables", "dumbbells", "barbell", "bench", "pull_up_equipment"], constraints: "", ...overrides });
 const slot = (primaryMuscle, movementPattern, role, sets = 3, secondaryStimulus = []) => ({ primaryMuscle, secondaryStimulus, movementPattern, role, sets, repRange: "8-12", restSeconds: role === "compound" ? 120 : 75, priority: role === "compound" ? "primary" : "accessory", sequencing: { order: 1, rationale: "Preserve the intended session priority." }, fatigueConsideration: "Manage related local fatigue while retaining purposeful work.", flexibility: null });
@@ -83,4 +84,67 @@ test("shoulder-dominant blueprints remain executable but expose selected-exercis
   assert.equal(result.feasible, true);
   assert.ok(result.quality.concerns.some((item) => item.code === "baseline_coverage_gap"));
   assert.ok(result.quality.concerns.some((item) => item.code === "session_below_typical_session_workload"));
+});
+
+test("narrow isolation intents select the requested trusted purpose and leave unsupported intent explicit", () => {
+  const isolated = blueprint({
+    sessions: [
+      session("Biceps", "arms", [slot("arms", "isolation", "isolation", 3)]),
+      session("Triceps", "arms", [slot("arms", "isolation", "isolation", 3)]),
+      session("Hamstrings", "legs", [slot("legs", "isolation", "isolation", 3)]),
+      session("Rear Delts", "shoulders", [slot("shoulders", "isolation", "isolation", 3)]),
+    ],
+    coverage: ["arms", "legs", "shoulders"].map((muscleGroup) => ({ muscleGroup, intent: "Planned." })),
+    movementPatterns: ["isolation"],
+  });
+  isolated.sessions[0].slots[0].selectionIntent = "biceps_flexion";
+  isolated.sessions[1].slots[0].selectionIntent = "triceps_extension";
+  isolated.sessions[2].slots[0].selectionIntent = "knee_flexion";
+  isolated.sessions[3].slots[0].selectionIntent = "rear_delt";
+  const result = fulfilRobWeeklyBlueprint({ blueprint: isolated, requirements: requirements(), catalogue: catalogue(["wger-1931", "wger-211", "wger-1294", "wger-487", "wger-2658"]) });
+  assert.equal(result.feasible, true);
+  assert.deepEqual(selected(result), ["wger-1931", "wger-211", "wger-1294", "wger-487"]);
+  assert.deepEqual(result.selections.map((item) => item.selectionIntent), ["biceps_flexion", "triceps_extension", "knee_flexion", "rear_delt"]);
+  isolated.sessions[2].slots[0].selectionIntent = "knee_extension";
+  const unsupported = fulfilRobWeeklyBlueprint({ blueprint: isolated, requirements: requirements(), catalogue: catalogue(["wger-1294", "wger-1931", "wger-211", "wger-487"]) });
+  assert.equal(unsupported.feasible, false);
+  assert.equal(unsupported.unresolvedSlots[0].selectionIntent, "knee_extension");
+});
+
+test("a realistic four-day 75-minute hypertrophy blueprint fulfils as a complete varied training week", () => {
+  const complete = blueprint({
+    sessions: [
+      session("Upper A", "chest", [slot("chest", "horizontal_push", "compound", 3, [{ muscleGroup: "shoulders", involvement: "meaningful" }, { muscleGroup: "arms", involvement: "meaningful" }]), slot("back", "horizontal_pull", "compound", 3, [{ muscleGroup: "arms", involvement: "meaningful" }]), slot("shoulders", "vertical_push", "compound", 3, [{ muscleGroup: "arms", involvement: "meaningful" }]), slot("shoulders", "isolation", "isolation", 3), slot("arms", "isolation", "isolation", 3), slot("arms", "isolation", "isolation", 3)]),
+      session("Lower", "legs", [slot("legs", "knee_dominant", "compound", 3, [{ muscleGroup: "glutes", involvement: "supporting" }]), slot("legs", "hinge", "compound", 3, [{ muscleGroup: "glutes", involvement: "meaningful" }]), slot("glutes", "hinge", "compound", 3), slot("legs", "isolation", "isolation", 3), slot("core", "trunk", "trunk", 3), slot("legs", "knee_dominant", "compound", 3, [{ muscleGroup: "glutes", involvement: "supporting" }])]),
+      session("Upper B", "back", [slot("back", "vertical_pull", "compound", 3, [{ muscleGroup: "arms", involvement: "meaningful" }]), slot("back", "horizontal_pull", "compound", 3, [{ muscleGroup: "arms", involvement: "meaningful" }]), slot("shoulders", "isolation", "isolation", 3), slot("arms", "isolation", "isolation", 3), slot("chest", "isolation", "isolation", 3), slot("core", "trunk", "trunk", 3)]),
+      session("Full Body", "chest", [slot("chest", "horizontal_push", "compound", 3, [{ muscleGroup: "shoulders", involvement: "meaningful" }, { muscleGroup: "arms", involvement: "meaningful" }]), slot("legs", "knee_dominant", "compound", 3, [{ muscleGroup: "glutes", involvement: "supporting" }]), slot("legs", "hinge", "compound", 3, [{ muscleGroup: "glutes", involvement: "meaningful" }]), slot("shoulders", "isolation", "isolation", 3), slot("arms", "isolation", "isolation", 3), slot("core", "trunk", "trunk", 3)]),
+    ],
+    movementPatterns: ["horizontal_push", "horizontal_pull", "vertical_push", "isolation", "knee_dominant", "hinge", "trunk", "vertical_pull"],
+  });
+  complete.sessions[0].slots[3].selectionIntent = "lateral_delt";
+  complete.sessions[0].slots[4].selectionIntent = "triceps_extension";
+  complete.sessions[0].slots[5].selectionIntent = "biceps_flexion";
+  complete.sessions[1].slots[3].selectionIntent = "knee_flexion";
+  complete.sessions[2].slots[2].selectionIntent = "rear_delt";
+  complete.sessions[2].slots[3].selectionIntent = "biceps_flexion";
+  complete.sessions[3].slots[3].selectionIntent = "lateral_delt";
+  complete.sessions[3].slots[4].selectionIntent = "triceps_extension";
+  const actualAuthorisedIds = ["wger-73", "wger-185", "wger-2669", "wger-1117", "wger-567", "wger-2658", "wger-348", "wger-211", "wger-659", "wger-1931", "wger-1801", "wger-203", "wger-507", "wger-294", "wger-1294", "wger-458", "wger-723", "wger-475", "wger-487", "wger-1922"];
+  const result = fulfilRobWeeklyBlueprint({ blueprint: complete, requirements: requirements(), catalogue: catalogue(actualAuthorisedIds) });
+  assert.equal(result.feasible, true, JSON.stringify(result.unresolvedSlots));
+  assert.equal(result.candidate.program.days.length, 4);
+  assert.ok(result.candidate.program.days.every((day) => day.exercises.length === 6 && day.exercises.reduce((sum, item) => sum + item.sets, 0) === 18));
+  assert.equal(new Set(selected(result)).size >= 16, true);
+  assert.equal(result.quality.concerns.some((item) => item.code === "baseline_coverage_gap"), false);
+  assert.equal(result.quality.concerns.some((item) => item.code === "session_below_typical_session_workload"), false);
+  assert.deepEqual(selected(result).map((id) => SERVER_CATALOGUE.get(id).name), ["Bench Press", "Bent Over Dumbbell Rows", "Shoulder Press, Dumbbells", "Dumbbell Lateral Raise", "Dumbbell Triceps Extension", "Dumbbell Curl", "Dumbbell Goblet Squat", "Romanian Deadlift", "Hip Thrust", "Single-leg hamstring curl", "Plank", "Barbell Full Squat", "Wide-grip Pulldown", "Seated Cable Row", "Rear Delt Raises", "Dumbbell Curl", "Seated Cable chest fly", "Plank", "Decline Bench Press Barbell", "Dumbbell Goblet Squat", "Romanian Deadlift", "Lateral Raises", "Triceps Extensions on Cable", "Plank"]);
+});
+
+test("future integration can derive authorised IDs and exclusions only from server-owned inputs", () => {
+  const authorised = createServerAuthorisedRobCatalogue(requirements(), ["wger-73", "not-a-real-id"]);
+  assert.equal(authorised.version, 2);
+  assert.equal(authorised.ids.includes("wger-73"), false);
+  assert.equal(authorised.ids.includes("wger-567"), true);
+  assert.deepEqual(authorised.excludedExerciseIds, ["wger-73"]);
+  assert.ok(authorised.ids.every((id) => SERVER_CATALOGUE.has(id)));
 });

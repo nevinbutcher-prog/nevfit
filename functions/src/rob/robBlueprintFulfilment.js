@@ -6,7 +6,7 @@ import { createRobProgramQualityScorecard } from "../../../src/services/rob/robP
 
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
 const validCatalogue = (catalogue) => object(catalogue) && catalogue.version === ROB_CATALOGUE_VERSION && Array.isArray(catalogue.ids) && catalogue.ids.length > 0 && new Set(catalogue.ids).size === catalogue.ids.length && catalogue.ids.every((id) => typeof id === "string" && SERVER_CATALOGUE.has(id));
-const patternRoleMatch = (profile, slot) => profile.primaryStimulus.status === "known" && profile.primaryStimulus.contributions.some((item) => item.muscleGroup === slot.primaryMuscle) && profile.movementPattern.value === slot.movementPattern && profile.role.value === slot.role;
+const patternRoleMatch = (profile, slot) => profile.primaryStimulus.status === "known" && profile.primaryStimulus.contributions.some((item) => item.muscleGroup === slot.primaryMuscle) && profile.movementPattern.value === slot.movementPattern && profile.role.value === slot.role && (slot.selectionIntent == null || profile.selectionIntent.value === slot.selectionIntent);
 const rank = (entry, profile, slot, selectedIds, selectedProfiles) => {
   const conventionality = { standard: 24, variant: 12, specialist: 2, unknown: 0 }[profile.conventionality.value] ?? 0;
   const confidence = { high: 16, medium: 9, low: 0 }[profile.confidence] ?? 0;
@@ -15,7 +15,7 @@ const rank = (entry, profile, slot, selectedIds, selectedProfiles) => {
   const sameRole = selectedProfiles.filter((item) => item.movementPattern.value === slot.movementPattern && item.primaryStimulus.contributions.some((contribution) => contribution.muscleGroup === slot.primaryMuscle)).length * -3;
   return conventionality + confidence + setup + repeated + sameRole;
 };
-const rationale = (entry, profile, slot, score, selectedIds) => ({ exerciseId: entry.id, source: "server_catalogue", primaryMatch: slot.primaryMuscle, movementPattern: profile.movementPattern.value, role: profile.role.value, confidence: profile.confidence, conventionality: profile.conventionality.value, repeatedAcrossWeek: selectedIds.has(entry.id), score, explanation: `Trusted catalogue exercise fulfils the ${slot.primaryMuscle} ${slot.movementPattern.replaceAll("_", " ")} ${slot.role} slot with ${profile.confidence} planning confidence.` });
+const rationale = (entry, profile, slot, score, selectedIds) => ({ exerciseId: entry.id, source: "server_catalogue", primaryMatch: slot.primaryMuscle, movementPattern: profile.movementPattern.value, role: profile.role.value, selectionIntent: profile.selectionIntent.value, confidence: profile.confidence, conventionality: profile.conventionality.value, repeatedAcrossWeek: selectedIds.has(entry.id), score, explanation: `Trusted catalogue exercise fulfils the ${slot.primaryMuscle} ${slot.movementPattern.replaceAll("_", " ")} ${slot.role}${slot.selectionIntent ? ` (${slot.selectionIntent.replaceAll("_", " ")})` : ""} slot with ${profile.confidence} planning confidence.` });
 
 export function fulfilRobWeeklyBlueprint({ blueprint, requirements, catalogue }) {
   const validatedBlueprint = parseRobWeeklyBlueprint(JSON.stringify(blueprint), requirements);
@@ -26,7 +26,7 @@ export function fulfilRobWeeklyBlueprint({ blueprint, requirements, catalogue })
   const selectedIds = new Set(); const selectedProfiles = []; const selections = []; const unresolvedSlots = [];
   const days = validatedBlueprint.sessions.map((session, routineIndex) => ({ name: session.name, focus: session.purpose, exercises: session.slots.map((slot, slotIndex) => {
     const candidates = entries.map((entry) => ({ entry, profile: profiles.get(entry.id) })).filter(({ profile }) => patternRoleMatch(profile, slot));
-    if (!candidates.length) { unresolvedSlots.push({ code: "no_trustworthy_catalogue_match", routineIndex, slotIndex, primaryMuscle: slot.primaryMuscle, movementPattern: slot.movementPattern, role: slot.role, explanation: "No authorised, equipment-compatible trusted catalogue exercise fulfils this exact blueprint slot." }); return null; }
+    if (!candidates.length) { unresolvedSlots.push({ code: "no_trustworthy_catalogue_match", routineIndex, slotIndex, primaryMuscle: slot.primaryMuscle, movementPattern: slot.movementPattern, role: slot.role, selectionIntent: slot.selectionIntent ?? null, explanation: "No authorised, equipment-compatible trusted catalogue exercise fulfils this exact blueprint slot." }); return null; }
     const chosen = candidates.map(({ entry, profile }) => ({ entry, profile, score: rank(entry, profile, slot, selectedIds, selectedProfiles) })).sort((first, second) => second.score - first.score || first.entry.name.localeCompare(second.entry.name) || first.entry.id.localeCompare(second.entry.id))[0];
     selections.push({ routineIndex, slotIndex, ...rationale(chosen.entry, chosen.profile, slot, chosen.score, selectedIds) }); selectedIds.add(chosen.entry.id); selectedProfiles.push(chosen.profile);
     return { exerciseId: chosen.entry.id, sets: slot.sets, repRange: slot.repRange, restSeconds: slot.restSeconds, note: null, proposalGroupKey: null };

@@ -4,6 +4,11 @@ export const ROB_EXERCISE_PLANNING_TAXONOMY_VERSION = 1;
 const INVOLVEMENT = Object.freeze({ unknown: 0, supporting: 1, meaningful: 2 });
 const provenance = (value, confidence) => ({ value, confidence, provenance: "inferred_rule" });
 
+// This is intentionally a narrow selection overlay, not an anatomical model.
+// It distinguishes only isolation purposes that are unsafe to treat as freely
+// interchangeable when a blueprint explicitly asks for one.
+export const ROB_SELECTION_INTENTS = Object.freeze(["biceps_flexion", "triceps_extension", "knee_flexion", "knee_extension", "lateral_delt", "rear_delt", "anterior_delt"]);
+
 export function normalizePlanningMuscle(value) {
   const name = String(value ?? "").toLowerCase();
   if (/shoulder/.test(name)) return "shoulders";
@@ -70,6 +75,24 @@ const conventionalityFor = (entry, pattern) => {
   if (/single.?arm|single.?leg|incline|decline|wide.?grip|close.?grip|reverse.?grip|arnold|front/.test(name)) return provenance("variant", "low");
   return pattern === "unknown" ? { value: "unknown", confidence: "low", provenance: "unknown" } : provenance("standard", "low");
 };
+const selectionIntentFor = (entry, primary, pattern) => {
+  const name = String(entry?.name ?? "").toLowerCase();
+  if (pattern !== "isolation") return { value: "unknown", confidence: "low", provenance: "unknown" };
+  if (primary === "arms") {
+    if (/tricep|skull.?crusher|pushdown/.test(name)) return provenance("triceps_extension", "medium");
+    if (/bicep|curl/.test(name)) return provenance("biceps_flexion", "medium");
+  }
+  if (primary === "legs") {
+    if (/leg curl|hamstring curl/.test(name)) return provenance("knee_flexion", "medium");
+    if (/leg extension|terminal knee extension/.test(name)) return provenance("knee_extension", "medium");
+  }
+  if (primary === "shoulders") {
+    if (/rear delt|rear-delt|reverse fly/.test(name)) return provenance("rear_delt", "medium");
+    if (/lateral raise|side lateral/.test(name)) return provenance("lateral_delt", "medium");
+    if (/front raise/.test(name)) return provenance("anterior_delt", "medium");
+  }
+  return { value: "unknown", confidence: "low", provenance: "unknown" };
+};
 const fatigueTagsFor = (entry, pattern, role) => {
   const name = String(entry?.name ?? "").toLowerCase();
   const tags = new Set([pattern]);
@@ -105,6 +128,7 @@ export function createRobExercisePlanningProfile(entry) {
   const secondaryStimulus = { status: secondary.length ? (sourceSecondary.length ? "partial" : "inferred") : "unknown", contributions: secondary };
   const role = exception?.role ? { value: exception.role, confidence: "high", provenance: "manual_review" } : provenance(roleFor(movementPattern.value), movementPattern.confidence);
   const conventionality = exception?.conventionality ? { value: exception.conventionality, confidence: "high", provenance: "manual_review" } : conventionalityFor(entry, movementPattern.value);
+  const selectionIntent = selectionIntentFor(entry, primaryGroup, movementPattern.value);
   const confidence = primaryStimulus.status === "unknown" || movementPattern.value === "unknown" ? "low" : exception ? "high" : secondaryStimulus.status === "unknown" ? "low" : "medium";
   return Object.freeze({
     taxonomyVersion: ROB_EXERCISE_PLANNING_TAXONOMY_VERSION,
@@ -114,6 +138,7 @@ export function createRobExercisePlanningProfile(entry) {
     secondaryStimulus,
     movementPattern,
     role,
+    selectionIntent,
     fatigueTags: fatigueTagsFor(entry, movementPattern.value, role.value),
     sequencingTags: sequencingTagsFor(role.value, movementPattern.value),
     setupDemand: setupFor(entry),

@@ -33,6 +33,8 @@ test("strict contract rejects malformed routines, unsupported slot fields, presc
   assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(badSlot), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
   const badPrescription = fullBlueprint(); badPrescription.sessions[0].slots[0].repRange = "bad";
   assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(badPrescription), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
+  const badIntent = fullBlueprint(); badIntent.sessions[0].slots[0].selectionIntent = "invented_anatomy";
+  assert.throws(() => parseRobWeeklyBlueprint(JSON.stringify(badIntent), requirements()), (error) => error.validationDiagnostic.reason === "blueprint_structure");
   assert.throws(() => parseRobWeeklyBlueprint("{", requirements()), (error) => error.validationDiagnostic.reason === "json");
 });
 
@@ -89,6 +91,7 @@ test("goals, frequencies, durations, multiple priorities, and policy messages re
   const schema = blueprintResponseFormat().json_schema.schema;
   assert.equal(schema.additionalProperties, false);
   assert.equal(schema.properties.sessions.items.properties.slots.items.properties.primaryMuscle.enum.includes("chest"), true);
+  assert.equal(schema.properties.sessions.items.properties.slots.items.properties.selectionIntent.enum.includes("biceps_flexion"), true);
 });
 
 const representativeFourDayOutputTokens = estimateRobWeeklyBlueprintOutputTokens(fullBlueprint());

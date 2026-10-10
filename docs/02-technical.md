@@ -204,6 +204,18 @@ coverage, movement, distribution, recovery, and compatibility guidance without
 choosing exercises, hardcoding a split, rejecting proposals, or importing
 React, Firebase, or AI code.
 
+### Program Quality Scorecard v2
+
+`src/services/rob/robProgramQualityScorecard.js` is a pure, deterministic
+advisory evaluator built on the planning taxonomy and weekly policy. Its
+candidate adapter resolves only trusted catalogue IDs into planning profiles,
+then reports explainable whole-week and routine-level concerns plus neutral
+observations for complementary sequencing. It never changes the existing
+server `assessProgramQuality()` heuristic, strict validation, candidate,
+materialisation, persistence, or generation response contracts. Unknown
+metadata remains a bounded material-uncertainty concern rather than zero
+stimulus.
+
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or
 invalidating an in-flight review releases its loading state without attempting

@@ -214,7 +214,10 @@ observations for complementary sequencing. It never changes the existing
 server `assessProgramQuality()` heuristic, strict validation, candidate,
 materialisation, persistence, or generation response contracts. Unknown
 metadata remains a bounded material-uncertainty concern rather than zero
-stimulus.
+stimulus. Immediate adjacent sequencing is assessed separately from
+nonadjacent accumulated session fatigue; substantial meaningful secondary
+involvement can qualitatively support balanced coverage for arms, shoulders,
+and glutes without being converted into fractional direct-set credits.
 
 `src/services/rob/robReviewLifecycle.js` owns the transient request lifecycle
 for both program and routine reviews. Starting, replacing, leaving, or

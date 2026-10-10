@@ -27,11 +27,45 @@ test("Failure B flags low 75-minute session workload, pressing competition, and 
 });
 
 test("a coherent balanced shoulder-emphasis program avoids equivalent failure codes and records complementary pressing/pulling", () => {
-  const candidate = program([day("Upper 1", ["wger-73", "wger-2669", "wger-567", "wger-723", "wger-1931"], 3), day("Lower 1", ["wger-1801", "wger-507", "wger-294", "wger-364", "wger-458"], 4), day("Upper 2", ["wger-73", "wger-2669", "wger-2658", "wger-2658", "wger-1931", "wger-145"], 3), day("Lower 2", ["wger-203", "wger-507", "wger-294", "wger-364", "wger-458"], 4)]);
+  const candidate = program([day("Upper 1", ["wger-73", "wger-2669", "wger-567", "wger-723", "wger-1931"], 3), day("Lower 1", ["wger-1801", "wger-507", "wger-294", "wger-364", "wger-458"], 4), day("Upper 2", ["wger-73", "wger-2669", "wger-2658", "wger-487", "wger-1931", "wger-145"], 3), day("Lower 2", ["wger-203", "wger-507", "wger-294", "wger-364", "wger-458"], 4)]);
   const scorecard = createRobProgramQualityScorecard(candidate, requirements(), catalogue);
   assert.equal(codes(scorecard).includes("redundant_role_selection"), false);
   assert.equal(codes(scorecard).includes("baseline_coverage_gap"), false);
+  assert.equal(codes(scorecard).includes("session_below_typical_session_workload"), false);
+  assert.equal(codes(scorecard).includes("competing_pressing_sequence"), false);
+  assert.equal(new Set(candidate.program.days[2].exercises.map((item) => item.exerciseId)).size, candidate.program.days[2].exercises.length);
+  assert.equal(scorecard.summary.directWorkingSetsByPrimaryMuscle.shoulders, 9);
+  assert.equal(scorecard.summary.directWorkingSetsByPrimaryMuscle.glutes, 8);
   assert.ok(scorecard.observations.some((item) => item.code === "complementary_push_pull_sequence"));
+  assert.ok(scorecard.observations.some((item) => item.code === "accumulated_pressing_overlap" && item.routineIndex === 0));
+});
+
+test("bench then row then overhead press is accumulated pressing demand, not back-to-back pressing", () => {
+  const candidate = program([day("Upper", ["wger-73", "wger-2669", "wger-567"], 4)]);
+  const scorecard = createRobProgramQualityScorecard(candidate, requirements({ daysPerWeek: 3, sessionMinutes: 45, priorities: ["shoulders"] }), catalogue);
+  assert.equal(codes(scorecard).includes("competing_pressing_sequence"), false);
+  assert.ok(scorecard.observations.some((item) => item.code === "complementary_push_pull_sequence"));
+  assert.deepEqual(scorecard.observations.find((item) => item.code === "accumulated_pressing_overlap").exerciseIndexPairs, [[0, 2]]);
+});
+
+test("substantial compound-derived arms and glutes coverage remains qualitative rather than invented direct sets", () => {
+  const candidate = program([day("Upper 1", ["wger-73", "wger-2669", "wger-567", "wger-723"]), day("Lower 1", ["wger-1801", "wger-507", "wger-458"]), day("Upper 2", ["wger-73", "wger-2669", "wger-723"]), day("Lower 2", ["wger-203", "wger-507", "wger-458"])]);
+  const scorecard = createRobProgramQualityScorecard(candidate, requirements({ priorities: ["balanced"] }), catalogue);
+  assert.equal(scorecard.summary.directWorkingSetsByPrimaryMuscle.arms, undefined);
+  assert.equal(scorecard.summary.directWorkingSetsByPrimaryMuscle.glutes, undefined);
+  assert.equal(scorecard.summary.qualitativeSecondaryCoverage.arms, "substantial_secondary");
+  assert.equal(scorecard.summary.qualitativeSecondaryCoverage.glutes, "substantial_secondary");
+  assert.equal(scorecard.concerns.some((item) => item.code === "baseline_coverage_gap" && item.muscleGroups.includes("arms")), false);
+  assert.ok(scorecard.observations.some((item) => item.code === "qualitative_secondary_coverage" && item.muscleGroups.includes("glutes")));
+});
+
+test("genuine balanced-program omissions remain visible when neither direct nor substantial secondary stimulus exists", () => {
+  const candidate = program([day("Upper 1", ["wger-73", "wger-2669", "wger-723"]), day("Upper 2", ["wger-73", "wger-2669", "wger-723"]), day("Upper 3", ["wger-73", "wger-2669", "wger-723"]), day("Upper 4", ["wger-73", "wger-2669", "wger-723"])]);
+  const scorecard = createRobProgramQualityScorecard(candidate, requirements({ priorities: ["balanced"] }), catalogue);
+  const missing = scorecard.concerns.filter((item) => item.code === "baseline_coverage_gap").flatMap((item) => item.muscleGroups);
+  assert.ok(missing.includes("legs"));
+  assert.ok(missing.includes("glutes"));
+  assert.ok(missing.includes("core"));
 });
 
 test("adapter accepts current candidate envelopes and handles goals, durations, frequencies, and uncertainty deterministically", () => {

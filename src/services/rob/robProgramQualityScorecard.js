@@ -1,5 +1,5 @@
-import { createRobExercisePlanningProfile } from "./robExercisePlanningTaxonomy.js";
-import { assessRobMovementInteractions, assessRobSessionWorkload, createRobWeeklyProgrammingPolicy } from "./robWeeklyProgrammingPolicy.js";
+import { createRobExercisePlanningProfile, planningOverlap } from "./robExercisePlanningTaxonomy.js";
+import { assessRobSessionWorkload, createRobWeeklyProgrammingPolicy } from "./robWeeklyProgrammingPolicy.js";
 
 export const ROB_PROGRAM_QUALITY_SCORECARD_VERSION = 2;
 
@@ -19,7 +19,7 @@ export function createRobProgramQualityScorecard(candidate, requirements = {}, c
   const routines = days.map((day, routineIndex) => ({ routineIndex, day, items: (Array.isArray(day?.exercises) ? day.exercises : []).map((exercise, exerciseIndex) => ({ exercise, exerciseIndex, profile: profileFor(exercise, entries) })) }));
   const all = routines.flatMap((routine) => routine.items.map((item) => ({ ...item, routineIndex: routine.routineIndex })));
   const concerns = []; const observations = [];
-  const directByMuscle = new Map(); const routineExposure = new Map(); const patterns = new Set();
+  const directByMuscle = new Map(); const routineExposure = new Map(); const secondaryEvidence = new Map(); const patterns = new Set();
   let unknownMetadata = 0;
   for (const item of all) {
     if (!item.profile) { unknownMetadata += 1; continue; }
@@ -29,13 +29,30 @@ export function createRobProgramQualityScorecard(candidate, requirements = {}, c
       directByMuscle.set(contribution.muscleGroup, (directByMuscle.get(contribution.muscleGroup) ?? 0) + item.exercise.sets);
       routineExposure.set(contribution.muscleGroup, new Set([...(routineExposure.get(contribution.muscleGroup) ?? []), item.routineIndex]));
     }
+    for (const contribution of item.profile.secondaryStimulus.contributions ?? []) {
+      if (!secondaryEvidence.has(contribution.muscleGroup)) secondaryEvidence.set(contribution.muscleGroup, { meaningfulExerciseIds: new Set(), supportingExerciseIds: new Set(), routineIndices: new Set() });
+      const evidence = secondaryEvidence.get(contribution.muscleGroup);
+      if (contribution.involvement === "meaningful") evidence.meaningfulExerciseIds.add(item.exercise.exerciseId);
+      if (contribution.involvement === "supporting") evidence.supportingExerciseIds.add(item.exercise.exerciseId);
+      evidence.routineIndices.add(item.routineIndex);
+    }
     if (item.profile.movementPattern.value !== "unknown") patterns.add(item.profile.movementPattern.value);
     if (item.profile.secondaryStimulus.status === "unknown" || item.profile.confidence === "low") unknownMetadata += 1;
   }
 
+  const substantialSecondary = (muscleGroup) => {
+    const evidence = secondaryEvidence.get(muscleGroup);
+    if (!evidence || !["glutes", "arms", "shoulders"].includes(muscleGroup)) return false;
+    const totalExercises = new Set([...evidence.meaningfulExerciseIds, ...evidence.supportingExerciseIds]);
+    return evidence.meaningfulExerciseIds.size >= 2 || (evidence.meaningfulExerciseIds.size >= 1 && totalExercises.size >= 2 && evidence.routineIndices.size >= 2);
+  };
+  const qualitativeSecondaryCoverage = {};
   for (const coverage of policy.coverage.filter((item) => item.expectation === "baseline_required")) {
     const workingSets = directByMuscle.get(coverage.muscleGroup) ?? 0;
-    if (!workingSets) concerns.push(concern("baseline_coverage_gap", "high", `No direct ${coverage.muscleGroup} working sets are visible despite the weekly baseline expectation.`, { muscleGroups: [coverage.muscleGroup], confidence: "high", policyExpectation: coverage.expectation }));
+    const qualitativelyCovered = !workingSets && substantialSecondary(coverage.muscleGroup);
+    qualitativeSecondaryCoverage[coverage.muscleGroup] = qualitativelyCovered ? "substantial_secondary" : workingSets ? "direct" : "absent";
+    if (qualitativelyCovered) observations.push({ code: "qualitative_secondary_coverage", muscleGroups: [coverage.muscleGroup], explanation: `${coverage.muscleGroup} has substantial meaningful secondary involvement across the week. This supports qualitative coverage but is not converted into direct-set volume.`, confidence: "low" });
+    if (!workingSets && !qualitativelyCovered) concerns.push(concern("baseline_coverage_gap", "high", `No direct or substantial qualitative ${coverage.muscleGroup} stimulus is visible despite the weekly baseline expectation.`, { muscleGroups: [coverage.muscleGroup], confidence: "high", policyExpectation: coverage.expectation }));
   }
   for (const priority of policy.priorityEmphasis.selected) {
     const sets = directByMuscle.get(priority) ?? 0;
@@ -51,16 +68,21 @@ export function createRobProgramQualityScorecard(candidate, requirements = {}, c
     const totalSets = directSets(routine.items);
     const workload = assessRobSessionWorkload({ sessionMinutes: requirements.sessionMinutes, directWorkingSets: totalSets, exerciseCount: routine.items.length });
     for (const item of workload.concerns ?? []) concerns.push(concern(`session_${item.code}`, item.code === "below_typical_session_workload" ? "moderate" : "low", item.reason, { routineIndex: routine.routineIndex, policyExpectation: `${workload.referenceDuration ?? "requested"}-minute session workload` }));
-    const profiles = routine.items.map((item) => item.profile).filter(Boolean);
-    const interactions = assessRobMovementInteractions(profiles);
-    for (const interaction of interactions.considerations) {
-      const first = routine.items.filter((item) => item.profile)[interaction.firstIndex];
-      const second = routine.items.filter((item) => item.profile)[interaction.secondIndex];
+    const knownItems = routine.items.filter((item) => item.profile);
+    for (let position = 0; position < knownItems.length - 1; position += 1) {
+      const first = knownItems[position]; const second = knownItems[position + 1];
+      const interaction = planningOverlap(first.profile, second.profile);
       const firstPattern = first?.profile?.movementPattern?.value; const secondPattern = second?.profile?.movementPattern?.value;
       if (firstPattern === "horizontal_push" && secondPattern === "horizontal_pull") observations.push({ code: "complementary_push_pull_sequence", routineIndex: routine.routineIndex, exerciseIndices: [first.exerciseIndex, second.exerciseIndex], explanation: "A horizontal press followed by a row can be a complementary pattern pairing; actual fatigue still depends on load and effort.", confidence: "medium" });
       if (["horizontal_push", "vertical_push"].includes(firstPattern) && ["horizontal_push", "vertical_push"].includes(secondPattern) && interaction.sharedMuscles.includes("shoulders")) concerns.push(concern("competing_pressing_sequence", "moderate", "Back-to-back compound pressing shares shoulder and pressing demands; consider ordering, recovery, and the purpose of both movements.", { routineIndex: routine.routineIndex, exerciseIndices: [first.exerciseIndex, second.exerciseIndex], muscleGroups: ["shoulders"], movementPatterns: [firstPattern, secondPattern], policyExpectation: "fatigue_sensitive_compound_distribution" }));
       if (firstPattern === "knee_dominant" && secondPattern === "knee_dominant") concerns.push(concern("concentrated_knee_dominant_sequence", "low", "Consecutive knee-dominant work concentrates local and bracing demand; this is not prohibited, but should have a clear workload purpose.", { routineIndex: routine.routineIndex, exerciseIndices: [first.exerciseIndex, second.exerciseIndex], movementPatterns: ["knee_dominant"], policyExpectation: "fatigue_sensitive_compound_distribution" }));
     }
+    const nonAdjacentPressPairs = [];
+    for (let first = 0; first < knownItems.length; first += 1) for (let second = first + 2; second < knownItems.length; second += 1) {
+      const firstPattern = knownItems[first].profile.movementPattern.value; const secondPattern = knownItems[second].profile.movementPattern.value;
+      if (["horizontal_push", "vertical_push"].includes(firstPattern) && ["horizontal_push", "vertical_push"].includes(secondPattern) && planningOverlap(knownItems[first].profile, knownItems[second].profile).sharedMuscles.includes("shoulders")) nonAdjacentPressPairs.push([knownItems[first].exerciseIndex, knownItems[second].exerciseIndex]);
+    }
+    if (nonAdjacentPressPairs.length) observations.push({ code: "accumulated_pressing_overlap", routineIndex: routine.routineIndex, exerciseIndexPairs: nonAdjacentPressPairs, explanation: "Nonadjacent compound presses still accumulate shoulder and pressing demand across this session; they are not described as back-to-back.", confidence: "medium" });
   }
 
   const roleGroups = new Map();
@@ -76,5 +98,5 @@ export function createRobProgramQualityScorecard(candidate, requirements = {}, c
   if (unknownMetadata && (concerns.some((item) => ["baseline_coverage_gap", "movement_pattern_gap", "redundant_role_selection"].includes(item.code)) || unknownMetadata / Math.max(all.length, 1) >= 0.25)) concerns.push(concern("material_metadata_uncertainty", "low", "Incomplete taxonomy metadata limits confidence in coverage, overlap, or redundancy interpretation; unknown stimulus is not treated as zero.", { confidence: "low", affectedExerciseCount: unknownMetadata, policyExpectation: "retain_unknown_stimulus_as_uncertainty" }));
   if (!all.length) concerns.push(concern("no_evaluable_exercises", "high", "The supplied program contains no evaluable exercises, so weekly quality cannot be assessed.", { confidence: "high" }));
 
-  return Object.freeze({ version: ROB_PROGRAM_QUALITY_SCORECARD_VERSION, advisoryOnly: true, policyVersion: policy.version, summary: { routineCount: routines.length, exerciseCount: all.length, directWorkingSetsByPrimaryMuscle: Object.fromEntries([...directByMuscle.entries()].sort()), unknownMetadataCount: unknownMetadata, limitations: policy.limitations }, concerns, observations });
+  return Object.freeze({ version: ROB_PROGRAM_QUALITY_SCORECARD_VERSION, advisoryOnly: true, policyVersion: policy.version, summary: { routineCount: routines.length, exerciseCount: all.length, directWorkingSetsByPrimaryMuscle: Object.fromEntries([...directByMuscle.entries()].sort()), qualitativeSecondaryCoverage, unknownMetadataCount: unknownMetadata, limitations: policy.limitations }, concerns, observations });
 }

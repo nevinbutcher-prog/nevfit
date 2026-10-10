@@ -15,6 +15,7 @@ export function createRobProgramResolutionSession({ candidate, requirements, cat
   const source = sourceFor(candidate); const program = source?.program;
   if (!source || source.proposalType !== "create_program" || !Array.isArray(program?.days)) return null;
   const trusted = new Map((Array.isArray(catalogue?.entries) ? catalogue.entries : []).filter(validExercise).map((exercise) => [exercise.id, clone(exercise)]));
+  const requiresTrustedCatalogue = catalogue !== undefined;
   const catalogueGrounded = trusted.size > 0;
   const entries = {};
   program.days.forEach((day, routineIndex) => (day.exercises ?? []).forEach((exercise, exerciseIndex) => {
@@ -22,7 +23,8 @@ export function createRobProgramResolutionSession({ candidate, requirements, cat
     const selectedExercise = catalogueGrounded && typeof exercise.exerciseId === "string" ? trusted.get(exercise.exerciseId) ?? null : null;
     entries[key] = { key, routineIndex, exerciseIndex, requestedName: text(exercise.exerciseRef) || text(selectedExercise?.name), status: selectedExercise ? "resolved" : "unresolved", candidates: selectedExercise ? [clone(selectedExercise)] : [], selectedExercise, error: null, revision: 0 };
   }));
-  return { version: ROB_PROGRAM_RESOLUTION_VERSION, candidate: clone(source), requirements: clone(requirements ?? null), fingerprint: createRobProgramResolutionFingerprint({ candidate: source, requirements }), catalogueGrounded, entries, status: "not_started", proposal: null, validation: null };
+  const catalogueIntegrityFailure = requiresTrustedCatalogue && (!catalogueGrounded || Object.values(entries).some((entry) => !entry.selectedExercise));
+  return { version: ROB_PROGRAM_RESOLUTION_VERSION, candidate: clone(source), requirements: clone(requirements ?? null), fingerprint: createRobProgramResolutionFingerprint({ candidate: source, requirements }), catalogueGrounded, catalogueIntegrityFailure, entries, status: "not_started", proposal: null, validation: null };
 }
 const current = (session) => session?.version === ROB_PROGRAM_RESOLUTION_VERSION && session.fingerprint === createRobProgramResolutionFingerprint({ candidate: session.candidate, requirements: session.requirements });
 const getEntry = (session, key) => current(session) && typeof key === "string" ? session.entries?.[key] ?? null : null;

@@ -102,7 +102,7 @@ export function createRobProgramGenerationHandler({ providerFactory = () => crea
         operation: "rob_program_generation", failureCategory: null, requestedOutputTokens, ...result.diagnostics,
         durationMs: Date.now() - startedAt, authenticatedUidPresent: true,
       });
-      return { model: result.model, usage: result.usage, explanation: result.explanation, candidate: result.candidate };
+      return { model: result.model, usage: result.usage, explanation: result.explanation, candidate: result.candidate, catalogue: result.catalogue };
     } catch (error) {
       const normalized = normalizeAiError(error);
       const candidateValidation = error.programGenerationFailureCategory === "candidate_validation" && normalized.validationDiagnostic?.reason === "exercise" ? normalized.validationDiagnostic : null;

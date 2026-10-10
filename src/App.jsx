@@ -4415,12 +4415,12 @@ function App() {
       robProgramGenerationLifecycleRef.current = settleRobProgramGenerationRequest(robProgramGenerationLifecycleRef.current, request);
       setRobProgramGeneration({ status: "success", candidate: result, error: null, fingerprint });
       const session = createRobProgramResolutionSession({ candidate: result, requirements, catalogue: result.catalogue });
-      setRobProgramResolution({ session, error: null });
-      if (session?.catalogueGrounded) {
+      setRobProgramResolution({ session, error: session?.catalogueIntegrityFailure ? "Fitbot could not verify the generated exercise metadata. Generate a new program instead of matching exercises manually." : null });
+      if (session?.catalogueGrounded && !session.catalogueIntegrityFailure) {
         const materialized = materializeRobProgramProposal(session, { programs: programDraftsRef.current });
         setRobProgramResolution({ session: materialized.session, error: materialized.error?.message ?? null });
       }
-      if (session && !session.catalogueGrounded) {
+      if (session && !session.catalogueGrounded && !session.catalogueIntegrityFailure) {
         const resolved = await resolveRobProgramExercises(session, { searchExercises });
         if (JSON.stringify(robProgramIntake.confirmedRequirements) === fingerprint) {
           setRobProgramResolution((current) => {

@@ -15,6 +15,8 @@ test("authenticated whole-program generation returns a transient bounded candida
   assert.equal(result.candidate.proposalType, "create_program");
   assert.equal(result.candidate.program.days.length, 3);
   assert.equal(result.candidate.program.days[0].exercises[0].exerciseId, "wger-73");
+  assert.equal(result.catalogue.version, 2);
+  assert.equal(result.catalogue.entries.find((entry) => entry.id === "wger-73")?.name.length > 0, true);
 });
 
 test("whole-program candidates reject wrong routine counts and provider-supplied IDs", () => {

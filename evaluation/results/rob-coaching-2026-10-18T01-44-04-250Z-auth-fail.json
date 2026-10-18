@@ -1,0 +1,582 @@
+{
+  "generatedAt": "2026-10-18T01:44:04.955Z",
+  "mode": "executed",
+  "modelRatesUsdPerMillion": [
+    {
+      "id": "openai/gpt-4o-mini",
+      "inputPerMillion": 0.15,
+      "outputPerMillion": 0.6,
+      "role": "current baseline"
+    },
+    {
+      "id": "openai/gpt-4.1",
+      "inputPerMillion": 2,
+      "outputPerMillion": 8,
+      "role": "stronger instruction-following candidate"
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.5",
+      "inputPerMillion": 3,
+      "outputPerMillion": 15,
+      "role": "cross-provider coaching candidate"
+    }
+  ],
+  "results": [
+    {
+      "id": "session-60:current:openai/gpt-4o-mini",
+      "scenarioId": "session-60",
+      "title": "60-minute hypertrophy session",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Practical exercise order and selection",
+        "Plausible 60-minute workload",
+        "Respects equipment and discomfort constraints"
+      ],
+      "contextCoverage": null,
+      "promptHash": "d6f70ec88169af60d24ff63edb090bf52384833550c0795fa97e07780cf0d165",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 146
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "session-60:current:openai/gpt-4.1",
+      "scenarioId": "session-60",
+      "title": "60-minute hypertrophy session",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Practical exercise order and selection",
+        "Plausible 60-minute workload",
+        "Respects equipment and discomfort constraints"
+      ],
+      "contextCoverage": null,
+      "promptHash": "d6f70ec88169af60d24ff63edb090bf52384833550c0795fa97e07780cf0d165",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 33
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "session-60:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "session-60",
+      "title": "60-minute hypertrophy session",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Practical exercise order and selection",
+        "Plausible 60-minute workload",
+        "Respects equipment and discomfort constraints"
+      ],
+      "contextCoverage": null,
+      "promptHash": "d6f70ec88169af60d24ff63edb090bf52384833550c0795fa97e07780cf0d165",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 32
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "program-four-day:current:openai/gpt-4o-mini",
+      "scenarioId": "program-four-day",
+      "title": "Four-day shoulder and arm emphasis",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Whole-week coverage with modest shoulder and arm emphasis",
+        "Recovery and repetition across days",
+        "Feasible 60-minute sessions"
+      ],
+      "contextCoverage": null,
+      "promptHash": "aa7ab37effc8c451fdd057351f8e7afb3e85e8e5d82cf18984536508313f2041",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 33
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "program-four-day:current:openai/gpt-4.1",
+      "scenarioId": "program-four-day",
+      "title": "Four-day shoulder and arm emphasis",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Whole-week coverage with modest shoulder and arm emphasis",
+        "Recovery and repetition across days",
+        "Feasible 60-minute sessions"
+      ],
+      "contextCoverage": null,
+      "promptHash": "aa7ab37effc8c451fdd057351f8e7afb3e85e8e5d82cf18984536508313f2041",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 32
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "program-four-day:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "program-four-day",
+      "title": "Four-day shoulder and arm emphasis",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Whole-week coverage with modest shoulder and arm emphasis",
+        "Recovery and repetition across days",
+        "Feasible 60-minute sessions"
+      ],
+      "contextCoverage": null,
+      "promptHash": "aa7ab37effc8c451fdd057351f8e7afb3e85e8e5d82cf18984536508313f2041",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 32
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:current:openai/gpt-4o-mini",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "00176f379496130d470b9ba34e648f00695cdbada3bdb9d5aa2545ce610c6e1c",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 31
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:current:openai/gpt-4.1",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "00176f379496130d470b9ba34e648f00695cdbada3bdb9d5aa2545ce610c6e1c",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 30
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "00176f379496130d470b9ba34e648f00695cdbada3bdb9d5aa2545ce610c6e1c",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 43
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:clearer-prompt:openai/gpt-4o-mini",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "clearer-prompt",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "a8762cd4bcebfa83967bb5cfdeb4a278c794209594fc24aad01a03231b27b0c3",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 37
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:current:openai/gpt-4o-mini",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "d20c0859e085787bee7648c46cb61febc367b97a264e731be36951f3e369b6a9",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 30
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:current:openai/gpt-4.1",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "d20c0859e085787bee7648c46cb61febc367b97a264e731be36951f3e369b6a9",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 30
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "d20c0859e085787bee7648c46cb61febc367b97a264e731be36951f3e369b6a9",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 39
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:clearer-prompt:openai/gpt-4o-mini",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "clearer-prompt",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "09d882ce923931abd84f93063288fa2ff189a9d59caefc85eafb218f27a9f802",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 29
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "follow-up:current:openai/gpt-4o-mini",
+      "scenarioId": "follow-up",
+      "title": "Follow-up conversation continuity",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Does not pretend to remember an absent prior turn",
+        "Respects supplied dislikes and discomfort",
+        "Asks only for information needed to decide"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "2e74c50bf357e8f9f42a4753894535550f1ad35485e5cf280a6c304c0f44076f",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 35
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "follow-up:current:openai/gpt-4.1",
+      "scenarioId": "follow-up",
+      "title": "Follow-up conversation continuity",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Does not pretend to remember an absent prior turn",
+        "Respects supplied dislikes and discomfort",
+        "Asks only for information needed to decide"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "2e74c50bf357e8f9f42a4753894535550f1ad35485e5cf280a6c304c0f44076f",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 31
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "follow-up:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "follow-up",
+      "title": "Follow-up conversation continuity",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Does not pretend to remember an absent prior turn",
+        "Respects supplied dislikes and discomfort",
+        "Asks only for information needed to decide"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "2e74c50bf357e8f9f42a4753894535550f1ad35485e5cf280a6c304c0f44076f",
+      "result": {
+        "status": "http-error",
+        "httpStatus": 401,
+        "latencyMs": 36
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    }
+  ],
+  "totalBilledCostUsd": 0,
+  "billedCostComplete": true
+}

@@ -1,0 +1,801 @@
+{
+  "generatedAt": "2026-10-18T01:48:13.333Z",
+  "mode": "executed",
+  "modelRatesUsdPerMillion": [
+    {
+      "id": "openai/gpt-4o-mini",
+      "inputPerMillion": 0.15,
+      "outputPerMillion": 0.6,
+      "role": "current baseline"
+    },
+    {
+      "id": "openai/gpt-4.1",
+      "inputPerMillion": 2,
+      "outputPerMillion": 8,
+      "role": "stronger instruction-following candidate"
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.5",
+      "inputPerMillion": 3,
+      "outputPerMillion": 15,
+      "role": "cross-provider coaching candidate"
+    }
+  ],
+  "results": [
+    {
+      "id": "session-60:current:openai/gpt-4o-mini",
+      "scenarioId": "session-60",
+      "title": "60-minute hypertrophy session",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Practical exercise order and selection",
+        "Plausible 60-minute workload",
+        "Respects equipment and discomfort constraints"
+      ],
+      "contextCoverage": null,
+      "promptHash": "d6f70ec88169af60d24ff63edb090bf52384833550c0795fa97e07780cf0d165",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4o-mini",
+        "actualModel": "openai/gpt-4o-mini",
+        "generationId": "gen-1792287943-lJZuHHhp0BF74isbiJaX",
+        "latencyMs": 1227,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 2496,
+          "outputTokens": 310,
+          "totalTokens": 2806
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.0005604,
+        "output": "{\"version\":1,\"proposalType\":\"create_program\",\"explanation\":\"This program focuses on hypertrophy of the shoulders and arms while ensuring the exercises are suitable for a home gym environment, avoiding lower-back strain.\",\"program\":{\"name\":\"Hypertrophy Focus: Shoulders and Arms\",\"summary\":\"A balanced weekly routine emphasizing shoulder and arm development through a variety of exercises.\",\"days\":[{\"name\":\"Hypertrophy Workout\",\"focus\":\"Shoulders and Arms\",\"exercises\":[{\"exerciseId\":\"wger-566\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":\"Avoid behind-the-neck pressing for safety.\",\"proposalGroupKey\":null},{\"exerciseId\":\"wger-348\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":\"arms_superset\"},{\"exerciseId\":\"wger-91\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":\"arms_superset\"},{\"exerciseId\":\"wger-92\",\"sets\":3,\"repRange\":\"10\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":\"arms_superset\"},{\"exerciseId\":\"wger-211\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-222\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null}]}]}}",
+        "validation": {
+          "valid": true,
+          "quality": {
+            "concerns": []
+          },
+          "routineMinutes": [
+            50.8
+          ]
+        }
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "session-60:current:openai/gpt-4.1",
+      "scenarioId": "session-60",
+      "title": "60-minute hypertrophy session",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Practical exercise order and selection",
+        "Plausible 60-minute workload",
+        "Respects equipment and discomfort constraints"
+      ],
+      "contextCoverage": null,
+      "promptHash": "d6f70ec88169af60d24ff63edb090bf52384833550c0795fa97e07780cf0d165",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4.1",
+        "actualModel": "openai/gpt-4.1",
+        "generationId": "gen-1792287949-L2qTIVWWn2qsdqmmB0ww",
+        "latencyMs": 530,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 2492,
+          "outputTokens": 433,
+          "totalTokens": 2925
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.008448,
+        "output": "{\"version\":1,\"proposalType\":\"create_program\",\"explanation\":\"This routine provides a full-body coverage for hypertrophy in a single weekly workout, with extra emphasis on shoulders and arms using a variety of pressing, isolation, and pulling movements. Lower-back stress is minimized by avoiding heavy unsupported hinges and using chest-supported and cable back work. No behind-the-neck pressing or leg press included. Exercise order alternates push/pull and regions to manage fatigue within the session.\",\"program\":{\"name\":\"Full-Body Hypertrophy (Shoulder & Arm Focus, Home Gym)\",\"summary\":\"Balanced full-body hypertrophy program with extra focus on shoulders and arms, designed for a single 60-minute home gym session per week.\",\"days\":[{\"name\":\"Full-Body Push/Pull Emphasis\",\"focus\":\"Hypertrophy with shoulder and arm emphasis\",\"exercises\":[{\"exerciseId\":\"wger-566\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":90,\"note\":\"Avoid behind-the-neck; press in front of the head only.\",\"proposalGroupKey\":null},{\"exerciseId\":\"wger-75\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-348\",\"sets\":3,\"repRange\":\"10-15\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-1117\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-92\",\"sets\":3,\"repRange\":\"10-15\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-211\",\"sets\":3,\"repRange\":\"10-15\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-203\",\"sets\":3,\"repRange\":\"12-15\",\"restSeconds\":75,\"note\":\"Keep torso upright to minimize back strain.\",\"proposalGroupKey\":null}]}]}}",
+        "validation": {
+          "valid": true,
+          "quality": {
+            "concerns": []
+          },
+          "routineMinutes": [
+            48.6
+          ]
+        }
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "session-60:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "session-60",
+      "title": "60-minute hypertrophy session",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Practical exercise order and selection",
+        "Plausible 60-minute workload",
+        "Respects equipment and discomfort constraints"
+      ],
+      "contextCoverage": null,
+      "promptHash": "d6f70ec88169af60d24ff63edb090bf52384833550c0795fa97e07780cf0d165",
+      "result": {
+        "status": "timeout",
+        "latencyMs": 25008,
+        "errorName": "TimeoutError"
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "program-four-day:current:openai/gpt-4o-mini",
+      "scenarioId": "program-four-day",
+      "title": "Four-day shoulder and arm emphasis",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Whole-week coverage with modest shoulder and arm emphasis",
+        "Recovery and repetition across days",
+        "Feasible 60-minute sessions"
+      ],
+      "contextCoverage": null,
+      "promptHash": "aa7ab37effc8c451fdd057351f8e7afb3e85e8e5d82cf18984536508313f2041",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4o-mini",
+        "actualModel": "openai/gpt-4o-mini",
+        "generationId": "gen-1792287980-VVEyHwRW2cfmWJygjaNj",
+        "latencyMs": 1257,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 2498,
+          "outputTokens": 629,
+          "totalTokens": 3127
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.0007520999999999999,
+        "output": "{\"version\":1,\"proposalType\":\"create_program\",\"explanation\":\"This program focuses on hypertrophy for balanced development across major muscle groups, with special emphasis on shoulders and arms, while considering available equipment and constraints.\",\"program\":{\"name\":\"Balanced Hypertrophy Routine\",\"summary\":\"A balanced training program targeting major muscle groups with an emphasis on shoulders and arms over four days.\",\"days\":[{\"name\":\"Upper Body A\",\"focus\":\"Chest, Shoulders, Triceps\",\"exercises\":[{\"exerciseId\":\"wger-537\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-91\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-211\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-222\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null}]},{\"name\":\"Lower Body\",\"focus\":\"Legs\",\"exercises\":[{\"exerciseId\":\"wger-203\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-1652\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null}]},{\"name\":\"Upper Body B\",\"focus\":\"Back, Shoulders, Biceps\",\"exercises\":[{\"exerciseId\":\"wger-723\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-92\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-348\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-1185\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null}]},{\"name\":\"Full Body\",\"focus\":\"Mixed emphasis\",\"exercises\":[{\"exerciseId\":\"wger-75\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-83\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-204\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-91\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null}]}]}}",
+        "validation": {
+          "valid": true,
+          "quality": {
+            "concerns": [
+              {
+                "routineIndex": 1,
+                "code": "limited_workload",
+                "estimatedWorkloadMinutes": 22.6
+              }
+            ]
+          },
+          "routineMinutes": [
+            37.2,
+            22.6,
+            37.2,
+            37.2
+          ]
+        }
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "program-four-day:current:openai/gpt-4.1",
+      "scenarioId": "program-four-day",
+      "title": "Four-day shoulder and arm emphasis",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Whole-week coverage with modest shoulder and arm emphasis",
+        "Recovery and repetition across days",
+        "Feasible 60-minute sessions"
+      ],
+      "contextCoverage": null,
+      "promptHash": "aa7ab37effc8c451fdd057351f8e7afb3e85e8e5d82cf18984536508313f2041",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4.1",
+        "actualModel": "openai/gpt-4.1",
+        "generationId": "gen-1792287991-mMeTWL0WQHCiMPnthf7o",
+        "latencyMs": 517,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 2494,
+          "outputTokens": 1057,
+          "totalTokens": 3551
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.013444,
+        "output": "{\"version\":1,\"proposalType\":\"create_program\",\"explanation\":\"This is a balanced 4-day hypertrophy program for a home gym, covering all major muscle groups with extra volume for shoulders and arms. Leg movements avoid heavy unsupported hinges and leg press. Pressing variations do not use behind-the-neck style. Each session targets a major pattern or region with additional arm and shoulder work distributed across the week.\",\"program\":{\"name\":\"Balanced Push Pull Legs + Arms Emphasis\",\"summary\":\"A 4-day home gym hypertrophy split covering all major muscle groups with additional focus on shoulders and arms.\",\"days\":[{\"name\":\"Upper Push (Chest/Shoulders/Triceps)\",\"focus\":\"Chest and anterior shoulders with triceps focus\",\"exercises\":[{\"exerciseId\":\"wger-73\",\"sets\":4,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-537\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-566\",\"sets\":3,\"repRange\":\"8-10\",\"restSeconds\":120,\"note\":\"Press in front, not behind neck.\",\"proposalGroupKey\":null},{\"exerciseId\":\"wger-348\",\"sets\":3,\"repRange\":\"12-15\",\"restSeconds\":75,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-211\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":75,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-1185\",\"sets\":3,\"repRange\":\"12-15\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null}]},{\"name\":\"Lower Body & Shoulders\",\"focus\":\"Legs with shoulder emphasis and core\",\"exercises\":[{\"exerciseId\":\"wger-203\",\"sets\":4,\"repRange\":\"10-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-257\",\"sets\":3,\"repRange\":\"8-10\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-294\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-567\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-145\",\"sets\":3,\"repRange\":\"15\",\"restSeconds\":45,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-1378\",\"sets\":3,\"repRange\":\"12-15\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null}]},{\"name\":\"Upper Pull (Back/Biceps)\",\"focus\":\"Back, lats, biceps with rear delts\",\"exercises\":[{\"exerciseId\":\"wger-723\",\"sets\":4,\"repRange\":\"8-12\",\"restSeconds\":120,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-310\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-1117\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-82\",\"sets\":3,\"repRange\":\"12-15\",\"restSeconds\":75,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-95\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-91\",\"sets\":3,\"repRange\":\"8-12\",\"restSeconds\":90,\"note\":null,\"proposalGroupKey\":null}]},{\"name\":\"Arms & Shoulder Focus\",\"focus\":\"Biceps, triceps, all heads of delts\",\"exercises\":[{\"exerciseId\":\"wger-92\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":75,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-204\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":75,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-659\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-211\",\"sets\":3,\"repRange\":\"10-12\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-348\",\"sets\":3,\"repRange\":\"12-15\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null},{\"exerciseId\":\"wger-222\",\"sets\":3,\"repRange\":\"12-15\",\"restSeconds\":60,\"note\":null,\"proposalGroupKey\":null}]}\n]}}",
+        "validation": {
+          "valid": true,
+          "quality": {
+            "concerns": [
+              {
+                "routineIndex": 3,
+                "code": "routine_muscle_concentration",
+                "muscleGroup": "arms"
+              }
+            ]
+          },
+          "routineMinutes": [
+            48.4,
+            46.4,
+            47.9,
+            40.8
+          ]
+        }
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "program-four-day:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "program-four-day",
+      "title": "Four-day shoulder and arm emphasis",
+      "type": "program",
+      "variant": "current",
+      "checks": [
+        "Whole-week coverage with modest shoulder and arm emphasis",
+        "Recovery and repetition across days",
+        "Feasible 60-minute sessions"
+      ],
+      "contextCoverage": null,
+      "promptHash": "aa7ab37effc8c451fdd057351f8e7afb3e85e8e5d82cf18984536508313f2041",
+      "result": {
+        "status": "timeout",
+        "latencyMs": 25006,
+        "errorName": "TimeoutError"
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:current:openai/gpt-4o-mini",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "00176f379496130d470b9ba34e648f00695cdbada3bdb9d5aa2545ce610c6e1c",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4o-mini",
+        "actualModel": "openai/gpt-4o-mini",
+        "generationId": "gen-1792288023-Efhn4TIfCv7YOA0r8N12",
+        "latencyMs": 935,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 928,
+          "outputTokens": 125,
+          "totalTokens": 1053
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.00021419999999999998,
+        "output": "The Axe Hold is a great exercise for activating the shoulder stabilizers and can be beneficial for hypertrophy, but placing it before a conventional lateral raise may not prioritize shoulder muscle recruitment as effectively as desired. \n\nTo optimize your session for shoulder hypertrophy, you might consider switching the order: perform the conventional lateral raise first, as it targets the deltoids directly, followed by the Axe Hold for stabilization. This could help maximize your shoulder development while still incorporating the stability aspect. \n\nIf you're set on using the Axe Hold first, ensure you maintain proper form and control during both exercises to minimize any risk to your lower back."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:current:openai/gpt-4.1",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "00176f379496130d470b9ba34e648f00695cdbada3bdb9d5aa2545ce610c6e1c",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4.1",
+        "actualModel": "openai/gpt-4.1",
+        "generationId": "gen-1792288028-HtyIF3Z6QHUBdqAGqJfc",
+        "latencyMs": 532,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 928,
+          "outputTokens": 154,
+          "totalTokens": 1082
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.003088,
+        "output": "Observation:  \nThe Axe Hold is generally an isometric exercise focusing on grip strength and some shoulder endurance, but it provides limited tension through the full range of shoulder motion. The conventional lateral raise is well-established for targeting the lateral deltoid, a primary muscle for shoulder hypertrophy—one of your main goals.\n\nSuggestion:  \nFor maximizing lateral delt hypertrophy, perform the conventional lateral raise first, while your shoulders are fresh. If you want to include the Axe Hold for variety or additional endurance/grip work, add it after your main lateral raise sets. This sequence gives priority to the exercise most closely tied to your hypertrophy goal with no unnecessary overlap or fatigue.\n\nSmallest useful correction:  \nPlace the conventional lateral raise before the Axe Hold in your session."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "00176f379496130d470b9ba34e648f00695cdbada3bdb9d5aa2545ce610c6e1c",
+      "result": {
+        "status": "completed",
+        "requestedModel": "anthropic/claude-sonnet-4.5",
+        "actualModel": "anthropic/claude-sonnet-4.5",
+        "generationId": "gen-1792288032-bJN8RCRhSVdv6xSeyhZ6",
+        "latencyMs": 1331,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1052,
+          "outputTokens": 257,
+          "totalTokens": 1309
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.007011,
+        "output": "I don't see \"Axe Hold\" listed in your current program context—your **Upper A** includes a conventional lateral raise, and **Upper B** has dumbbell shoulder press. So I can't directly assess the placement you're describing.\n\n**Generally speaking:** For shoulder hypertrophy, a conventional lateral raise typically belongs *after* your primary pressing—not before, and certainly not replaced by a static hold. Lateral raises target the side delts with a higher rep stimulus, while an axe hold (if you mean a static front or side hold) is more of an endurance/stabilization drill that doesn't provide the same hypertrophic stimulus.\n\n**Smallest useful correction:** If an axe hold has somehow been programmed before your lateral raise in a session, swap them—do your pressing first, then lateral raises for 8–12 reps, and use the axe hold (if at all) as a finisher or omit it in favor of more direct volume on the delts.\n\nIf this is appearing in the Fitbot app differently than the context shows, double-check the session order or let me know more detail, and I'll help troubleshoot."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "questionable-exercise:clearer-prompt:openai/gpt-4o-mini",
+      "scenarioId": "questionable-exercise",
+      "title": "Unconventional exercise selection",
+      "type": "advice",
+      "variant": "clearer-prompt",
+      "checks": [
+        "Questions the unusual choice rather than rationalising it",
+        "Suggests a conventional alternative",
+        "Does not invent clinical safety claims"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "a8762cd4bcebfa83967bb5cfdeb4a278c794209594fc24aad01a03231b27b0c3",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4o-mini",
+        "actualModel": "openai/gpt-4o-mini",
+        "generationId": "gen-1792288043-n7zlbkmHOGopnsbIlAqD",
+        "latencyMs": 1061,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 982,
+          "outputTokens": 115,
+          "totalTokens": 1097
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.00021629999999999997,
+        "output": "Placing an Axe Hold before a conventional lateral raise can effectively activate the shoulder stabilizers and enhance muscle engagement during the raise. However, it may reduce your strength for the lateral raises, potentially lowering the load you can manage.\n\n**Suggestion:** If your primary goal is hypertrophy, consider performing the conventional lateral raise before the Axe Hold. This ensures that you can fully exert your strength during the raise when your shoulders are fresh. If you're focusing on stability, you can keep the Axe Hold early in your routine, but be mindful of how it impacts your performance in subsequent exercises."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:current:openai/gpt-4o-mini",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "d20c0859e085787bee7648c46cb61febc367b97a264e731be36951f3e369b6a9",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4o-mini",
+        "actualModel": "openai/gpt-4o-mini",
+        "generationId": "gen-1792288048-ANQvsf3kYb1gnnZPIHfy",
+        "latencyMs": 912,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1086,
+          "outputTokens": 337,
+          "totalTokens": 1423
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.00036510000000000004,
+        "output": "To compare your latest complete training week (lower-a routine) with the preceding week effectively, I would need the detailed completion data of that preceding week. Since this information is unavailable, I'll focus on observations from the logged workout you provided and what you can do next based on your current goals.\n\n### Observations from Your Latest Workout:\n1. **Dumbbell Lunge**: You completed 3 sets of 10 reps at 18 kg each.\n2. **Hip Thrust**: You completed 3 sets of 10 reps at 62.5 kg each.\n\n### What Progressed:\n- If the weights or reps for these exercises were consistent or previously lower than the current performance, you may have demonstrated progression in strength. However, the precise comparison to the previous week is not available.\n\n### What is Uncertain:\n- Without the data from the preceding week, it's unclear if there was an improvement in load or repetitions for the lunge or hip thrust exercises.\n\n### Next Steps:\n1. **Monitor Progress**: Continue tracking your weight and repetitions for all exercises, particularly dumbbell lunges and hip thrusts. Aim for progressive overload where possible.\n   \n2. **Alter Routine for Hypertrophy Focus**: Since your goals are hypertrophy, consider gradually increasing the weights for your main exercises or incorporating variation like supersets or drop sets within your current parameters.\n\n3. **Stay Mindful of Constraints**: Ensure you maintain form, especially with your lower back discomfort; avoid heavy unsupported hinges, and focus on exercises that support your goals without aggravating any discomfort.\n\nIf you complete your next workout and provide details, I'd be glad to help analyze it further!"
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:current:openai/gpt-4.1",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "d20c0859e085787bee7648c46cb61febc367b97a264e731be36951f3e369b6a9",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4.1",
+        "actualModel": "openai/gpt-4.1",
+        "generationId": "gen-1792288054-2ccsQBm6hIQm6oDUnj1h",
+        "latencyMs": 838,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1086,
+          "outputTokens": 433,
+          "totalTokens": 1519
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.005636,
+        "output": "**Observation:**  \nBased on your Fitbot history, only one \"Lower A\" (wk2-lower) session from your latest week is provided. There is no training log from the preceding week, nor any other recent sessions shown. Without logs for both weeks or data from another routine, comparison across a full training week—or between weeks—is not possible.\n\n**What genuinely progressed:**  \n- For \"Lower A\" on 2026-09-30, you performed:\n  - Dumbbell lunge: 3×10 reps with 18 kg.\n  - Hip thrust: 3×10 reps with 62.5 kg.\n- Since earlier data is not available, it's uncertain if this is an improvement, regression, or maintenance.\n\n**What is uncertain:**  \n- No records for the prior week are present.  \n- No logs for Upper A, Upper B, or Lower B routines from either week are provided.  \n- Without comparative data, I can't assess increases in weight, reps, additional sets, improved execution, or overall adherence.\n\n**What should you do next?**  \n- Continue logging every workout, including weights and reps, so trends are visible.\n- If this week’s effort was near the top of your target rep range (10/12 reps per set), next time consider increasing weight slightly or adding a rep or two per set—if form remains strong and your lower back feels okay.\n- For your lower-body work: if lunges and hip thrusts felt solid and were completed without discomfort, incremental increases (weight or reps) are a simple way to push progress.\n- Monitor how your lower back feels, especially with any hinges. Stick with the “no heavy unsupported hinge” constraint; if you feel any aggravation, scale back load or try a shorter range of motion.\n\n**Summary:**  \nI can’t confirm progress or regression versus last week due to missing prior week logs. Keep tracking all workouts carefully to spot trends, and when you regularly hit the rep ceiling with good technique and comfort, nudge weight upward. If you share logs for a second week, I can compare them directly for you."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "d20c0859e085787bee7648c46cb61febc367b97a264e731be36951f3e369b6a9",
+      "result": {
+        "status": "completed",
+        "requestedModel": "anthropic/claude-sonnet-4.5",
+        "actualModel": "anthropic/claude-sonnet-4.5",
+        "generationId": "gen-1792288060-SWF4sZ65onAIOTZB7kb3",
+        "latencyMs": 1341,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1225,
+          "outputTokens": 342,
+          "totalTokens": 1567
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.008805,
+        "output": "# Week Comparison\n\n**I can only see one logged workout in your history** (Lower A on Sept 30, 2026), so I cannot compare a complete training week against a preceding week. To provide the analysis you're asking for, I'd need at least two full rotations of your 4-day program logged.\n\n## What I Can See\n\n**Lower A (Sept 30):**\n- Dumbbell lunge: 3×10 at 18 kg\n- Hip thrust: 3×10 at 62.5 kg\n\nBoth exercises hit your target rep range (8-12) consistently across all sets.\n\n## What to Do Next\n\n**Immediate:**\n1. **Continue logging workouts** – Complete Upper A, Lower B, and Upper B to finish this rotation\n2. **Progress where you can** – Since you hit 10 reps cleanly on both exercises, consider adding 1-2 kg to lunges or 2.5-5 kg to hip thrusts next time you run Lower A\n3. **Track the full cycle** – After 4-8 weeks of consistent logging, patterns in progress, stalls, and recovery will become clear\n\n**For future comparison:**\nOnce you have multiple weeks logged, I can identify genuine progression (more load or reps at same RPE), distinguish it from session-to-session noise, and spot exercises that may need adjustments in volume, frequency, or loading strategy.\n\nGet the other three workouts logged, and we'll have something meaningful to compare next rotation."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "training-week:clearer-prompt:openai/gpt-4o-mini",
+      "scenarioId": "training-week",
+      "title": "Completed training-week review",
+      "type": "advice",
+      "variant": "clearer-prompt",
+      "checks": [
+        "Uses only visible logged evidence",
+        "Does not invent missing prior sessions",
+        "Identifies the context limit when comparison is impossible"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 4,
+        "visibleWorkouts": 1,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "09d882ce923931abd84f93063288fa2ff189a9d59caefc85eafb218f27a9f802",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4o-mini",
+        "actualModel": "openai/gpt-4o-mini",
+        "generationId": "gen-1792288072-jf9AqOhxDZviBqjSmblU",
+        "latencyMs": 622,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1140,
+          "outputTokens": 93,
+          "totalTokens": 1233
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.0002268,
+        "output": "To provide you with an accurate comparison, I'll need access to the training data from the week preceding the latest complete week you logged. Currently, I only have information about your last workout (from 2026-09-30). \n\nIf you can share the details from the preceding week, such as the exercises performed, weights lifted, and any sets or reps, I can then determine what progressed, what remains uncertain, and advise on what you should do next."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "follow-up:current:openai/gpt-4o-mini",
+      "scenarioId": "follow-up",
+      "title": "Follow-up conversation continuity",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Does not pretend to remember an absent prior turn",
+        "Respects supplied dislikes and discomfort",
+        "Asks only for information needed to decide"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "2e74c50bf357e8f9f42a4753894535550f1ad35485e5cf280a6c304c0f44076f",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4o-mini",
+        "actualModel": "openai/gpt-4o-mini",
+        "generationId": "gen-1792288075-iqqxpIAE20H5QpGc7ITe",
+        "latencyMs": 1657,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 920,
+          "outputTokens": 75,
+          "totalTokens": 995
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.000183,
+        "output": "Yes, if you agreed on a specific row variation that you like, you should definitely keep it in Upper A this week. Consistency with exercises you enjoy can enhance your motivation and progress. Just make sure it aligns with your discomforts—avoid any movements you dislike or that could aggravate your lower back. If you need further adjustments or alternatives, feel free to ask!"
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "follow-up:current:openai/gpt-4.1",
+      "scenarioId": "follow-up",
+      "title": "Follow-up conversation continuity",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Does not pretend to remember an absent prior turn",
+        "Respects supplied dislikes and discomfort",
+        "Asks only for information needed to decide"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "2e74c50bf357e8f9f42a4753894535550f1ad35485e5cf280a6c304c0f44076f",
+      "result": {
+        "status": "completed",
+        "requestedModel": "openai/gpt-4.1",
+        "actualModel": "openai/gpt-4.1",
+        "generationId": "gen-1792288080-QpwS6Xhk9ww94OCc4VbB",
+        "latencyMs": 691,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 920,
+          "outputTokens": 226,
+          "totalTokens": 1146
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.003648,
+        "output": "Here’s what I know from your supplied context:\n\n**Observations:**\n- In Upper A, the programmed row is a Seated cable row.\n- No dislike of the Seated cable row is documented.\n- Your dislikes include behind-the-neck pressing and heavy unsupported hinges (which are not in Upper A).\n- No specific “row variation” preference is documented in the current context, and there’s no workout log to reference your previous feedback or choice.\n\n**Suggestions:**\n- If you like the Seated cable row and it does not aggravate any discomfort or conflict with your stated dislikes, it is reasonable to keep it in Upper A this week.\n- Continue avoiding behind-the-neck pressing as noted in your constraints.\n- If you want a different row variation (e.g., dumbbell row or another type), clarify the preference you discussed last time. I’ll help you decide if it aligns with your goals and constraints.\n\nIf you specify or remind me which row variation you prefer—and why—I can give more targeted advice. Based on what’s here, keep the Seated cable row in unless it’s causing an issue."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    },
+    {
+      "id": "follow-up:current:anthropic/claude-sonnet-4.5",
+      "scenarioId": "follow-up",
+      "title": "Follow-up conversation continuity",
+      "type": "advice",
+      "variant": "current",
+      "checks": [
+        "Does not pretend to remember an absent prior turn",
+        "Respects supplied dislikes and discomfort",
+        "Asks only for information needed to decide"
+      ],
+      "contextCoverage": {
+        "suppliedWorkouts": 0,
+        "visibleWorkouts": 0,
+        "priorConversationTurns": 0
+      },
+      "promptHash": "2e74c50bf357e8f9f42a4753894535550f1ad35485e5cf280a6c304c0f44076f",
+      "result": {
+        "status": "completed",
+        "requestedModel": "anthropic/claude-sonnet-4.5",
+        "actualModel": "anthropic/claude-sonnet-4.5",
+        "generationId": "gen-1792288085-7ahcXih89ifXlsTWTugw",
+        "latencyMs": 1458,
+        "finishReason": "stop",
+        "usage": {
+          "inputTokens": 1040,
+          "outputTokens": 183,
+          "totalTokens": 1223
+        },
+        "billedCostUsd": null,
+        "tokenPricedCostUsd": 0.005865,
+        "output": "I don't have a record of our previous conversation about which row variation you preferred or your reasons for liking it. The context shows seated cable row programmed in Upper A, but I can't confirm we discussed this together or what your specific preference was.\n\n**What I do know from your profile:**\n- You dislike behind-the-neck pressing\n- Heavy unsupported hinges aggravate your lower back\n- You have a cable machine available\n\nIf seated cable row works well for you and we did discuss it previously, then yes—keep it in Upper A. It's a solid choice that respects your lower-back constraint (supported position) and aligns with your hypertrophy goals.\n\n**If you want to refresh me:** What row variation did you prefer, and what made it your choice? I'll factor that into any future guidance."
+      },
+      "humanReview": {
+        "programming": null,
+        "cohesiveness": null,
+        "insight": null,
+        "personality": null,
+        "reliability": null,
+        "criticalFailures": [],
+        "missingContext": [],
+        "reasoningFailures": [],
+        "notes": ""
+      }
+    }
+  ],
+  "totalBilledCostUsd": 0,
+  "billedCostComplete": false
+}

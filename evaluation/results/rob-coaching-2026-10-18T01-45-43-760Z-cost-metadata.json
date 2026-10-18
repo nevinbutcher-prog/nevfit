@@ -1,0 +1,142 @@
+﻿{
+    "source":  "eval-results/rob-coaching-2026-10-18T01-45-43-760Z.json",
+    "retrievedAt":  "2026-10-18T01:49:25.0707167Z",
+    "description":  "Read-only OpenRouter generation metadata retrieval after the 17-request evaluation",
+    "records":  [
+                    {
+                        "caseId":  "session-60:current:openai/gpt-4o-mini",
+                        "generationId":  "gen-1792287943-lJZuHHhp0BF74isbiJaX",
+                        "status":  "found",
+                        "totalCostUsd":  0.0005604,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "session-60:current:openai/gpt-4.1",
+                        "generationId":  "gen-1792287949-L2qTIVWWn2qsdqmmB0ww",
+                        "status":  "found",
+                        "totalCostUsd":  0.008448,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "program-four-day:current:openai/gpt-4o-mini",
+                        "generationId":  "gen-1792287980-VVEyHwRW2cfmWJygjaNj",
+                        "status":  "found",
+                        "totalCostUsd":  0.0007521,
+                        "providerName":  "Azure",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "program-four-day:current:openai/gpt-4.1",
+                        "generationId":  "gen-1792287991-mMeTWL0WQHCiMPnthf7o",
+                        "status":  "found",
+                        "totalCostUsd":  0.013444,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "questionable-exercise:current:openai/gpt-4o-mini",
+                        "generationId":  "gen-1792288023-Efhn4TIfCv7YOA0r8N12",
+                        "status":  "found",
+                        "totalCostUsd":  0.0002142,
+                        "providerName":  "Azure",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "questionable-exercise:current:openai/gpt-4.1",
+                        "generationId":  "gen-1792288028-HtyIF3Z6QHUBdqAGqJfc",
+                        "status":  "found",
+                        "totalCostUsd":  0.003088,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "questionable-exercise:current:anthropic/claude-sonnet-4.5",
+                        "generationId":  "gen-1792288032-bJN8RCRhSVdv6xSeyhZ6",
+                        "status":  "found",
+                        "totalCostUsd":  0.007011,
+                        "providerName":  "Amazon Bedrock",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "questionable-exercise:clearer-prompt:openai/gpt-4o-mini",
+                        "generationId":  "gen-1792288043-n7zlbkmHOGopnsbIlAqD",
+                        "status":  "found",
+                        "totalCostUsd":  0.0002163,
+                        "providerName":  "Azure",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "training-week:current:openai/gpt-4o-mini",
+                        "generationId":  "gen-1792288048-ANQvsf3kYb1gnnZPIHfy",
+                        "status":  "found",
+                        "totalCostUsd":  0.0003651,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "training-week:current:openai/gpt-4.1",
+                        "generationId":  "gen-1792288054-2ccsQBm6hIQm6oDUnj1h",
+                        "status":  "found",
+                        "totalCostUsd":  0.005636,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "training-week:current:anthropic/claude-sonnet-4.5",
+                        "generationId":  "gen-1792288060-SWF4sZ65onAIOTZB7kb3",
+                        "status":  "found",
+                        "totalCostUsd":  0.008805,
+                        "providerName":  "Amazon Bedrock",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "training-week:clearer-prompt:openai/gpt-4o-mini",
+                        "generationId":  "gen-1792288072-jf9AqOhxDZviBqjSmblU",
+                        "status":  "found",
+                        "totalCostUsd":  0.0002268,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "follow-up:current:openai/gpt-4o-mini",
+                        "generationId":  "gen-1792288075-iqqxpIAE20H5QpGc7ITe",
+                        "status":  "found",
+                        "totalCostUsd":  0.000183,
+                        "providerName":  "Azure",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "follow-up:current:openai/gpt-4.1",
+                        "generationId":  "gen-1792288080-QpwS6Xhk9ww94OCc4VbB",
+                        "status":  "found",
+                        "totalCostUsd":  0.003648,
+                        "providerName":  "OpenAI",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    },
+                    {
+                        "caseId":  "follow-up:current:anthropic/claude-sonnet-4.5",
+                        "generationId":  "gen-1792288085-7ahcXih89ifXlsTWTugw",
+                        "status":  "found",
+                        "totalCostUsd":  0.005865,
+                        "providerName":  "Amazon Bedrock",
+                        "isByok":  false,
+                        "upstreamInferenceCostUsd":  0
+                    }
+                ]
+}

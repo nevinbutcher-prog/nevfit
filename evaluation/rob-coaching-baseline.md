@@ -1,6 +1,6 @@
 # Rob coaching quality baseline
 
-**Status:** Local evaluation tooling ready; no paid model requests have been made.
+**Status:** Pre-run plan. The authorised run and preserved evidence are in the [execution report](rob-coaching-run-2026-10-18.md).
 **Date prepared:** 18 October 2026.
 **Scope:** Five synthetic scenarios, the repository's configured default model, two comparison models, and two small baseline prompt variants. Production code and user data are untouched.
 
@@ -70,4 +70,4 @@ The script writes incremental and final JSON to ignored `eval-results/`. It does
 - `composeRobAdviceMessages()` carries one question and context, with no conversation transcript. The follow-up case tests whether Rob admits that gap rather than inventing a memory.
 - The profile is a static in-repository object, not a persisted athlete preference history. The evaluation substitutes a synthetic profile with the same shape; production cannot learn evolving preferences from prior chats through this route.
 - Whole-program output is restricted to a bounded verified catalogue and a strict executable schema. This protects IDs but limits evaluation of free-form coaching explanations and exercise alternatives. The experimental weekly-blueprint path remains disconnected.
-- This checkpoint has not measured actual coaching quality, latency, response reliability or billed cost. Those conclusions require the authorised paid run and human scoring of its representative outputs.
+- The execution report records latency, response reliability and available billed costs. Coaching quality remains subject to independent human scoring.

@@ -104,6 +104,7 @@
 
 ## Current Known Limitations
 
+- The checkpoint 047 offline exercise-catalogue audit is recorded in `evaluation/exercise-catalogue-audit.md` and `evaluation/exercise-catalogue-recommendation.md`. The 907-record WGER snapshot has material equipment and muscle-classification gaps, especially for machine exercises. Its 25-ID mapping prototype is non-production; no catalogue/search/Rob behaviour was changed, and no production usage was assessed.
 - The 17-request synthetic Rob coaching comparison was executed and preserved in `evaluation/rob-coaching-run-2026-10-18.md`; independent human scoring remains open. The ordinary Ask Rob route still receives only its latest-workout context. Weekly review uses a separate two-week summary.
 - Weekly review uses the account's saved coaching preferences and browser-local calendar. It reads the signed-in user's Firestore workout, health and preference paths; cloud errors do not fall back to device-cached data. Very dense weeks bound detailed exercise, session and run lists while retaining totals and omission counts. Unsynced device-only entries are not included, and no live user-facing coaching response has yet been assessed.
 

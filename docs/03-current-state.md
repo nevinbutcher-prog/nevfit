@@ -74,6 +74,7 @@
 - No Rob advice flow can read or write application data beyond its supplied in-memory coaching context
 - Ask Rob advisory surface with authenticated, server-owned persona/prompt instructions and transient recoverable responses
 - Rob advice automatically supplies bounded deterministic advice context but cannot modify routines, programs, workouts, or other application data
+- Rob Home now offers Review my week for a selected local Monday–Sunday week. It compares completed strength workouts, logged runs and recorded steps with the preceding week through a bounded derived context and an authenticated, read-only weekly-review callable. Missing entries and incomplete weeks remain explicit.
 - Deterministic pure Rob context builder for advice, routine review, and program review
 - Static current coaching profile, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for future Rob requests
 - Authenticated structured Rob routine and program reviews with server-validated JSON results, privacy-safe diagnostics, and no persistence or proposal application
@@ -103,7 +104,8 @@
 
 ## Current Known Limitations
 
-- A synthetic Rob coaching-quality evaluation harness and scoring rubric are ready, but no paid model comparison or human scoring has been run. See `evaluation/rob-coaching-baseline.md` for the planned 17 calls and context limitations.
+- The 17-request synthetic Rob coaching comparison was executed and preserved in `evaluation/rob-coaching-run-2026-10-18.md`; independent human scoring remains open. The ordinary Ask Rob route still receives only its latest-workout context. Weekly review uses a separate two-week summary.
+- Weekly review uses the existing static coaching profile and browser-local calendar. Its selected-week context is derived from fresh reads of the signed-in user's Firestore workout and health paths; cloud errors do not fall back to device-cached data. Very dense weeks bound detailed exercise, session and run lists while retaining totals and omission counts. Unsynced device-only entries are not included, and no live user-facing coaching response has yet been assessed.
 
 - Rob can resolve or manually replace whole-program exercises transiently, but whole-program preview, approval, and saving are not yet available.
 - Confirmed program-design briefs are transient and reset on a full browser reload; no personal preference profile is persisted for this flow yet.

@@ -84,6 +84,12 @@ target-relevant where association data exists, capped at eight records, and
 ordered newest first. Advice includes one complete latest completed workout (rather than a lossy multi-workout summary), retaining logged exercise order, sets, units, and swap display identity. Program, routine, exercise, note, set, and history sizes
 are independently bounded to keep future AI context predictable.
 
+## Rob Weekly Activity Review
+
+`src/services/rob/robWeeklyContext.js` derives a separate, read-only weekly context from fresh Firestore reads of the signed-in user's completed workouts and health state. The selected date defines a device-local Monday–Sunday week and the seven preceding days. It includes all observed strength-session, run and step totals, bounded session and exercise details, same-exercise comparisons across routine IDs, preserved load units, and explicit missing/omitted evidence. Step entries of zero are recorded days; absent dates remain missing. The weekly action does not use the device-cache fallback when cloud reads fail. Firestore rules limit workout and health reads to the authenticated user's path.
+
+The `robWeeklyReview` callable in `functions/src/index.js` requires authentication and accepts only a bounded weekly context. It performs one provider call, returns transient text and usage, logs no training details, and writes no Firestore data. `functions/src/rob/robWeeklyReview.js` owns the focused whole-activity coaching instructions. `ROB_WEEKLY_REVIEW_MODEL` can independently select this route's server-side OpenRouter model; when unset it uses `AI_MODEL` (currently the `openai/gpt-4o-mini` default). This checkpoint does not change the production model for any Rob route. The evaluated GPT-4.1 candidate can be configured for this route separately after a deployment decision.
+
 ## Catalogue-grounded Rob Program Generation
 
 Whole-program generation prepares a bounded browser-side selection from the existing WGER pool, filtered by confirmed equipment and explicit supplied exclusions. The browser submits only catalogue IDs and a version; Firebase independently maps those IDs through its reviewed server-owned WGER catalogue before creating the AI prompt. Client names, equipment, and eligibility claims are ignored. AI output must use only those exact IDs, and fabricated, stale, malformed, or out-of-catalogue IDs are rejected before a transient executable proposal is materialised.

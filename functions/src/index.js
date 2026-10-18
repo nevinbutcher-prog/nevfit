@@ -6,6 +6,7 @@ import { AiError, normalizeAiError, toClientError } from "./ai/aiErrors.js";
 import { createOpenRouterProvider } from "./ai/providers/openRouterProvider.js";
 import { generateAiResponse } from "./ai/aiService.js";
 import { generateRobAdvice } from "./rob/robAdvice.js";
+import { generateRobWeeklyReview, ROB_WEEKLY_MODEL } from "./rob/robWeeklyReview.js";
 import { generateRobReview } from "./rob/robReview.js";
 import { generateRobProposal } from "./rob/robProposal.js";
 import { generateRobProgramCandidate } from "./rob/robProgramGeneration.js";
@@ -53,6 +54,27 @@ export function createRobAdviceHandler({ providerFactory = () => createOpenRoute
 }
 
 export const robAdvice = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobAdviceHandler());
+
+export function createRobWeeklyReviewHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: { ...aiConfig, model: ROB_WEEKLY_MODEL || aiConfig.model } }) } = {}) {
+  return async (request) => {
+    if (!request.auth) {
+      const error = toClientError(new AiError("ai_unauthenticated"));
+      throw new HttpsError("unauthenticated", error.message, error);
+    }
+    const startedAt = Date.now();
+    try {
+      const result = await generateRobWeeklyReview(request.data, { provider: providerFactory() });
+      logger.info("Rob weekly review completed", { operation: "rob_weekly_review", model: result.model, durationMs: Date.now() - startedAt, usage: result.usage, authenticatedUidPresent: true });
+      return result;
+    } catch (error) {
+      const normalized = normalizeAiError(error);
+      logger.warn("Rob weekly review failed", { operation: "rob_weekly_review", model: ROB_WEEKLY_MODEL || aiConfig.model, code: normalized.code, durationMs: Date.now() - startedAt, authenticatedUidPresent: true });
+      throw new HttpsError(normalized.code === "ai_invalid_request" ? "invalid-argument" : "internal", normalized.message, toClientError(normalized));
+    }
+  };
+}
+
+export const robWeeklyReview = onCall({ secrets: [openRouterApiKey], timeoutSeconds: 35 }, createRobWeeklyReviewHandler());
 
 export function createRobReviewHandler({ providerFactory = () => createOpenRouterProvider({ apiKey: openRouterApiKey.value(), config: aiConfig }) } = {}) {
   return async (request) => {

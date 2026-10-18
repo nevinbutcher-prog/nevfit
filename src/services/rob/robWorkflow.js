@@ -1,6 +1,7 @@
 export const ROB_WORKFLOW_STEPS = Object.freeze({
   HOME: "home",
   ADVICE: "advice",
+  WEEKLY_REVIEW: "weekly_review",
   PROGRAM_SELECTION: "program_selection",
   PROGRAM_REVIEW: "program_review",
   PROGRAM_BUILD: "program_build",

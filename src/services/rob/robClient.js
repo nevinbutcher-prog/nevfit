@@ -11,3 +11,12 @@ export async function requestRobAdvice({ question, context }) {
     throw new RobClientError(error?.details && typeof error.details === "object" ? error.details : {});
   }
 }
+
+export async function requestRobWeeklyReview({ context }) {
+  try {
+    const result = await httpsCallable(functions, "robWeeklyReview")({ context });
+    return result.data;
+  } catch (error) {
+    throw new RobClientError(error?.details && typeof error.details === "object" ? error.details : {});
+  }
+}

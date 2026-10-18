@@ -81,7 +81,8 @@ import {
   getViewModeForLoadedActiveWorkout,
 } from "./utils/navigation";
 import { buildRobContext, ROB_CONTEXT_TYPES } from "./services/rob/robContext";
-import { requestRobAdvice } from "./services/rob/robClient";
+import { requestRobAdvice, requestRobWeeklyReview } from "./services/rob/robClient";
+import { buildRobWeeklyContext, weeklyBounds } from "./services/rob/robWeeklyContext";
 import { requestRobReview } from "./services/rob/robReviewClient";
 import { requestRobProgramGeneration, requestRobProposal, resolveRobProposalCandidate } from "./services/rob/robProposalClient";
 import {
@@ -1950,6 +1951,10 @@ function App() {
   const [robExchange, setRobExchange] = useState(null);
   const [robStatus, setRobStatus] = useState("idle");
   const [robError, setRobError] = useState(null);
+  const [robWeeklyDate, setRobWeeklyDate] = useState(getTodayDateInputValue);
+  const [robWeeklyResult, setRobWeeklyResult] = useState(null);
+  const [robWeeklyStatus, setRobWeeklyStatus] = useState("idle");
+  const [robWeeklyError, setRobWeeklyError] = useState(null);
   const [robReview, setRobReview] = useState(null);
   const [robReviewStatus, setRobReviewStatus] = useState("idle");
   const [robReviewError, setRobReviewError] = useState(null);
@@ -1966,6 +1971,7 @@ function App() {
   const [robProgramResolution, setRobProgramResolution] = useState({ session: null, error: null });
   const programDraftsRef = useRef(programDrafts);
   const robReviewLifecycleRef = useRef(createRobReviewLifecycle());
+  const robWeeklyRequestRef = useRef(0);
   const robSelectedProgramIdRef = useRef(null);
   const robProgramGenerationLifecycleRef = useRef(createRobProgramGenerationLifecycle());
   useEffect(() => {
@@ -4469,6 +4475,30 @@ function App() {
     }
   }
 
+  async function submitRobWeeklyReview() {
+    if (robWeeklyStatus === "loading" || healthLoading || workoutHistoryLoading) return;
+    const uid = currentUser?.uid;
+    if (!uid) return;
+    const requestId = ++robWeeklyRequestRef.current;
+    setRobWeeklyStatus("loading");
+    setRobWeeklyError(null);
+    setRobWeeklyResult(null);
+    try {
+      const [cloudWorkouts, cloudHealth] = await Promise.all([loadCloudCompletedWorkouts(uid), loadHealthState(uid)]);
+      if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
+      const health = normalizeHealthState(cloudHealth, { steps: {}, runs: [], weeklyRunTarget: DEFAULT_WEEKLY_RUN_TARGET });
+      const context = buildRobWeeklyContext({ selectedDate: robWeeklyDate, completedWorkouts: cloudWorkouts, runs: health.runs, stepsByDate: health.steps });
+      const result = await requestRobWeeklyReview({ context });
+      if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
+      setRobWeeklyResult({ text: result.text, start: context.current.start, end: context.current.end });
+      setRobWeeklyStatus("success");
+    } catch {
+      if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
+      setRobWeeklyError("Rob couldn't load or review your synced activity right now. Try again.");
+      setRobWeeklyStatus("error");
+    }
+  }
+
   async function submitRobReview(requestType, selectedReviewProgramId = null) {
     const program = requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW
       ? getPreselectedReviewProgram(activeProgramDrafts, selectedReviewProgramId)
@@ -4545,6 +4575,8 @@ function App() {
 
   function openRobHome() {
     invalidatePendingRobReview();
+    robWeeklyRequestRef.current++;
+    setRobWeeklyStatus("idle");
     setRobPanelMode(ROB_WORKFLOW_STEPS.HOME);
     setViewMode("rob");
   }
@@ -4894,15 +4926,25 @@ function App() {
             <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Rob</p>
-                <h2 className="mt-2 text-3xl font-bold text-white">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "What would you like help with?" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Review my program" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Build me a program" : robPanelMode === ROB_WORKFLOW_STEPS.ADVICE ? "Ask Rob a question" : "Rob's Review"}</h2>
-                <p className="mt-2 text-sm text-slate-300">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "Choose a coaching workflow. Rob will never change your training without your approval." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Choose the program you want Rob to assess." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Answer a few practical questions, then confirm the brief Rob will use for a future program design." : robPanelMode === "routine_review" ? `Routine review · ${robReview?.routineName ?? robReviewOrigin?.routineName ?? "Routine"}` : robPanelMode === "program_review" ? `Program review · ${robReview?.programName ?? robReviewOrigin?.programName ?? "Program"}` : "Ask about training, exercises, volume, session structure or progression."}</p>
+                <h2 className="mt-2 text-3xl font-bold text-white">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "What would you like help with?" : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Review my week" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Review my program" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Build me a program" : robPanelMode === ROB_WORKFLOW_STEPS.ADVICE ? "Ask Rob a question" : "Rob's Review"}</h2>
+                <p className="mt-2 text-sm text-slate-300">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "Choose a coaching workflow. Rob will never change your training without your approval." : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Compare completed workouts, logged runs and recorded steps with the preceding week." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Choose the program you want Rob to assess." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Answer a few practical questions, then confirm the brief Rob will use for a future program design." : robPanelMode === "routine_review" ? `Routine review · ${robReview?.routineName ?? robReviewOrigin?.routineName ?? "Routine"}` : robPanelMode === "program_review" ? `Program review · ${robReview?.programName ?? robReviewOrigin?.programName ?? "Program"}` : "Ask about training, exercises, volume, session structure or progression."}</p>
               </div>
               {robPanelMode !== ROB_WORKFLOW_STEPS.HOME ? <button type="button" onClick={openRobHome} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">Rob Home</button> : null}
             </div>
             {robPanelMode === ROB_WORKFLOW_STEPS.HOME ? <div className="grid gap-3">
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.ADVICE)} className="rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 text-left transition hover:border-emerald-300"><h3 className="text-lg font-bold text-white">Ask Rob a question</h3><p className="mt-1 text-sm text-slate-300">Get help with training, exercises and progression.</p></button>
+              <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.WEEKLY_REVIEW)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my week</h3><p className="mt-1 text-sm text-slate-300">Get a coaching assessment of a selected Monday–Sunday week.</p></button>
               <button type="button" onClick={() => openRobProgramReview(robSelectedProgramId)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my program</h3><p className="mt-1 text-sm text-slate-300">Have Rob analyse an existing training program.</p></button>
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_BUILD)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Build me a program</h3><p className="mt-1 text-sm text-slate-300">Work with Rob to design a complete training program.</p></button>
+            </div> : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? <div className="space-y-4">
+              <form onSubmit={(event) => { event.preventDefault(); submitRobWeeklyReview(); }} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+                <label htmlFor="rob-weekly-date" className="block text-sm font-semibold text-slate-200">Choose a date in the week to review</label>
+                <input id="rob-weekly-date" type="date" value={robWeeklyDate} max={getTodayDateInputValue()} onChange={(event) => { robWeeklyRequestRef.current++; setRobWeeklyDate(event.target.value); setRobWeeklyResult(null); setRobWeeklyStatus("idle"); }} disabled={robWeeklyStatus === "loading"} className="mt-2 rounded-lg border border-slate-700 bg-slate-950 p-2 text-white" />
+                <p className="mt-2 text-sm text-slate-400">{robWeeklyDate ? `${weeklyBounds(robWeeklyDate).start} to ${weeklyBounds(robWeeklyDate).end} · compared with ${weeklyBounds(robWeeklyDate).priorStart} to ${weeklyBounds(robWeeklyDate).priorEnd}` : "Select a valid date."}</p>
+                <button type="submit" disabled={!robWeeklyDate || robWeeklyStatus === "loading"} className="mt-4 rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">{robWeeklyStatus === "loading" ? "Rob is reviewing…" : "Review my week"}</button>
+              </form>
+              {robWeeklyError ? <p role="alert" className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">{robWeeklyError} <button type="button" onClick={submitRobWeeklyReview} className="ml-2 font-semibold underline">Retry</button></p> : null}
+              {robWeeklyResult ? <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h3 className="text-sm font-semibold text-emerald-200">{robWeeklyResult.start} to {robWeeklyResult.end}</h3><p className="mt-3 whitespace-pre-wrap text-slate-100">{robWeeklyResult.text}</p></article> : null}
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? <div className="space-y-3">
               {robProgramSelectionError ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">{robProgramSelectionError}</p> : null}
               {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} aria-pressed={robSelectedProgramId === program.id} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="break-words font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines{isRobReviewingUnsavedDraft(program) ? " · Reviewing unsaved draft" : ""}</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p><button type="button" onClick={() => setViewMode("routines")} className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Go to Programs</button></div>}

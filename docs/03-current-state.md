@@ -39,6 +39,7 @@
 - Pure proposal-to-draft application with stable routine-row targeting and no persistence side effects
 - Automated builder regression coverage for normalization, add/swap/remove/reorder, supersets, duplication, persistence fallback, and workout snapshots
 - Workout mode
+- Multiline personal exercise notes keyed by stable exercise ID, with edit and clear controls in active workouts and per-user Firestore sync
 - Supersetted exercises render in grouped workout-mode blocks
 - Faster workout logging with independent per-set drafts, right-edge confirmation, automatic weight carry-forward, compact prior-session summaries, and clear set states
 - Flat, table-style set rows with quiet inline progression feedback and a compact timer footer

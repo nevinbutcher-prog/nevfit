@@ -18,6 +18,17 @@ import {
 } from "./services/backupService";
 import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
 import {
+  MAX_EXERCISE_NOTE_LENGTH,
+  normalizeExerciseNotes,
+  setExerciseNote,
+} from "./services/exerciseNotes";
+import {
+  cacheExerciseNotes,
+  loadCachedExerciseNotes,
+  loadExerciseNotes,
+  saveExerciseNotes,
+} from "./services/exerciseNotesStore";
+import {
   loadHealthState,
   saveHealthState,
 } from "./services/healthStore";
@@ -1930,6 +1941,10 @@ function App() {
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
   );
+  const [exerciseNotes, setExerciseNotes] = useState({});
+  const [exerciseNotesRevision, setExerciseNotesRevision] = useState(0);
+  const [exerciseNotesOwnerUid, setExerciseNotesOwnerUid] = useState(null);
+  const [expandedPersonalNoteExerciseId, setExpandedPersonalNoteExerciseId] = useState(null);
   const [viewMode, setViewMode] = useState(getInitialViewMode);
   const [robQuestion, setRobQuestion] = useState("");
   const [robExchange, setRobExchange] = useState(null);
@@ -1973,10 +1988,12 @@ function App() {
   const [planningLoading, setPlanningLoading] = useState(true);
   const [healthLoading, setHealthLoading] = useState(true);
   const [activeWorkoutLoading, setActiveWorkoutLoading] = useState(true);
+  const [exerciseNotesLoading, setExerciseNotesLoading] = useState(true);
   const [workoutHistoryLoading, setWorkoutHistoryLoading] = useState(true);
   const [programSyncError, setProgramSyncError] = useState("");
   const [appStateSyncError, setAppStateSyncError] = useState("");
   const [workoutSyncError, setWorkoutSyncError] = useState("");
+  const [exerciseNotesSyncError, setExerciseNotesSyncError] = useState("");
   const [backupMessage, setBackupMessage] = useState("");
   const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
@@ -2001,6 +2018,10 @@ function App() {
   const planningPersistQueueRef = useRef(Promise.resolve());
   const healthPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutPersistQueueRef = useRef(Promise.resolve());
+  const exerciseNotesPersistQueueRef = useRef(Promise.resolve());
+  const exerciseNotesImportingRef = useRef(false);
+  const currentUserUidRef = useRef(currentUser?.uid ?? null);
+  currentUserUidRef.current = currentUser?.uid ?? null;
   const activeWorkoutLoadedRef = useRef(false);
   const workoutSetInputRefs = useRef(new Map());
   const backupFileInputRef = useRef(null);
@@ -2262,6 +2283,45 @@ function App() {
 
   useEffect(() => {
     if (!currentUser) {
+      setExerciseNotes({});
+      setExerciseNotesRevision(0);
+      setExerciseNotesOwnerUid(null);
+      setExerciseNotesLoading(false);
+      return undefined;
+    }
+
+    const uid = currentUser.uid;
+    let active = true;
+    setExerciseNotesLoading(true);
+    setExerciseNotesRevision(0);
+    setExerciseNotesSyncError("");
+    setExerciseNotesOwnerUid(null);
+    loadExerciseNotes(uid)
+      .then((notes) => {
+        if (active) {
+          setExerciseNotes(notes);
+          setExerciseNotesOwnerUid(uid);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          console.error("Exercise notes sync failed:", error);
+          setExerciseNotes(loadCachedExerciseNotes(uid));
+          setExerciseNotesOwnerUid(uid);
+          setExerciseNotesSyncError("Exercise notes are using this device cache. Cloud sync is unavailable.");
+        }
+      })
+      .finally(() => {
+        if (active) setExerciseNotesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
       lastWorkoutHistoryLoadUidRef.current = null;
       setWorkoutHistoryLoading(false);
       return undefined;
@@ -2507,6 +2567,46 @@ function App() {
       );
     });
   }, [activeWorkoutLoading, activeWorkoutSession, currentUser]);
+
+  useEffect(() => {
+    if (
+      !currentUser ||
+      isImportingBackup ||
+      exerciseNotesLoading ||
+      exerciseNotesOwnerUid !== currentUser.uid ||
+      !exerciseNotesRevision
+    ) {
+      return undefined;
+    }
+
+    const uid = currentUser.uid;
+    const notes = exerciseNotes;
+    const revision = exerciseNotesRevision;
+    const timeout = window.setTimeout(() => {
+      if (exerciseNotesImportingRef.current) return;
+      const queuedPersist = exerciseNotesPersistQueueRef.current.then(
+        () => saveExerciseNotes(uid, notes),
+        () => saveExerciseNotes(uid, notes),
+      );
+      exerciseNotesPersistQueueRef.current = queuedPersist.catch(() => {});
+      queuedPersist.then(
+        () => {
+          if (currentUserUidRef.current !== uid) return;
+          setExerciseNotesRevision((current) =>
+            current === revision ? 0 : current,
+          );
+          setExerciseNotesSyncError("");
+        },
+        (error) => {
+          if (currentUserUidRef.current !== uid) return;
+          console.error("Exercise notes sync failed:", error);
+          setExerciseNotesSyncError("Exercise notes are saved on this device. Cloud sync is unavailable.");
+        },
+      );
+    }, 600);
+
+    return () => window.clearTimeout(timeout);
+  }, [currentUser, exerciseNotes, exerciseNotesLoading, exerciseNotesOwnerUid, exerciseNotesRevision, isImportingBackup]);
 
   useEffect(() => {
     if (!selectedProgramId) {
@@ -2801,6 +2901,7 @@ function App() {
         runs,
         weeklyRunTarget,
       }),
+      exerciseNotes,
     });
   }
 
@@ -2843,6 +2944,7 @@ function App() {
       activeWorkout: importedActiveWorkout,
       completedWorkouts: importedCompletedWorkouts,
       health: normalizeHealthState(backup.health),
+      exerciseNotes: normalizeExerciseNotes(backup.exerciseNotes),
     };
   }
 
@@ -2857,6 +2959,7 @@ function App() {
     persistActiveWorkoutSession(backup.activeWorkout);
     persistCompletedWorkouts(backup.completedWorkouts);
     persistHealthCache(backup.health);
+    cacheExerciseNotes(currentUser.uid, backup.exerciseNotes);
 
     setProgramDefinitions(backup.programs);
     setProgramDrafts(backup.programs);
@@ -2870,6 +2973,8 @@ function App() {
     setStepsByDate(backup.health.steps);
     setRuns(backup.health.runs);
     setWeeklyRunTarget(backup.health.weeklyRunTarget);
+    setExerciseNotes(backup.exerciseNotes);
+    setExerciseNotesRevision(0);
     setSelectedCompletedWorkoutId(null);
     setExpandedWorkoutDetailsExerciseId(null);
     setRestTimer(null);
@@ -2907,6 +3012,8 @@ function App() {
       }
 
       setIsImportingBackup(true);
+      exerciseNotesImportingRef.current = true;
+      await exerciseNotesPersistQueueRef.current;
       await importBackup(currentUser.uid, importedBackup);
       applyImportedBackupToLocalState(importedBackup);
       setBackupMessage("Backup imported. NevFit data restored.");
@@ -2918,6 +3025,7 @@ function App() {
           : error.message || "Backup could not be imported.",
       );
     } finally {
+      exerciseNotesImportingRef.current = false;
       setIsImportingBackup(false);
     }
   }
@@ -3847,6 +3955,8 @@ function App() {
     planningLoading ||
     healthLoading ||
     activeWorkoutLoading ||
+    exerciseNotesLoading ||
+    exerciseNotesOwnerUid !== currentUser.uid ||
     workoutHistoryLoading
   ) {
     return <LoadingScreen />;
@@ -3881,6 +3991,14 @@ function App() {
     ? formatTimerSeconds(restTimer.remainingSeconds)
     : "--:--";
 
+  function updatePersonalExerciseNote(exerciseId, note) {
+    if (!currentUser || !exerciseId) return;
+    const nextNotes = setExerciseNote(exerciseNotes, exerciseId, note);
+    cacheExerciseNotes(currentUser.uid, nextNotes, true);
+    setExerciseNotes(nextNotes);
+    setExerciseNotesRevision((current) => current + 1);
+  }
+
   function renderWorkoutExerciseBlock(sessionExercise, exerciseIndex, isNested = false) {
     const exercise = getExercise(sessionExercise.exerciseId);
     const completionOptions = {
@@ -3904,6 +4022,9 @@ function App() {
       !isExerciseComplete || expandedCompletedExerciseIds.has(workoutDetailsKey);
     const isWorkoutDetailsExpanded =
       expandedWorkoutDetailsExerciseId === workoutDetailsKey;
+    const personalNote = exerciseNotes[sessionExercise.exerciseId] ?? "";
+    const isPersonalNoteExpanded =
+      expandedPersonalNoteExerciseId === sessionExercise.exerciseId;
 
     if (!isExerciseExpanded) {
       return (
@@ -3924,6 +4045,7 @@ function App() {
             <span className="mt-1 block text-sm text-emerald-100">
               ✓ {completedSetCount}/{sessionExercise.sets.length} sets completed
             </span>
+            {personalNote ? <span className="mt-1 block text-xs text-emerald-200">Personal note saved</span> : null}
           </span>
           <span className="shrink-0 text-sm font-semibold text-emerald-200">
             Edit
@@ -3950,6 +4072,18 @@ function App() {
               {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
             </p>
           </div>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setExpandedPersonalNoteExerciseId(
+              isPersonalNoteExpanded ? null : sessionExercise.exerciseId,
+            )}
+            className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500"
+            aria-expanded={isPersonalNoteExpanded}
+            aria-label={`${personalNote ? "Edit" : "Add"} personal note for ${sessionExercise.exerciseName ?? exercise?.name ?? "exercise"}`}
+          >
+            {personalNote ? "Note •" : "Note"}
+          </button>
           {exercise ? (
             <button
               type="button"
@@ -3973,7 +4107,30 @@ function App() {
           >
             Swap
           </button>
+          </div>
         </div>
+        {isPersonalNoteExpanded ? (
+          <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+            <label htmlFor={`personal-note-${exerciseIndex}`} className="block text-xs font-semibold text-slate-300">
+              Personal exercise note
+            </label>
+            <textarea
+              id={`personal-note-${exerciseIndex}`}
+              rows={3}
+              maxLength={MAX_EXERCISE_NOTE_LENGTH}
+              value={personalNote}
+              onChange={(event) => updatePersonalExerciseNote(sessionExercise.exerciseId, event.target.value)}
+              placeholder="Machine settings, positioning, or anything you want to remember"
+              className="mt-2 w-full resize-y rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+            />
+            {personalNote ? (
+              <button type="button" onClick={() => updatePersonalExerciseNote(sessionExercise.exerciseId, "")}
+                className="mt-2 text-xs font-semibold text-slate-400 underline hover:text-slate-200">
+                Clear note
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {sessionExercise.originalExerciseId ? (
           <p className="mt-2 text-xs font-semibold text-sky-300">
             Swapped from {sessionExercise.originalExerciseName ?? "original exercise"}
@@ -4723,6 +4880,12 @@ function App() {
         {workoutSyncError ? (
           <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100">
             {workoutSyncError}
+          </p>
+        ) : null}
+
+        {exerciseNotesSyncError ? (
+          <p className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-100">
+            {exerciseNotesSyncError}
           </p>
         ) : null}
 

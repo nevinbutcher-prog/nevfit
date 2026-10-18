@@ -18,6 +18,8 @@ src/
     weekSchedule.js
   services/
     activeWorkoutStore.js
+    exerciseNotes.js
+    exerciseNotesStore.js
     auth.js
     backupService.js
     exerciseProvider.js
@@ -732,12 +734,13 @@ Backup shape:
 ```js
 {
   exportedAt,
-  version: 1,
+  version: 2,
   programs,
   planning,
   activeWorkout,
   completedWorkouts,
   health,
+  exerciseNotes,
 }
 ```
 
@@ -746,11 +749,27 @@ asking for explicit confirmation. A confirmed import replaces the current
 Firestore-backed account data instead of merging:
 
 - program documents are deleted and recreated from the backup
-- planning, active workout, and health app-state documents are overwritten
+- planning, active workout, health, and exercise-notes app-state documents are overwritten
 - completed workout documents are deleted and recreated from the backup
 
 After a successful import, React state and localStorage caches are refreshed
 from the imported backup.
+Version 1 backups remain importable; because they contain no exercise notes, importing
+one clears the current notes under the existing replace-all import semantics.
+
+## Personal Exercise Notes
+
+`src/services/exerciseNotesStore.js` stores a per-user map at
+`users/{uid}/appState/exerciseNotes`. Keys are stable exercise IDs and values are
+optional multiline text (up to 4,000 characters). These notes are separate from
+routine prescriptions, active workout snapshots, completed history, and the
+shared exercise catalogue. The workout UI can edit or clear them directly, and
+the same exercise ID retrieves the same note in another routine or workout.
+
+Changes update a UID-scoped local cache immediately and save to Firestore after
+a short pause. A pending local edit is retried on the next authenticated load,
+so a refresh during typing does not replace it with an older cloud value.
+Loading and saving use the existing owner-only `appState` Firestore rule.
 
 ## Firebase Identity Layer
 

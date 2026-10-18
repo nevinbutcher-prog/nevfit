@@ -7,8 +7,9 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { normalizeExerciseNotes } from "./exerciseNotes";
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 const COLLECTION_BATCH_LIMIT = 450;
 
 function getDateStamp(date = new Date()) {
@@ -83,6 +84,7 @@ export function createBackup({
   activeWorkout,
   completedWorkouts,
   health,
+  exerciseNotes,
 }) {
   return {
     exportedAt: new Date().toISOString(),
@@ -92,6 +94,7 @@ export function createBackup({
     activeWorkout,
     completedWorkouts,
     health,
+    exerciseNotes,
   };
 }
 
@@ -107,7 +110,7 @@ export function validateBackup(value) {
     };
   }
 
-  if (value.version !== BACKUP_VERSION) {
+  if (value.version !== 1 && value.version !== BACKUP_VERSION) {
     return {
       valid: false,
       message: "Backup version is not supported.",
@@ -148,6 +151,13 @@ export function validateBackup(value) {
     return { valid: false, message: "Backup is missing health data." };
   }
 
+  if (value.version === 2 &&
+    (!isPlainObject(value.exerciseNotes) ||
+      Object.keys(normalizeExerciseNotes(value.exerciseNotes)).length !==
+        Object.keys(value.exerciseNotes).length)) {
+    return { valid: false, message: "Backup exercise notes are invalid." };
+  }
+
   return { valid: true, message: "" };
 }
 
@@ -176,6 +186,10 @@ export async function importBackup(uid, backup) {
   );
   await setDoc(doc(db, "users", uid, "appState", "health"), {
     ...backup.health,
+    updatedAt: serverTimestamp(),
+  });
+  await setDoc(doc(db, "users", uid, "appState", "exerciseNotes"), {
+    notes: backup.exerciseNotes ?? {},
     updatedAt: serverTimestamp(),
   });
 }

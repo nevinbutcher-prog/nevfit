@@ -30,6 +30,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Custom programs and routines
 - Routine duplication, rename, archive, and save feedback
 - Workout mode with active workout persistence, independent per-set drafts, right-edge confirm controls with weight carry-forward, and compact history
+- Personal exercise notes editable from workout mode and shared across routines for the same exercise
 - Rest timer with repeated audible alarm, vibration support, and strong complete state
 - Append-only completed workout history
 - Previous performance derived from global completed workout history by stable exercise ID

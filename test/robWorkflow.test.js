@@ -20,6 +20,7 @@ test("Rob workflow exposes its shared primary destinations", () => {
     HOME: "home",
     ADVICE: "advice",
     WEEKLY_REVIEW: "weekly_review",
+    PROFILE: "profile",
     PROGRAM_SELECTION: "program_selection",
     PROGRAM_REVIEW: "program_review",
     PROGRAM_BUILD: "program_build",

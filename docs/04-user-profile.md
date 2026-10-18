@@ -24,8 +24,7 @@ Implemented:
 
 Not implemented yet:
 
-- User settings editor
-- Profile editing UI
+- General account settings editor
 
 Signed-out users see only the NevFit sign-in screen. While auth state is
 loading, the app shows a loading screen so the main app does not flash before
@@ -97,6 +96,7 @@ Current application Firestore writes are:
 - `users/{uid}/appState/planning` for schedule, active program selection, and cycle settings
 - `users/{uid}/appState/health` for manual steps, manual runs, and weekly run target
 - `users/{uid}/appState/activeWorkout` for the resumable active workout session
+- `users/{uid}/appState/robCoaching` for the signed-in athlete's optional Rob coaching preferences
 - `users/{uid}/completedWorkouts/{workoutId}` for append-only completed workout snapshots
 
 Programs and routines also remain cached locally in `nevfit_programs` for the
@@ -114,44 +114,16 @@ Firestore is the source of truth when cloud workout state exists. If cloud
 history is empty and local completed workouts exist, NevFit uploads the local
 snapshots once during migration.
 
-Future identity work should add user-facing profile and settings editing without
-broadening these data paths.
+Future identity work can add general account settings without broadening these data paths.
 
-## Primary Training Profile
+## Rob coaching preferences
 
-The documented training profile is also represented as a static, non-editable
-coaching configuration in `src/services/rob/robTrainingProfile.js`. It is kept
-separate from the Firebase identity document and supplies future Rob context;
-it does not add a profile editor or persist new profile fields.
-
-Primary user:
-
-- Nevin
-
-Age:
-
-- 42
-
-Goals:
-
-- Shoulders
-- Arms
-- Hypertrophy
-
-Equipment:
-
-- Dumbbells
-- Barbell
-- Bench
-- High pulley
-
-Constraints:
-
-- L3-L5 nerve issues
-- No leg press
-
-Training style:
-
-- 4 day rotation
-- 60 minute workouts
-- Home gym
+Rob Home provides a small account-specific editor for goals, equipment,
+constraints, exercise likes and dislikes, training setting, usual session
+duration and frequency, and progression method/rule. The normalized document
+is stored at `users/{uid}/appState/robCoaching` under the existing user-scoped
+Firestore rules. A missing document means unknown preferences; no developer
+profile is copied to new accounts. Weekly review fetches this document fresh
+with the account's activity, while other Rob advice and review contexts use the
+loaded profile for that signed-in account. The confirmed program-design intake
+remains authoritative for its own program request.

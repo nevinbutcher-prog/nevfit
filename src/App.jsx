@@ -82,7 +82,10 @@ import {
 } from "./utils/navigation";
 import { buildRobContext, ROB_CONTEXT_TYPES } from "./services/rob/robContext";
 import { requestRobAdvice, requestRobWeeklyReview } from "./services/rob/robClient";
-import { buildRobWeeklyContext, weeklyBounds } from "./services/rob/robWeeklyContext";
+import { buildRobWeeklyContext } from "./services/rob/robWeeklyContext";
+import { emptyRobCoachingProfile } from "./services/rob/robCoachingProfile";
+import { loadRobCoachingProfile, saveRobCoachingProfile } from "./services/rob/robCoachingProfileStore";
+import RobCoachingPreferences from "./components/rob/RobCoachingPreferences";
 import { requestRobReview } from "./services/rob/robReviewClient";
 import { requestRobProgramGeneration, requestRobProposal, resolveRobProposalCandidate } from "./services/rob/robProposalClient";
 import {
@@ -539,6 +542,11 @@ function getDateInputValue(date) {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function formatRobWeekRange(start, end) {
+  const format = (value) => new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return `${format(start)} – ${format(end)}`;
 }
 
 function getStartOfWeek(date, firstDayId = weekSchedule[0]?.id ?? "mon") {
@@ -1951,10 +1959,13 @@ function App() {
   const [robExchange, setRobExchange] = useState(null);
   const [robStatus, setRobStatus] = useState("idle");
   const [robError, setRobError] = useState(null);
-  const [robWeeklyDate, setRobWeeklyDate] = useState(getTodayDateInputValue);
   const [robWeeklyResult, setRobWeeklyResult] = useState(null);
   const [robWeeklyStatus, setRobWeeklyStatus] = useState("idle");
   const [robWeeklyError, setRobWeeklyError] = useState(null);
+  const [robCoachingProfile, setRobCoachingProfile] = useState(emptyRobCoachingProfile);
+  const [robCoachingProfileUid, setRobCoachingProfileUid] = useState(null);
+  const [robCoachingProfileLoading, setRobCoachingProfileLoading] = useState(true);
+  const [robCoachingProfileError, setRobCoachingProfileError] = useState(false);
   const [robReview, setRobReview] = useState(null);
   const [robReviewStatus, setRobReviewStatus] = useState("idle");
   const [robReviewError, setRobReviewError] = useState(null);
@@ -2074,6 +2085,32 @@ function App() {
       console.error("User profile sync failed:", error);
       lastProfileSyncUidRef.current = null;
     });
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setRobCoachingProfile(emptyRobCoachingProfile());
+      setRobCoachingProfileUid(null);
+      setRobCoachingProfileLoading(false);
+      setRobCoachingProfileError(false);
+      return undefined;
+    }
+    const uid = currentUser.uid;
+    let active = true;
+    setRobCoachingProfile(emptyRobCoachingProfile());
+    setRobCoachingProfileUid(null);
+    setRobCoachingProfileLoading(true);
+    setRobCoachingProfileError(false);
+    loadRobCoachingProfile(uid).then((profile) => {
+      if (!active) return;
+      setRobCoachingProfile(profile);
+      setRobCoachingProfileUid(uid);
+    }).catch(() => {
+      if (!active) return;
+      setRobCoachingProfileUid(uid);
+      setRobCoachingProfileError(true);
+    }).finally(() => { if (active) setRobCoachingProfileLoading(false); });
+    return () => { active = false; };
   }, [currentUser]);
 
   useEffect(() => {
@@ -3960,6 +3997,7 @@ function App() {
     programsLoading ||
     planningLoading ||
     healthLoading ||
+    robCoachingProfileLoading ||
     activeWorkoutLoading ||
     exerciseNotesLoading ||
     exerciseNotesOwnerUid !== currentUser.uid ||
@@ -4451,6 +4489,17 @@ function App() {
       (workout) => workout.id === selectedCompletedWorkoutId,
     ) ?? todayCompletedWorkout;
   const cycleWeekLabel = getCycleWeekLabel(cycleStartDate, cycleLengthWeeks);
+  const currentRobProfile = robCoachingProfileUid === currentUser?.uid ? robCoachingProfile : emptyRobCoachingProfile();
+
+  async function saveCurrentRobProfile(profile) {
+    const uid = currentUser?.uid;
+    if (!uid || robCoachingProfileError) throw new Error("profile_unavailable");
+    const saved = await saveRobCoachingProfile(uid, profile);
+    if (currentUserUidRef.current !== uid) throw new Error("account_changed");
+    setRobCoachingProfile(saved);
+    setRobCoachingProfileUid(uid);
+    setRobCoachingProfileError(false);
+  }
 
   async function submitRobQuestion(question = robQuestion) {
     const trimmedQuestion = question.trim();
@@ -4464,6 +4513,7 @@ function App() {
         // Global Ask Rob is program-scoped; editor selection is not implicit scope.
         routineId: null,
         completedWorkouts,
+        coachingProfile: currentRobProfile,
       });
       const result = await requestRobAdvice({ question: trimmedQuestion, context });
       setRobExchange({ question: trimmedQuestion, text: result.text });
@@ -4484,13 +4534,13 @@ function App() {
     setRobWeeklyError(null);
     setRobWeeklyResult(null);
     try {
-      const [cloudWorkouts, cloudHealth] = await Promise.all([loadCloudCompletedWorkouts(uid), loadHealthState(uid)]);
+      const [cloudWorkouts, cloudHealth, profile] = await Promise.all([loadCloudCompletedWorkouts(uid), loadHealthState(uid), loadRobCoachingProfile(uid)]);
       if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
       const health = normalizeHealthState(cloudHealth, { steps: {}, runs: [], weeklyRunTarget: DEFAULT_WEEKLY_RUN_TARGET });
-      const context = buildRobWeeklyContext({ selectedDate: robWeeklyDate, completedWorkouts: cloudWorkouts, runs: health.runs, stepsByDate: health.steps });
+      const context = buildRobWeeklyContext({ completedWorkouts: cloudWorkouts, runs: health.runs, stepsByDate: health.steps, coachingProfile: profile });
       const result = await requestRobWeeklyReview({ context });
       if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
-      setRobWeeklyResult({ text: result.text, start: context.current.start, end: context.current.end });
+      setRobWeeklyResult({ text: result.text, start: context.current.start, end: context.current.end, priorStart: context.preceding.start, priorEnd: context.preceding.end, incomplete: context.evidenceLimits.currentWeekInProgress });
       setRobWeeklyStatus("success");
     } catch {
       if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
@@ -4531,7 +4581,7 @@ function App() {
     setRobReviewOrigin({ type: requestType === ROB_CONTEXT_TYPES.ROUTINE_REVIEW ? "routine" : "program", programName: program.name, routineName: selectedProgramDayDraft?.name ?? null });
     setViewMode("rob");
     try {
-      const context = buildRobContext({ requestType, program, routineId, completedWorkouts });
+      const context = buildRobContext({ requestType, program, routineId, completedWorkouts, coachingProfile: currentRobProfile });
       const result = await requestRobReview({ context });
       if (!isFreshRobReviewRequest(request, requestType)) return;
       robReviewLifecycleRef.current = settleRobReviewRequest(robReviewLifecycleRef.current, request);
@@ -4671,7 +4721,7 @@ function App() {
     const routineId = selectedProgramDayDraft.id;
     setRobProposalState({ ...createRobProposalState(), status: "loading" });
     try {
-      const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program, routineId, completedWorkouts });
+      const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.ROUTINE_REVIEW, program, routineId, completedWorkouts, coachingProfile: currentRobProfile });
       const review = { summary: robReview.summary, concerns: robReview.concerns.map(({ title, explanation, routineIds, routineExerciseIds }) => ({ title, explanation, routineIds, routineExerciseIds })), suggestedChanges: robReview.suggestedChanges.map(({ title, explanation, priority, routineIds, routineExerciseIds }) => ({ title, explanation, priority, routineIds, routineExerciseIds })) };
       const generated = cachedResolution?.candidate ?? await requestRobProposal({ context, request: { type: "modify_routine", instruction: "Turn the review recommendations into a candidate routine change." }, review });
       const generationBaseline = cachedResolution?.generationBaseline ?? createRobProposalGenerationBaseline(program, generated.candidate);
@@ -4737,7 +4787,7 @@ function App() {
     const original = selectedProgramDraft;
     setRobCreateState((state) => ({ ...state, status: "loading", error: null }));
     try {
-      const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: original, routineId: null, completedWorkouts });
+      const context = buildRobContext({ requestType: ROB_CONTEXT_TYPES.PROGRAM_REVIEW, program: original, routineId: null, completedWorkouts, coachingProfile: currentRobProfile });
       const generated = cachedResolution?.candidate ?? await requestRobProposal({ context, request: { type: "create_routine", instruction: request.instruction } });
       const generationBaseline = cachedResolution?.generationBaseline ?? createRobProposalGenerationBaseline(original, generated.candidate);
       const latest = programDraftsRef.current.find((item) => item.id === generationBaseline?.programId);
@@ -4926,25 +4976,21 @@ function App() {
             <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Rob</p>
-                <h2 className="mt-2 text-3xl font-bold text-white">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "What would you like help with?" : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Review my week" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Review my program" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Build me a program" : robPanelMode === ROB_WORKFLOW_STEPS.ADVICE ? "Ask Rob a question" : "Rob's Review"}</h2>
-                <p className="mt-2 text-sm text-slate-300">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "Choose a coaching workflow. Rob will never change your training without your approval." : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Compare completed workouts, logged runs and recorded steps with the preceding week." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Choose the program you want Rob to assess." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Answer a few practical questions, then confirm the brief Rob will use for a future program design." : robPanelMode === "routine_review" ? `Routine review · ${robReview?.routineName ?? robReviewOrigin?.routineName ?? "Routine"}` : robPanelMode === "program_review" ? `Program review · ${robReview?.programName ?? robReviewOrigin?.programName ?? "Program"}` : "Ask about training, exercises, volume, session structure or progression."}</p>
+                <h2 className="mt-2 text-3xl font-bold text-white">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "What would you like help with?" : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? "Coaching preferences" : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Review my week" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Review my program" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Build me a program" : robPanelMode === ROB_WORKFLOW_STEPS.ADVICE ? "Ask Rob a question" : "Rob's Review"}</h2>
+                <p className="mt-2 text-sm text-slate-300">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "Choose a coaching workflow. Rob will never change your training without your approval." : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? "Tell Rob what applies to your account. Leave unknown details blank." : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Review this week's completed workouts, runs and steps against last week." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Choose the program you want Rob to assess." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Answer a few practical questions, then confirm the brief Rob will use for a future program design." : robPanelMode === "routine_review" ? `Routine review · ${robReview?.routineName ?? robReviewOrigin?.routineName ?? "Routine"}` : robPanelMode === "program_review" ? `Program review · ${robReview?.programName ?? robReviewOrigin?.programName ?? "Program"}` : "Ask about training, exercises, volume, session structure or progression."}</p>
               </div>
               {robPanelMode !== ROB_WORKFLOW_STEPS.HOME ? <button type="button" onClick={openRobHome} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">Rob Home</button> : null}
             </div>
             {robPanelMode === ROB_WORKFLOW_STEPS.HOME ? <div className="grid gap-3">
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.ADVICE)} className="rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 text-left transition hover:border-emerald-300"><h3 className="text-lg font-bold text-white">Ask Rob a question</h3><p className="mt-1 text-sm text-slate-300">Get help with training, exercises and progression.</p></button>
-              <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.WEEKLY_REVIEW)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my week</h3><p className="mt-1 text-sm text-slate-300">Get a coaching assessment of a selected Monday–Sunday week.</p></button>
+              <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.WEEKLY_REVIEW)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my week</h3><p className="mt-1 text-sm text-slate-300">Get a coaching assessment of this week.</p></button>
+              <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROFILE)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Coaching preferences</h3><p className="mt-1 text-sm text-slate-300">Set your goals, constraints and progression method for Rob.</p></button>
               <button type="button" onClick={() => openRobProgramReview(robSelectedProgramId)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my program</h3><p className="mt-1 text-sm text-slate-300">Have Rob analyse an existing training program.</p></button>
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_BUILD)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Build me a program</h3><p className="mt-1 text-sm text-slate-300">Work with Rob to design a complete training program.</p></button>
-            </div> : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? <div className="space-y-4">
-              <form onSubmit={(event) => { event.preventDefault(); submitRobWeeklyReview(); }} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-                <label htmlFor="rob-weekly-date" className="block text-sm font-semibold text-slate-200">Choose a date in the week to review</label>
-                <input id="rob-weekly-date" type="date" value={robWeeklyDate} max={getTodayDateInputValue()} onChange={(event) => { robWeeklyRequestRef.current++; setRobWeeklyDate(event.target.value); setRobWeeklyResult(null); setRobWeeklyStatus("idle"); }} disabled={robWeeklyStatus === "loading"} className="mt-2 rounded-lg border border-slate-700 bg-slate-950 p-2 text-white" />
-                <p className="mt-2 text-sm text-slate-400">{robWeeklyDate ? `${weeklyBounds(robWeeklyDate).start} to ${weeklyBounds(robWeeklyDate).end} · compared with ${weeklyBounds(robWeeklyDate).priorStart} to ${weeklyBounds(robWeeklyDate).priorEnd}` : "Select a valid date."}</p>
-                <button type="submit" disabled={!robWeeklyDate || robWeeklyStatus === "loading"} className="mt-4 rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">{robWeeklyStatus === "loading" ? "Rob is reviewing…" : "Review my week"}</button>
-              </form>
+            </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? (robCoachingProfileError ? <p role="alert" className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Coaching preferences could not be loaded. Refresh before editing them.</p> : <RobCoachingPreferences key={currentUser.uid} profile={currentRobProfile} onSave={saveCurrentRobProfile} />) : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-sm text-slate-300">Rob will review the current local Monday–Sunday week and compare it with the preceding week. The current week may still be incomplete.</p><button type="button" onClick={submitRobWeeklyReview} disabled={robWeeklyStatus === "loading"} className="mt-4 rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">{robWeeklyStatus === "loading" ? "Rob is reviewing…" : "Review my week"}</button></div>
               {robWeeklyError ? <p role="alert" className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">{robWeeklyError} <button type="button" onClick={submitRobWeeklyReview} className="ml-2 font-semibold underline">Retry</button></p> : null}
-              {robWeeklyResult ? <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h3 className="text-sm font-semibold text-emerald-200">{robWeeklyResult.start} to {robWeeklyResult.end}</h3><p className="mt-3 whitespace-pre-wrap text-slate-100">{robWeeklyResult.text}</p></article> : null}
+              {robWeeklyResult ? <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h3 className="text-sm font-semibold text-emerald-200">{formatRobWeekRange(robWeeklyResult.start, robWeeklyResult.end)}{robWeeklyResult.incomplete ? " · Week in progress" : ""}</h3><p className="mt-1 text-xs text-slate-400">Compared with {formatRobWeekRange(robWeeklyResult.priorStart, robWeeklyResult.priorEnd)}</p><p className="mt-3 whitespace-pre-wrap text-slate-100">{robWeeklyResult.text}</p></article> : null}
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? <div className="space-y-3">
               {robProgramSelectionError ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">{robProgramSelectionError}</p> : null}
               {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} aria-pressed={robSelectedProgramId === program.id} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="break-words font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines{isRobReviewingUnsavedDraft(program) ? " · Reviewing unsaved draft" : ""}</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p><button type="button" onClick={() => setViewMode("routines")} className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Go to Programs</button></div>}

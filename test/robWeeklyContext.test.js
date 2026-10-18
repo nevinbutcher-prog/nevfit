@@ -10,6 +10,26 @@ test("Monday–Sunday local weeks and preceding period cross month and year boun
   assert.deepEqual(weeklyBounds("2026-10-18"), { start: "2026-10-12", end: "2026-10-18", priorStart: "2026-10-05", priorEnd: "2026-10-11" });
 });
 
+test("automatically chooses the current local week on Monday and Sunday", () => {
+  const monday = buildRobWeeklyContext({ now: new Date("2026-10-12T12:00:00") });
+  const sunday = buildRobWeeklyContext({ now: new Date("2026-10-18T12:00:00") });
+  assert.equal(monday.current.start, "2026-10-12");
+  assert.equal(sunday.current.start, "2026-10-12");
+  assert.equal(monday.preceding.end, "2026-10-11");
+  assert.equal(sunday.evidenceLimits.currentWeekInProgress, true);
+});
+
+test("double progression is considered only when explicitly recorded for this account", () => {
+  const completedWorkouts = [workout("p", "2026-10-06", [[25, 12]]), workout("c", "2026-10-13", [[27.5, 8]])];
+  const withoutPreference = build({ completedWorkouts });
+  const withPreference = build({ completedWorkouts, coachingProfile: { version: 1, progression: { method: "double_progression", rule: "Add load after all sets reach 12 reps." } } });
+  const otherMethod = build({ completedWorkouts, coachingProfile: { version: 1, progression: { method: "other", rule: "Different method" } } });
+  assert.equal(withoutPreference.comparison.exercises[0].status, "mixed_load_rep_change");
+  assert.equal(withPreference.comparison.exercises[0].status, "possible_double_progression_reset");
+  assert.equal(otherMethod.comparison.exercises[0].status, "mixed_load_rep_change");
+  assert.equal(withPreference.profile.progression.rule, "Add load after all sets reach 12 reps.");
+});
+
 test("includes multiple completed workouts and compares same exercise across routine IDs", () => {
   const previous = workout("p", "2026-10-06", [[25, 10], [25, 10]]);
   const current1 = workout("c1", "2026-10-13", [[27.5, 10], [27.5, 10]]);

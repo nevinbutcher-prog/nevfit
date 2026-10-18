@@ -1,4 +1,4 @@
-import { robTrainingProfile } from "./robTrainingProfile.js";
+import { normalizeRobCoachingProfile } from "./robCoachingProfile.js";
 
 export const ROB_CONTEXT_TYPES = Object.freeze({
   ADVICE: "advice",
@@ -160,11 +160,7 @@ function relevantHistory(completedWorkouts, { routineIds, exerciseIds, limits = 
     .map(({ workout }) => workout);
 }
 
-function profile() {
-  return { goals: [...robTrainingProfile.goals], equipment: [...robTrainingProfile.equipment], constraints: [...robTrainingProfile.constraints], trainingStyle: { ...robTrainingProfile.trainingStyle } };
-}
-
-export function buildRobContext({ requestType, program, routineId = null, completedWorkouts = [] } = {}) {
+export function buildRobContext({ requestType, program, routineId = null, completedWorkouts = [], coachingProfile = null } = {}) {
   if (!validTypes.has(requestType)) throw new RobContextError("rob_context_invalid_request_type");
   const requiresProgram = requestType !== ROB_CONTEXT_TYPES.ADVICE;
   if (requiresProgram && !program) throw new RobContextError("rob_context_missing_program");
@@ -191,7 +187,7 @@ export function buildRobContext({ requestType, program, routineId = null, comple
     version: 1,
     requestType,
     target: { scope: serializedProgram ? (selectedRoutineId ? "routine" : "program") : "none", programId: serializedProgram?.id ?? null, routineId: requestType === ROB_CONTEXT_TYPES.PROGRAM_REVIEW ? null : selectedRoutineId },
-    profile: profile(),
+    profile: normalizeRobCoachingProfile(coachingProfile),
     program: serializedProgram,
     history: { workouts: relevantHistory(completedWorkouts, { routineIds, exerciseIds, limits: requestType === ROB_CONTEXT_TYPES.ADVICE ? ROB_ADVICE_CONTEXT_LIMITS : ROB_REVIEW_CONTEXT_LIMITS }) },
   };

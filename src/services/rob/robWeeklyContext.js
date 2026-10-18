@@ -1,4 +1,4 @@
-import { robTrainingProfile } from "./robTrainingProfile.js";
+import { normalizeRobCoachingProfile } from "./robCoachingProfile.js";
 
 const DAY_MS = 86400000;
 const MAX_EXERCISES = 24;
@@ -115,7 +115,7 @@ function summariseSteps(steps, start, end) {
   return { recordedDays, missingDays: 7 - recordedDays, zeroDays, total, averageRecordedDay: recordedDays ? Math.round(total / recordedDays) : null, days };
 }
 
-function compareExercise(current, previous) {
+function compareExercise(current, previous, profile) {
   const prior = new Map(previous.exercises.map((exercise) => [exercise.exerciseId, exercise]));
   return current.exercises.map((exercise) => {
     const before = prior.get(exercise.exerciseId);
@@ -127,6 +127,7 @@ function compareExercise(current, previous) {
       if ((set.load > old.load && set.reps >= old.reps) || (set.load === old.load && set.reps > old.reps)) status = "top_set_progressed";
       else if ((set.load < old.load && set.reps <= old.reps) || (set.load === old.load && set.reps < old.reps)) status = "top_set_declined";
       else if (set.load === old.load && set.reps === old.reps) status = "top_set_flat";
+      else if (set.load > old.load && set.reps < old.reps && profile.progression.method === "double_progression") status = "possible_double_progression_reset";
       else status = "mixed_load_rep_change";
     }
     return { exerciseId: exercise.exerciseId, name: exercise.name, status, currentWorkingSets: exercise.workingSets,
@@ -134,22 +135,24 @@ function compareExercise(current, previous) {
   });
 }
 
-export function buildRobWeeklyContext({ selectedDate, completedWorkouts = [], runs = [], stepsByDate = {}, now = new Date() }) {
-  const bounds = weeklyBounds(selectedDate);
+export function buildRobWeeklyContext({ selectedDate = null, completedWorkouts = [], runs = [], stepsByDate = {}, coachingProfile = null, now = new Date() }) {
+  const reviewedDate = selectedDate ?? localDate(now);
+  const bounds = weeklyBounds(reviewedDate);
+  const profile = normalizeRobCoachingProfile(coachingProfile);
   const period = (start, end) => ({ start, end, strength: summariseStrength(completedWorkouts, start, end), runs: summariseRuns(runs, start, end), steps: summariseSteps(stepsByDate, start, end) });
   const current = period(bounds.start, bounds.end);
   const preceding = period(bounds.priorStart, bounds.priorEnd);
   return {
-    version: 1, requestType: "weekly_review", calendar: "device_local_monday_sunday", selectedDate,
+    version: 1, requestType: "weekly_review", calendar: "device_local_monday_sunday", selectedDate: reviewedDate,
     current, preceding,
-    comparison: { exercises: compareExercise(current.strength, preceding.strength),
+    comparison: { exercises: compareExercise(current.strength, preceding.strength, profile),
       stepTotalsComparable: current.steps.recordedDays === 7 && preceding.steps.recordedDays === 7,
       runDistanceComparable: current.runs.distanceEntries === current.runs.count && preceding.runs.distanceEntries === preceding.runs.count },
     evidenceLimits: { currentWeekInProgress: bounds.end >= localDate(now), noUnloggedActivityAssumed: true,
-      profileSource: "static_coaching_profile", omittedExerciseDetails: current.strength.omittedExercises + preceding.strength.omittedExercises,
+      profileSource: Object.values(profile).some((value) => Array.isArray(value) ? value.length : value && typeof value === "object" && Object.values(value).some(Boolean)) ? "account_profile" : "unknown", omittedExerciseDetails: current.strength.omittedExercises + preceding.strength.omittedExercises,
       omittedSessionDetails: current.strength.omittedSessions + preceding.strength.omittedSessions,
       omittedRunDetails: current.runs.omittedRuns + preceding.runs.omittedRuns,
       workoutsWithUnusableDates: (Array.isArray(completedWorkouts) ? completedWorkouts : []).filter((workout) => !workoutDate(workout)).length },
-    profile: { goals: [...robTrainingProfile.goals], constraints: [...robTrainingProfile.constraints] },
+    profile,
   };
 }

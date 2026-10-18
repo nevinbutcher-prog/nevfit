@@ -76,8 +76,9 @@ future Rob features. It supports `advice`, `routine_review`, and
 `program_review` contexts, preserves program/routine/exercise stable IDs, and
 serializes compact prescriptions without invoking the AI transport.
 
-The builder uses the explicit non-editable coaching profile in
-`src/services/rob/robTrainingProfile.js`, rather than Firebase identity data.
+The builder accepts a normalized, account-scoped coaching profile from
+`users/{uid}/appState/robCoaching`. Missing fields remain unknown; it never
+falls back to the original developer's training details.
 It excludes identity and credentials, has no network or persistence imports,
 and never mutates supplied state. History is meaningful-workout-only,
 target-relevant where association data exists, capped at eight records, and
@@ -86,9 +87,9 @@ are independently bounded to keep future AI context predictable.
 
 ## Rob Weekly Activity Review
 
-`src/services/rob/robWeeklyContext.js` derives a separate, read-only weekly context from fresh Firestore reads of the signed-in user's completed workouts and health state. The selected date defines a device-local Monday–Sunday week and the seven preceding days. It includes all observed strength-session, run and step totals, bounded session and exercise details, same-exercise comparisons across routine IDs, preserved load units, and explicit missing/omitted evidence. Step entries of zero are recorded days; absent dates remain missing. The weekly action does not use the device-cache fallback when cloud reads fail. Firestore rules limit workout and health reads to the authenticated user's path.
+`src/services/rob/robWeeklyContext.js` derives a separate, read-only weekly context from fresh Firestore reads of the signed-in user's completed workouts, health state and coaching preferences. The action automatically selects the current device-local Monday–Sunday week and the seven preceding days. It includes all observed strength-session, run and step totals, bounded session and exercise details, same-exercise comparisons across routine IDs, preserved load units, and explicit missing/omitted evidence. A heavier top set with fewer reps is identified as a *possible* double-progression reset only when that method is explicitly recorded; the historical rep-range rule is not inferred from logs. Step entries of zero are recorded days; absent dates remain missing. The weekly action does not use the device-cache fallback when cloud reads fail. Firestore rules limit workout, health and preference reads to the authenticated user's path.
 
-The `robWeeklyReview` callable in `functions/src/index.js` requires authentication and accepts only a bounded weekly context. It performs one provider call, returns transient text and usage, logs no training details, and writes no Firestore data. `functions/src/rob/robWeeklyReview.js` owns the focused whole-activity coaching instructions. `ROB_WEEKLY_REVIEW_MODEL` can independently select this route's server-side OpenRouter model; when unset it uses `AI_MODEL` (currently the `openai/gpt-4o-mini` default). This checkpoint does not change the production model for any Rob route. The evaluated GPT-4.1 candidate can be configured for this route separately after a deployment decision.
+The `robWeeklyReview` callable in `functions/src/index.js` requires authentication and accepts only a bounded weekly context. It performs one provider call, returns transient text and usage, logs no training details, and writes no Firestore data. `functions/src/rob/robWeeklyReview.js` owns the concise whole-activity coaching instructions. `functions/.env.nevfit-fa139` sets `ROB_WEEKLY_REVIEW_MODEL=openai/gpt-4.1` for this route; other Rob routes continue using `AI_MODEL`. The OpenRouter key remains a Firebase secret.
 
 ## Catalogue-grounded Rob Program Generation
 
@@ -149,9 +150,9 @@ a later selected review.
 requirements contract for future whole-program generation. It validates goal,
 weekly frequency, session duration, priorities, environment/equipment, and
 constraints, then produces a separately copied confirmed snapshot. The intake
-does not read the static `robTrainingProfile`: there is no trustworthy persisted
-personal-preference source today, so every value is explicitly supplied and
-confirmed in the current session.
+does not use account preferences to override a confirmed program brief. Every
+program-specific value is explicitly supplied and confirmed in the current
+intake session.
 
 `src/components/rob/RobProgramIntake.jsx` presents one deterministic question
 at a time under Rob Home. Its state is transient React state: it survives

@@ -74,9 +74,9 @@
 - No Rob advice flow can read or write application data beyond its supplied in-memory coaching context
 - Ask Rob advisory surface with authenticated, server-owned persona/prompt instructions and transient recoverable responses
 - Rob advice automatically supplies bounded deterministic advice context but cannot modify routines, programs, workouts, or other application data
-- Rob Home now offers Review my week for a selected local Monday–Sunday week. It compares completed strength workouts, logged runs and recorded steps with the preceding week through a bounded derived context and an authenticated, read-only weekly-review callable. Missing entries and incomplete weeks remain explicit.
+- Rob Home offers one-click Review my week for the current local Monday–Sunday week. It compares completed strength workouts, logged runs and recorded steps with the preceding week through a bounded derived context and an authenticated, read-only weekly-review callable. Missing entries and incomplete weeks remain explicit.
 - Deterministic pure Rob context builder for advice, routine review, and program review
-- Static current coaching profile, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for future Rob requests
+- Account-scoped Rob coaching preferences, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for existing advice and review requests
 - Authenticated structured Rob routine and program reviews with server-validated JSON results, privacy-safe diagnostics, and no persistence or proposal application
 - Program-editor review actions assess the current unsaved draft, then route transient strengths, concerns, suggested changes, and limitations to the Rob coaching panel
 - Routine reviews can prepare a transient candidate proposal that Fitbot resolves and validates against the current draft, then presents as a readable change preview
@@ -105,10 +105,10 @@
 ## Current Known Limitations
 
 - The 17-request synthetic Rob coaching comparison was executed and preserved in `evaluation/rob-coaching-run-2026-10-18.md`; independent human scoring remains open. The ordinary Ask Rob route still receives only its latest-workout context. Weekly review uses a separate two-week summary.
-- Weekly review uses the existing static coaching profile and browser-local calendar. Its selected-week context is derived from fresh reads of the signed-in user's Firestore workout and health paths; cloud errors do not fall back to device-cached data. Very dense weeks bound detailed exercise, session and run lists while retaining totals and omission counts. Unsynced device-only entries are not included, and no live user-facing coaching response has yet been assessed.
+- Weekly review uses the account's saved coaching preferences and browser-local calendar. It reads the signed-in user's Firestore workout, health and preference paths; cloud errors do not fall back to device-cached data. Very dense weeks bound detailed exercise, session and run lists while retaining totals and omission counts. Unsynced device-only entries are not included, and no live user-facing coaching response has yet been assessed.
 
 - Rob can resolve or manually replace whole-program exercises transiently, but whole-program preview, approval, and saving are not yet available.
-- Confirmed program-design briefs are transient and reset on a full browser reload; no personal preference profile is persisted for this flow yet.
+- Confirmed program-design briefs remain transient and reset on a full browser reload; saved Rob coaching preferences do not replace intake answers for a particular program.
 - Rob does not yet generate `modify_program` recommendations.
 - Progression analytics are not implemented.
 

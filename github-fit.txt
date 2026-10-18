@@ -1,0 +1,14 @@
+Repository: 
+nevinbutcher-prog/nevfit
+Default branch: main
+Docs source of truth: docs/
+
+Shared NevDev development workflow: docs/nevdev_workflow.md
+
+When planning implementation work, preparing Codex briefs, reviewing code or recommending next steps, consult the shared workflow agreement.
+
+Work one approved checkpoint at a time. Preserve the user's original goal and evolving wants. Review actual repository changes before declaring an implementation ready for user verification.
+
+Distinguish implementation completion, code-review clearance, deployment and user acceptance. Record non-blocking findings rather than silently discarding them.
+
+Do not automatically generate further implementation cards or sequences. Reassess direction against the user's goal after each accepted checkpoint.

@@ -100,6 +100,14 @@ Successful selections are revalidated by `parseProgramCandidate()` and assessed 
 
 ## Rob Training Advice
 
+The non-production coaching-quality harness is documented in
+`evaluation/rob-coaching-baseline.md`. It builds synthetic scenarios using the
+existing advice and program-generation prompt/validation boundaries, compares
+the configured default against two fixed OpenRouter candidates, and performs a
+dry run by default. Paid execution needs an explicit command flag and budget;
+it writes only ignored local evaluation results. It is not a Firebase callable
+or production model/prompt change.
+
 The authenticated `robAdvice` callable is the user-facing AI boundary. Its
 server-owned persona and safety instructions compose deterministic advice
 context plus one user question, then reuse the provider-neutral AI provider.

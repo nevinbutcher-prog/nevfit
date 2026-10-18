@@ -103,6 +103,8 @@
 
 ## Current Known Limitations
 
+- A synthetic Rob coaching-quality evaluation harness and scoring rubric are ready, but no paid model comparison or human scoring has been run. See `evaluation/rob-coaching-baseline.md` for the planned 17 calls and context limitations.
+
 - Rob can resolve or manually replace whole-program exercises transiently, but whole-program preview, approval, and saving are not yet available.
 - Confirmed program-design briefs are transient and reset on a full browser reload; no personal preference profile is persisted for this flow yet.
 - Rob does not yet generate `modify_program` recommendations.

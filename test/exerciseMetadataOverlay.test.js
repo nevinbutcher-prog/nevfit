@@ -123,9 +123,9 @@ test("provider search and direct lookup use reviewed display, while Rob snapshot
   globalThis.fetch = async (url) => ({ ok: true, json: async () => String(url).includes("exerciseinfo/?") ? { results: [source("wger-364"), source("wger-73")] } : source("wger-364") });
   try {
     const [renamed] = await searchExercises("Seated Leg Curl");
-    assert.equal(renamed.id, "wger-364");
+    assert.equal(renamed.id, "nevfit-seated-leg-curl");
     assert.equal((await getExerciseById("wger-364")).name, "Seated Leg Curl");
-    assert.equal((await searchExercises("Leg Curl"))[0].id, "wger-364");
+    assert.equal((await searchExercises("Leg Curl")).some((exercise) => exercise.id === "nevfit-seated-leg-curl"), true);
     assert.equal(snapshot.exercises.find((entry) => entry.id === "wger-364").name, "Leg Curl");
     const rob = buildRobExerciseCatalogue({ requirements: { environment: "home_gym", equipment: ["dumbbells"], priorities: [] } });
     assert.equal(rob.entries.find((entry) => entry.id === "wger-1012").name, "Alternating bicep curls");

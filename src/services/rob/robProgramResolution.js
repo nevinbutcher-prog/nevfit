@@ -3,7 +3,7 @@ import { PROGRAM_PROPOSAL_TYPES, PROGRAM_PROPOSAL_VERSION, validateProgramPropos
 
 const clone = (value) => structuredClone(value);
 const text = (value) => typeof value === "string" ? value.trim() : "";
-const validExercise = (value) => value && typeof value === "object" && /^wger-[A-Za-z0-9._:-]+$/.test(value.id) && text(value.name);
+const validExercise = (value) => value && typeof value === "object" && /^(?:wger|nevfit)-[A-Za-z0-9._:-]+$/.test(value.id) && text(value.name);
 const sourceFor = (value) => value?.candidate?.candidate ?? value?.candidate ?? value;
 const makeId = (prefix, factory) => typeof factory === "function" ? factory(prefix) : prefix + "-" + crypto.randomUUID();
 const error = (code, message) => ({ code, message });

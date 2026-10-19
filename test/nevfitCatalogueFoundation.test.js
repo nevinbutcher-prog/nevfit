@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import catalogue from "../src/data/nevfitExerciseCatalogue.v1.json" with { type: "json" };
 import registry from "../src/data/nevfitExerciseIdentityRegistry.v1.json" with { type: "json" };
 import taxonomy from "../src/data/nevfitMuscleTaxonomy.v1.json" with { type: "json" };
@@ -92,11 +91,6 @@ test("validator rejects duplicate IDs, invalid muscles, and unsafe shared WGER r
   assert.equal(validateNevfitCatalogue({ ...inputs, catalogue: optionalMedia }).valid, true);
 });
 
-test("the offline catalogue is absent from live exercise lookup and Rob generation", () => {
-  for (const path of ["src/services/exerciseProvider.js", "src/services/rob/robExerciseCatalogue.js", "functions/src/rob/robExerciseCatalogue.js"]) {
-    const source = readFileSync(path, "utf8");
-    assert.equal(source.includes("nevfitExerciseCatalogue"), false);
-    assert.equal(source.includes("nevfitLegacyExerciseCrosswalk"), false);
-  }
+test("the historical WGER snapshot remains available after catalogue activation", () => {
   assert.equal(snapshot.exercises.find((entry) => entry.id === "wger-364").name, "Leg Curl");
 });

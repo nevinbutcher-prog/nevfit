@@ -1,0 +1,3218 @@
+{
+  "version": 1,
+  "exercises": [
+    {
+      "id": "nevfit-copenhagen-plank",
+      "name": "Copenhagen Plank",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "hip adductors",
+      "secondaryMuscles": [
+        "obliques"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "hip_adduction"
+    },
+    {
+      "id": "nevfit-lateral-band-walk",
+      "name": "Lateral Band Walk",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "band"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-side-lying-hip-raise",
+      "name": "Side-lying Hip Raise",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-standing-cable-hip-abduction",
+      "name": "Standing Cable Hip Abduction",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-standing-cable-hip-adduction",
+      "name": "Standing Cable Hip Adduction",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "hip adductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "hip_adduction"
+    },
+    {
+      "id": "nevfit-cossack-squat",
+      "name": "Cossack Squat",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-hip-abduction-machine-abductor-focus",
+      "name": "Hip Abduction Machine (Abductor Focus)",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-hip-adduction-machine",
+      "name": "Hip Adduction Machine",
+      "bodyPart": "Adductors / Abductors",
+      "primaryMuscle": "hip adductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "hip_adduction"
+    },
+    {
+      "id": "nevfit-barbell-bent-over-row",
+      "name": "Barbell Bent-over Row",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "upper mid back",
+        "biceps",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-landmine-row",
+      "name": "Landmine Row",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "upper mid back",
+        "biceps"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-assisted-pull-up",
+      "name": "Assisted Pull-up",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "upper mid back"
+      ],
+      "equipment": [
+        "bodyweight",
+        "pull_up_bar",
+        "resistance_band"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-chin-up",
+      "name": "Chin-up",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "brachialis",
+        "upper mid back"
+      ],
+      "equipment": [
+        "bodyweight",
+        "pull_up_bar"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-neutral-grip-pull-up",
+      "name": "Neutral-grip Pull-up",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "brachialis",
+        "upper mid back"
+      ],
+      "equipment": [
+        "bodyweight",
+        "pull_up_bar"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-pull-up",
+      "name": "Pull-up",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "brachialis",
+        "upper mid back"
+      ],
+      "equipment": [
+        "bodyweight",
+        "pull_up_bar"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-cable-pullover",
+      "name": "Cable Pullover",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "teres major"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "shoulder_extension"
+    },
+    {
+      "id": "nevfit-close-grip-seated-cable-row",
+      "name": "Close-grip Seated Cable Row",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "upper mid back",
+        "biceps"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-neutral-grip-lat-pulldown",
+      "name": "Neutral-grip Lat Pulldown",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-single-arm-cable-lat-pulldown",
+      "name": "Single-arm Cable Lat Pulldown",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-straight-arm-cable-pulldown",
+      "name": "Straight-arm Cable Pulldown",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "teres major"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-underhand-lat-pulldown",
+      "name": "Underhand Lat Pulldown",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-wide-grip-lat-pulldown",
+      "name": "Wide-grip Lat Pulldown",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-chest-supported-dumbbell-row",
+      "name": "Chest-supported Dumbbell Row",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "upper mid back",
+        "biceps"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-dumbbell-pullover",
+      "name": "Dumbbell Pullover",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "chest",
+        "serratus anterior"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "shoulder_extension"
+    },
+    {
+      "id": "nevfit-single-arm-dumbbell-row",
+      "name": "Single-arm Dumbbell Row",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "upper mid back",
+        "biceps"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-chest-supported-machine-row",
+      "name": "Chest-supported Machine Row",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "upper mid back",
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-iso-lateral-lat-pulldown-machine",
+      "name": "Iso-lateral Lat Pulldown Machine",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "biceps",
+        "upper mid back"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-machine-pullover",
+      "name": "Machine Pullover",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "teres major"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "shoulder_extension"
+    },
+    {
+      "id": "nevfit-plate-loaded-high-row",
+      "name": "Plate-loaded High Row",
+      "bodyPart": "Back — Lats",
+      "primaryMuscle": "lats",
+      "secondaryMuscles": [
+        "upper mid back",
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-barbell-good-morning",
+      "name": "Barbell Good Morning",
+      "bodyPart": "Back — Spinal erectors",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-conventional-barbell-deadlift",
+      "name": "Conventional Barbell Deadlift",
+      "bodyPart": "Back — Spinal erectors",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "quadriceps",
+        "upper mid back",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-prone-back-extension",
+      "name": "Prone Back Extension",
+      "bodyPart": "Back — Spinal erectors",
+      "primaryMuscle": "spinal erectors",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "back_extension"
+    },
+    {
+      "id": "nevfit-superman-raise",
+      "name": "Superman Raise",
+      "bodyPart": "Back — Spinal erectors",
+      "primaryMuscle": "spinal erectors",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "back_extension"
+    },
+    {
+      "id": "nevfit-45-degree-back-extension",
+      "name": "45-degree Back Extension",
+      "bodyPart": "Back — Spinal erectors",
+      "primaryMuscle": "spinal erectors",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "back_extension"
+    },
+    {
+      "id": "nevfit-back-extension-machine",
+      "name": "Back Extension Machine",
+      "bodyPart": "Back — Spinal erectors",
+      "primaryMuscle": "spinal erectors",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "back_extension"
+    },
+    {
+      "id": "nevfit-barbell-shrug",
+      "name": "Barbell Shrug",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-pendlay-row",
+      "name": "Pendlay Row",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-t-bar-row",
+      "name": "T-bar Row",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-inverted-row",
+      "name": "Inverted Row",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-scapular-pull-up",
+      "name": "Scapular Pull-up",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight",
+        "pull_up_bar"
+      ],
+      "movementPattern": "vertical_pull"
+    },
+    {
+      "id": "nevfit-cable-face-pull",
+      "name": "Cable Face Pull",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "rear deltoids",
+        "rotator cuff"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-cable-high-row",
+      "name": "Cable High Row",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps",
+        "rear deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-cable-scapular-retraction",
+      "name": "Cable Scapular Retraction",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-wide-grip-seated-cable-row",
+      "name": "Wide-grip Seated Cable Row",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps",
+        "rear deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-chest-supported-wide-elbow-dumbbell-row",
+      "name": "Chest-supported Wide-elbow Dumbbell Row",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "rear deltoids",
+        "biceps"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-dumbbell-shrug",
+      "name": "Dumbbell Shrug",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-incline-bench-dumbbell-row",
+      "name": "Incline Bench Dumbbell Row",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-chest-supported-high-row-machine",
+      "name": "Chest-supported High Row Machine",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps",
+        "rear deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-reverse-pec-deck-upper-back-emphasis",
+      "name": "Reverse Pec Deck (Upper-back Emphasis)",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "rear deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-seated-row-machine",
+      "name": "Seated Row Machine",
+      "bodyPart": "Back — Upper/mid back",
+      "primaryMuscle": "upper mid back",
+      "secondaryMuscles": [
+        "lats",
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-drag-curl",
+      "name": "Drag Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-ez-bar-curl",
+      "name": "EZ-bar Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-preacher-ez-bar-curl",
+      "name": "Preacher EZ-bar Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-reverse-barbell-curl",
+      "name": "Reverse Barbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachioradialis",
+        "brachialis"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-standing-barbell-curl",
+      "name": "Standing Barbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-bayesian-cable-curl",
+      "name": "Bayesian Cable Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-cable-preacher-curl",
+      "name": "Cable Preacher Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-high-cable-biceps-curl",
+      "name": "High Cable Biceps Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-rope-hammer-curl",
+      "name": "Rope Hammer Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-single-arm-cable-curl",
+      "name": "Single-arm Cable Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-standing-cable-curl",
+      "name": "Standing Cable Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-alternating-dumbbell-curl",
+      "name": "Alternating Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-concentration-curl",
+      "name": "Concentration Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-cross-body-hammer-curl",
+      "name": "Cross-body Hammer Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-hammer-curl",
+      "name": "Hammer Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-incline-dumbbell-curl",
+      "name": "Incline Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-preacher-dumbbell-curl",
+      "name": "Preacher Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-reverse-dumbbell-curl",
+      "name": "Reverse Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachioradialis",
+        "brachialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-curl",
+      "name": "Seated Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-spider-dumbbell-curl",
+      "name": "Spider Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-standing-dumbbell-curl",
+      "name": "Standing Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis",
+        "brachioradialis"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-zottman-curl",
+      "name": "Zottman Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachioradialis",
+        "forearms"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-machine-preacher-curl",
+      "name": "Machine Preacher Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-seated-biceps-curl-machine",
+      "name": "Seated Biceps Curl Machine",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "brachialis"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-standing-barbell-calf-raise",
+      "name": "Standing Barbell Calf Raise",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-single-leg-calf-raise",
+      "name": "Single-leg Calf Raise",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-standing-bodyweight-calf-raise",
+      "name": "Standing Bodyweight Calf Raise",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-calf-raise",
+      "name": "Seated Dumbbell Calf Raise",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-single-leg-dumbbell-calf-raise",
+      "name": "Single-leg Dumbbell Calf Raise",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-standing-dumbbell-calf-raise",
+      "name": "Standing Dumbbell Calf Raise",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-donkey-calf-raise-machine",
+      "name": "Donkey Calf Raise Machine",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-leg-press-calf-raise",
+      "name": "Leg Press Calf Raise",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-seated-calf-raise-machine",
+      "name": "Seated Calf Raise Machine",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-standing-calf-raise-machine",
+      "name": "Standing Calf Raise Machine",
+      "bodyPart": "Calves",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "calf_raise"
+    },
+    {
+      "id": "nevfit-decline-barbell-bench-press",
+      "name": "Decline Barbell Bench Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-flat-barbell-bench-press",
+      "name": "Flat Barbell Bench Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-incline-barbell-bench-press",
+      "name": "Incline Barbell Bench Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-chest-focused-parallel-bar-dip",
+      "name": "Chest-focused Parallel Bar Dip",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-decline-push-up",
+      "name": "Decline Push-up",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-incline-push-up",
+      "name": "Incline Push-up",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-push-up",
+      "name": "Push-up",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-cable-chest-press",
+      "name": "Cable Chest Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-high-to-low-cable-fly",
+      "name": "High-to-low Cable Fly",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-low-to-high-cable-fly",
+      "name": "Low-to-high Cable Fly",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-single-arm-cable-fly",
+      "name": "Single-arm Cable Fly",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-standing-cable-chest-fly",
+      "name": "Standing Cable Chest Fly",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-decline-dumbbell-press",
+      "name": "Decline Dumbbell Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-dumbbell-chest-fly",
+      "name": "Dumbbell Chest Fly",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-dumbbell-floor-press",
+      "name": "Dumbbell Floor Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-flat-dumbbell-bench-press",
+      "name": "Flat Dumbbell Bench Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-incline-dumbbell-bench-press",
+      "name": "Incline Dumbbell Bench Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-incline-dumbbell-fly",
+      "name": "Incline Dumbbell Fly",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-single-arm-dumbbell-chest-press",
+      "name": "Single-arm Dumbbell Chest Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-decline-chest-press-machine",
+      "name": "Decline Chest Press Machine",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-incline-chest-press-machine",
+      "name": "Incline Chest Press Machine",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-pec-deck-fly",
+      "name": "Pec Deck Fly",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-plate-loaded-chest-press",
+      "name": "Plate-loaded Chest Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-seated-chest-press-machine",
+      "name": "Seated Chest Press Machine",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-smith-machine-bench-press",
+      "name": "Smith Machine Bench Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-smith-machine-incline-press",
+      "name": "Smith Machine Incline Press",
+      "bodyPart": "Chest",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-ab-wheel-rollout",
+      "name": "Ab Wheel Rollout",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [
+        "lats",
+        "deltoids unspecified"
+      ],
+      "equipment": [
+        "ab wheel"
+      ],
+      "movementPattern": "core_anti_extension"
+    },
+    {
+      "id": "nevfit-bicycle-crunch",
+      "name": "Bicycle Crunch",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [
+        "obliques"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-crunch",
+      "name": "Crunch",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-dead-bug",
+      "name": "Dead Bug",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_anti_extension"
+    },
+    {
+      "id": "nevfit-hanging-knee-raise",
+      "name": "Hanging Knee Raise",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [
+        "hip flexors"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-hanging-leg-raise",
+      "name": "Hanging Leg Raise",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [
+        "hip flexors"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-hollow-body-hold",
+      "name": "Hollow Body Hold",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [
+        "hip flexors"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_anti_extension"
+    },
+    {
+      "id": "nevfit-plank",
+      "name": "Plank",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_anti_extension"
+    },
+    {
+      "id": "nevfit-reverse-crunch",
+      "name": "Reverse Crunch",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [
+        "hip flexors"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-cable-woodchop",
+      "name": "Cable Woodchop",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_rotation"
+    },
+    {
+      "id": "nevfit-kneeling-cable-crunch",
+      "name": "Kneeling Cable Crunch",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-pallof-press",
+      "name": "Pallof Press",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "abdominals"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_anti_rotation"
+    },
+    {
+      "id": "nevfit-standing-cable-crunch",
+      "name": "Standing Cable Crunch",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-dumbbell-side-bend",
+      "name": "Dumbbell Side Bend",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-weighted-dumbbell-crunch",
+      "name": "Weighted Dumbbell Crunch",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-abdominal-crunch-machine",
+      "name": "Abdominal Crunch Machine",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "abdominals",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-torso-rotation-machine",
+      "name": "Torso Rotation Machine",
+      "bodyPart": "Core — Abs",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "core_rotation"
+    },
+    {
+      "id": "nevfit-russian-twist",
+      "name": "Russian Twist",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "abdominals"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_rotation"
+    },
+    {
+      "id": "nevfit-side-plank",
+      "name": "Side Plank",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "abdominals"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "core_anti_extension"
+    },
+    {
+      "id": "nevfit-suitcase-carry",
+      "name": "Suitcase Carry",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "forearms",
+        "quadratus lumborum"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "carry_grip"
+    },
+    {
+      "id": "nevfit-cable-side-bend",
+      "name": "Cable Side Bend",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-cable-woodchop-high-to-low",
+      "name": "Cable Woodchop (High-to-low)",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "abdominals"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_rotation"
+    },
+    {
+      "id": "nevfit-cable-woodchop-low-to-high",
+      "name": "Cable Woodchop (Low-to-high)",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "abdominals"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_rotation"
+    },
+    {
+      "id": "nevfit-pallof-press-hold",
+      "name": "Pallof Press Hold",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "abdominals"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "core_anti_rotation"
+    },
+    {
+      "id": "nevfit-dumbbell-side-bend-oblique-emphasis",
+      "name": "Dumbbell Side Bend (Oblique Emphasis)",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "core_flexion"
+    },
+    {
+      "id": "nevfit-single-arm-farmer-carry",
+      "name": "Single-arm Farmer Carry",
+      "bodyPart": "Core — Obliques",
+      "primaryMuscle": "obliques",
+      "secondaryMuscles": [
+        "forearms",
+        "quadratus lumborum"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "carry_grip"
+    },
+    {
+      "id": "nevfit-barbell-reverse-curl",
+      "name": "Barbell Reverse Curl",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [
+        "brachioradialis",
+        "biceps"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-barbell-wrist-curl",
+      "name": "Barbell Wrist Curl",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-reverse-barbell-wrist-curl",
+      "name": "Reverse Barbell Wrist Curl",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-dead-hang",
+      "name": "Dead Hang",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [
+        "lats",
+        "deltoids unspecified"
+      ],
+      "equipment": [
+        "bodyweight",
+        "pull_up_bar"
+      ],
+      "movementPattern": "carry_grip"
+    },
+    {
+      "id": "nevfit-towel-hang",
+      "name": "Towel Hang",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [
+        "lats",
+        "deltoids unspecified"
+      ],
+      "equipment": [
+        "bodyweight",
+        "pull_up_bar"
+      ],
+      "movementPattern": "carry_grip"
+    },
+    {
+      "id": "nevfit-cable-reverse-curl",
+      "name": "Cable Reverse Curl",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [
+        "brachioradialis",
+        "biceps"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-cable-wrist-curl",
+      "name": "Cable Wrist Curl",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-dumbbell-farmer-carry",
+      "name": "Dumbbell Farmer Carry",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [
+        "upper mid back",
+        "core unspecified"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "carry_grip"
+    },
+    {
+      "id": "nevfit-dumbbell-pronation-supination",
+      "name": "Dumbbell Pronation / Supination",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "carry_grip"
+    },
+    {
+      "id": "nevfit-dumbbell-wrist-curl",
+      "name": "Dumbbell Wrist Curl",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-reverse-dumbbell-wrist-curl",
+      "name": "Reverse Dumbbell Wrist Curl",
+      "bodyPart": "Forearms / Grip",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-barbell-glute-bridge",
+      "name": "Barbell Glute Bridge",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-barbell-hip-thrust",
+      "name": "Barbell Hip Thrust",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-barbell-sumo-deadlift",
+      "name": "Barbell Sumo Deadlift",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "quadriceps",
+        "hip adductors",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-clamshell",
+      "name": "Clamshell",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-frog-pump",
+      "name": "Frog Pump",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-side-lying-hip-abduction",
+      "name": "Side-lying Hip Abduction",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-single-leg-glute-bridge",
+      "name": "Single-leg Glute Bridge",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-cable-glute-kickback",
+      "name": "Cable Glute Kickback",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "hip_extension"
+    },
+    {
+      "id": "nevfit-cable-hip-abduction",
+      "name": "Cable Hip Abduction",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-cable-pull-through-glute-emphasis",
+      "name": "Cable Pull-through (Glute Emphasis)",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-dumbbell-glute-bridge",
+      "name": "Dumbbell Glute Bridge",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-dumbbell-hip-thrust",
+      "name": "Dumbbell Hip Thrust",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-dumbbell-reverse-lunge-glute-emphasis",
+      "name": "Dumbbell Reverse Lunge (Glute Emphasis)",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "quadriceps"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-dumbbell-step-up-glute-emphasis",
+      "name": "Dumbbell Step-up (Glute Emphasis)",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "quadriceps"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-glute-drive-machine",
+      "name": "Glute Drive Machine",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-glute-kickback-machine",
+      "name": "Glute Kickback Machine",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "hip_extension"
+    },
+    {
+      "id": "nevfit-hip-abduction-machine",
+      "name": "Hip Abduction Machine",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "hip abductors",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "hip_abduction"
+    },
+    {
+      "id": "nevfit-hip-thrust-machine",
+      "name": "Hip Thrust Machine",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-smith-machine-hip-thrust",
+      "name": "Smith Machine Hip Thrust",
+      "bodyPart": "Glutes",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-barbell-good-morning-hamstring-emphasis",
+      "name": "Barbell Good Morning (Hamstring Emphasis)",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-barbell-romanian-deadlift",
+      "name": "Barbell Romanian Deadlift",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-stiff-leg-deadlift",
+      "name": "Stiff-leg Deadlift",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-nordic-hamstring-curl",
+      "name": "Nordic Hamstring Curl",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "knee_flexion"
+    },
+    {
+      "id": "nevfit-sliding-leg-curl",
+      "name": "Sliding Leg Curl",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "knee_flexion"
+    },
+    {
+      "id": "nevfit-stability-ball-leg-curl",
+      "name": "Stability Ball Leg Curl",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "stability ball"
+      ],
+      "movementPattern": "knee_flexion"
+    },
+    {
+      "id": "nevfit-cable-pull-through",
+      "name": "Cable Pull-through",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-standing-cable-leg-curl",
+      "name": "Standing Cable Leg Curl",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "knee_flexion"
+    },
+    {
+      "id": "nevfit-dumbbell-romanian-deadlift",
+      "name": "Dumbbell Romanian Deadlift",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-single-leg-dumbbell-romanian-deadlift",
+      "name": "Single-leg Dumbbell Romanian Deadlift",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "hinge"
+    },
+    {
+      "id": "nevfit-lying-leg-curl",
+      "name": "Lying Leg Curl",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "knee_flexion"
+    },
+    {
+      "id": "nevfit-nordic-curl-machine",
+      "name": "Nordic Curl Machine",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "elbow_flexion"
+    },
+    {
+      "id": "nevfit-seated-leg-curl",
+      "name": "Seated Leg Curl",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "knee_flexion"
+    },
+    {
+      "id": "nevfit-standing-single-leg-curl",
+      "name": "Standing Single-leg Curl",
+      "bodyPart": "Hamstrings",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "knee_flexion"
+    },
+    {
+      "id": "nevfit-barbell-back-squat",
+      "name": "Barbell Back Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "hip adductors",
+        "spinal erectors"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-front-squat",
+      "name": "Front Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "upper mid back"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-zercher-squat",
+      "name": "Zercher Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "core unspecified"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-bodyweight-split-squat",
+      "name": "Bodyweight Split Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-bodyweight-squat",
+      "name": "Bodyweight Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-reverse-nordic-curl",
+      "name": "Reverse Nordic Curl",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "hip flexors"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "knee_extension"
+    },
+    {
+      "id": "nevfit-step-up",
+      "name": "Step-up",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-dumbbell-bulgarian-split-squat",
+      "name": "Dumbbell Bulgarian Split Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "hip adductors"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-dumbbell-reverse-lunge",
+      "name": "Dumbbell Reverse Lunge",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-dumbbell-step-up",
+      "name": "Dumbbell Step-up",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-dumbbell-walking-lunge",
+      "name": "Dumbbell Walking Lunge",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-goblet-squat",
+      "name": "Goblet Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "hip adductors"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-45-degree-leg-press",
+      "name": "45-degree Leg Press",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "hip adductors"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-belt-squat-machine",
+      "name": "Belt Squat Machine",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-hack-squat-machine",
+      "name": "Hack Squat Machine",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-horizontal-leg-press",
+      "name": "Horizontal Leg Press",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes",
+        "hip adductors"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-leg-extension-machine",
+      "name": "Leg Extension Machine",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "knee_extension"
+    },
+    {
+      "id": "nevfit-pendulum-squat-machine",
+      "name": "Pendulum Squat Machine",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-single-leg-leg-extension",
+      "name": "Single-leg Leg Extension",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "knee_extension"
+    },
+    {
+      "id": "nevfit-single-leg-leg-press",
+      "name": "Single-leg Leg Press",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-smith-machine-squat",
+      "name": "Smith Machine Squat",
+      "bodyPart": "Quadriceps",
+      "primaryMuscle": "quadriceps",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "squat_lunge"
+    },
+    {
+      "id": "nevfit-barbell-front-raise",
+      "name": "Barbell Front Raise",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-seated-barbell-overhead-press",
+      "name": "Seated Barbell Overhead Press",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-standing-barbell-overhead-press",
+      "name": "Standing Barbell Overhead Press",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-handstand-push-up",
+      "name": "Handstand Push-up",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-pike-push-up",
+      "name": "Pike Push-up",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-cable-front-raise",
+      "name": "Cable Front Raise",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-single-arm-cable-shoulder-press",
+      "name": "Single-arm Cable Shoulder Press",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-arnold-press",
+      "name": "Arnold Press",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-dumbbell-front-raise",
+      "name": "Dumbbell Front Raise",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-shoulder-press",
+      "name": "Seated Dumbbell Shoulder Press",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-standing-dumbbell-shoulder-press",
+      "name": "Standing Dumbbell Shoulder Press",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-seated-shoulder-press-machine",
+      "name": "Seated Shoulder Press Machine",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-smith-machine-shoulder-press",
+      "name": "Smith Machine Shoulder Press",
+      "bodyPart": "Shoulders — Front delts",
+      "primaryMuscle": "front deltoids",
+      "secondaryMuscles": [
+        "triceps",
+        "side deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "vertical_push"
+    },
+    {
+      "id": "nevfit-cable-reverse-fly",
+      "name": "Cable Reverse Fly",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "upper mid back",
+        "rhomboids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "rear_delt_fly"
+    },
+    {
+      "id": "nevfit-face-pull",
+      "name": "Face Pull",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "rotator cuff",
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-single-arm-cable-rear-delt-fly",
+      "name": "Single-arm Cable Rear Delt Fly",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "upper mid back",
+        "rhomboids"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "rear_delt_fly"
+    },
+    {
+      "id": "nevfit-bent-over-dumbbell-reverse-fly",
+      "name": "Bent-over Dumbbell Reverse Fly",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "upper mid back",
+        "rhomboids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "rear_delt_fly"
+    },
+    {
+      "id": "nevfit-chest-supported-rear-delt-raise",
+      "name": "Chest-supported Rear Delt Raise",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "upper mid back",
+        "rhomboids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "rear_delt_fly"
+    },
+    {
+      "id": "nevfit-incline-bench-rear-delt-fly",
+      "name": "Incline Bench Rear Delt Fly",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "upper mid back",
+        "rhomboids"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "rear_delt_fly"
+    },
+    {
+      "id": "nevfit-rear-delt-row-machine",
+      "name": "Rear Delt Row Machine",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "upper mid back",
+        "rhomboids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_pull"
+    },
+    {
+      "id": "nevfit-reverse-pec-deck",
+      "name": "Reverse Pec Deck",
+      "bodyPart": "Shoulders — Rear delts",
+      "primaryMuscle": "rear deltoids",
+      "secondaryMuscles": [
+        "upper mid back",
+        "rhomboids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "chest_fly"
+    },
+    {
+      "id": "nevfit-behind-the-back-cable-lateral-raise",
+      "name": "Behind-the-back Cable Lateral Raise",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-dual-cable-lateral-raise",
+      "name": "Dual Cable Lateral Raise",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-single-arm-cable-lateral-raise",
+      "name": "Single-arm Cable Lateral Raise",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-dumbbell-lateral-raise",
+      "name": "Dumbbell Lateral Raise",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-incline-side-lying-lateral-raise",
+      "name": "Incline Side-lying Lateral Raise",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-leaning-dumbbell-lateral-raise",
+      "name": "Leaning Dumbbell Lateral Raise",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-lateral-raise",
+      "name": "Seated Dumbbell Lateral Raise",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-lateral-raise-machine",
+      "name": "Lateral Raise Machine",
+      "bodyPart": "Shoulders — Side delts",
+      "primaryMuscle": "side deltoids",
+      "secondaryMuscles": [
+        "upper mid back"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "shoulder_raise"
+    },
+    {
+      "id": "nevfit-barbell-lying-triceps-extension",
+      "name": "Barbell Lying Triceps Extension",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-close-grip-bench-press",
+      "name": "Close-grip Bench Press",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front deltoids"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-ez-bar-skull-crusher",
+      "name": "EZ-bar Skull Crusher",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-jm-press",
+      "name": "JM Press",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front deltoids"
+      ],
+      "equipment": [
+        "barbell"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-close-grip-push-up",
+      "name": "Close-grip Push-up",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-parallel-bar-dip",
+      "name": "Parallel Bar Dip",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front deltoids"
+      ],
+      "equipment": [
+        "bodyweight"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-cable-triceps-pushdown-straight-bar",
+      "name": "Cable Triceps Pushdown (Straight Bar)",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-cross-body-cable-triceps-extension",
+      "name": "Cross-body Cable Triceps Extension",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-overhead-cable-triceps-extension",
+      "name": "Overhead Cable Triceps Extension",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-reverse-grip-cable-pushdown",
+      "name": "Reverse-grip Cable Pushdown",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-rope-triceps-pushdown",
+      "name": "Rope Triceps Pushdown",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-single-arm-cable-pushdown",
+      "name": "Single-arm Cable Pushdown",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "cable"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-dumbbell-overhead-triceps-extension",
+      "name": "Dumbbell Overhead Triceps Extension",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-dumbbell-skull-crusher",
+      "name": "Dumbbell Skull Crusher",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-dumbbell-triceps-kickback",
+      "name": "Dumbbell Triceps Kickback",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-single-arm-dumbbell-overhead-extension",
+      "name": "Single-arm Dumbbell Overhead Extension",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell"
+      ],
+      "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-seated-dip-machine",
+      "name": "Seated Dip Machine",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front deltoids"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "horizontal_push"
+    },
+    {
+      "id": "nevfit-seated-triceps-extension-machine",
+      "name": "Seated Triceps Extension Machine",
+      "bodyPart": "Triceps",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "machine"
+      ],
+      "movementPattern": "elbow_extension"
+    }
+  ]
+}

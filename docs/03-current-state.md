@@ -1,6 +1,8 @@
 # Current State
 
-- Rob whole-program generation is catalogue-grounded: a bounded verified WGER selection is filtered for the confirmed equipment context, validated again by Firebase against a server-owned reviewed ID catalogue, and used directly to materialise a transient executable proposal. Ordinary generated programs no longer enter mandatory exercise-name matching; legacy matching remains available for exceptional and older flows.
+- Checkpoint 051 activates all 247 Nevfit exercises for new search and selection behind `VITE_NEVFIT_CATALOGUE_ENABLED` (on by default). Both Nevfit and legacy WGER identities remain readable in routines, active workouts and history. Rob uses a versioned Nevfit server-authorised catalogue while keeping WGER compatibility. Settings offers a read-only account migration preflight and JSON plan download. No historical identity migration has run or been authorised; the writer is not connected to the UI. See `evaluation/nevfit-catalogue-migration-operations.md`.
+
+- Rob whole-program generation is catalogue-grounded: bounded Nevfit or legacy WGER selections are filtered for the confirmed equipment context and validated again by Firebase against server-owned versioned ID catalogues. Ordinary generated programs materialise transient executable proposals; legacy name matching remains available for exceptional and older flows.
 
 ## Implemented
 

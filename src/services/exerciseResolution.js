@@ -48,7 +48,7 @@ export function normalizeExerciseText(value, aliases = DEFAULT_ALIASES) {
   return canonical.join(" ");
 }
 
-const validProviderExercise = (exercise) => exercise && /^wger-[A-Za-z0-9._:-]+$/.test(exercise.id) && typeof exercise.name === "string";
+const validProviderExercise = (exercise) => exercise && /^(?:wger|nevfit)-[A-Za-z0-9._:-]+$/.test(exercise.id) && typeof exercise.name === "string";
 const uniqueById = (exercises) => [...new Map(exercises.filter(validProviderExercise).map((exercise) => [exercise.id, exercise])).values()];
 const tokensFor = (value, aliases) => normalizeExerciseText(value, aliases).split(" ").filter(Boolean);
 const candidateTexts = (exercise) => [exercise?.name, exercise?.originalName, ...(Array.isArray(exercise?.aliases) ? exercise.aliases : [])]

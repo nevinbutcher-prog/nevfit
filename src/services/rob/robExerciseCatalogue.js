@@ -1,4 +1,5 @@
 import catalogue from "../../../functions/src/rob/robExerciseCatalogue.v2.json" with { type: "json" };
+import nevfitCatalogue from "../../../functions/src/rob/nevfitExerciseCatalogue.v1.json" with { type: "json" };
 
 export const ROB_CATALOGUE_VERSION = catalogue.version;
 export const ROB_CATALOGUE_INPUT_CHAR_BUDGET = 36000;
@@ -47,11 +48,12 @@ const score = (entry, requirements) => {
   const conventional = movement(entry) === "other" ? -2 : 2;
   return emphasis + conventional - (/isometric|stretch|test|warm.?up/i.test(entry.name) ? 5 : 0);
 };
-export function buildRobExerciseCatalogue({ requirements = {}, excludedExerciseIds = [] } = {}) {
+export function buildRobExerciseCatalogue({ requirements = {}, excludedExerciseIds = [], useNevfit = false } = {}) {
+  const source = useNevfit ? nevfitCatalogue : catalogue;
   const excluded = new Set(Array.isArray(excludedExerciseIds) ? excludedExerciseIds.filter((id) => typeof id === "string") : []);
   const unique = new Map();
-  for (const entry of catalogue.exercises) if (eligible(entry, requirements, excluded)) { const key = entry.name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); if (!unique.has(key) || score(entry, requirements) > score(unique.get(key), requirements)) unique.set(key, entry); }
-  return { version: catalogue.version, entries: [...unique.values()], excludedExerciseIds: [...excluded].filter((id) => catalogue.exercises.some((entry) => entry.id === id)) };
+  for (const entry of source.exercises) if (eligible(entry, requirements, excluded)) { const key = entry.id; if (!unique.has(key)) unique.set(key, entry); }
+  return { version: source.version, entries: [...unique.values()], excludedExerciseIds: [...excluded].filter((id) => source.exercises.some((entry) => entry.id === id)) };
 }
 export function selectRobGenerationCandidates(full, requirements) {
   const ranked = [...(full?.entries ?? [])].sort((a, b) => score(b, requirements) - score(a, requirements) || a.name.localeCompare(b.name));

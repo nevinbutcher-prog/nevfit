@@ -6,6 +6,7 @@ const ENGLISH_LANGUAGE_ID = 2;
 const SEARCH_POOL_LIMIT = 1500;
 import { buildRobExerciseCatalogue, selectRobGenerationCandidates } from "./rob/robExerciseCatalogue.js";
 import { applyNevfitExerciseMetadata } from "./exerciseMetadataOverlay.js";
+import { NEVFIT_CATALOGUE_ENABLED, NEVFIT_EXERCISES, getNevfitExerciseById } from "./nevfitCatalogue.js";
 let wgerExercisePoolPromise = null;
 
 const SEARCH_TOKEN_ALIASES = new Map([
@@ -595,6 +596,10 @@ export function normalizeExercise(sourceExercise) {
     return null;
   }
 
+  if (sourceExercise.source === "nevfit" && getNevfitExerciseById(sourceExercise.id)) {
+    return getNevfitExerciseById(sourceExercise.id);
+  }
+
   if (
     sourceExercise.source === "wger" &&
     sourceExercise.id &&
@@ -641,8 +646,17 @@ async function fetchWgerExercisePool() {
   return dedupeExercises(results.map(normalizeWgerExercise).filter(Boolean));
 }
 
-export async function searchExercises(query = "", filters = {}) {
+export async function searchExercises(query = "", filters = {}, options = {}) {
   const normalizedQuery = normalizeText(query);
+
+  if (options.catalogueEnabled ?? NEVFIT_CATALOGUE_ENABLED) {
+    return NEVFIT_EXERCISES
+      .filter((exercise) => !normalizedQuery || getExerciseMatchScore(exercise, normalizedQuery) !== null)
+      .filter((exercise) => matchesFilters(exercise, filters))
+      .sort((first, second) => normalizedQuery
+        ? sortBySearchRelevance(first, second, normalizedQuery)
+        : first.name.localeCompare(second.name));
+  }
 
   if (!normalizedQuery) {
     return [];
@@ -669,17 +683,18 @@ export async function searchExercises(query = "", filters = {}) {
 }
 
 export async function getVerifiedRobExerciseCatalogue(requirements, options = {}) {
-  wgerExercisePoolPromise ??= fetchWgerExercisePool();
   try {
     // The versioned catalogue is authoritative; the provider pool is only an
     // availability/enrichment source and never expands trusted identities.
-    const full = buildRobExerciseCatalogue({ requirements, excludedExerciseIds: options.excludedExerciseIds });
+    const full = buildRobExerciseCatalogue({ requirements, excludedExerciseIds: options.excludedExerciseIds, useNevfit: NEVFIT_CATALOGUE_ENABLED });
     return selectRobGenerationCandidates(full, requirements);
   }
   catch (error) { wgerExercisePoolPromise = null; throw error; }
 }
 
 export async function getExerciseById(id) {
+  const nevfit = getNevfitExerciseById(id);
+  if (nevfit) return nevfit;
   if (!id?.startsWith?.("wger-")) {
     return null;
   }

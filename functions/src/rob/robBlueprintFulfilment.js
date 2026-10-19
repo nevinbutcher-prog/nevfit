@@ -5,7 +5,7 @@ import { createRobExercisePlanningProfile } from "../../../src/services/rob/robE
 import { createRobProgramQualityScorecard } from "../../../src/services/rob/robProgramQualityScorecard.js";
 
 const object = (value) => value && typeof value === "object" && !Array.isArray(value);
-const validCatalogue = (catalogue) => object(catalogue) && catalogue.version === ROB_CATALOGUE_VERSION && Array.isArray(catalogue.ids) && catalogue.ids.length > 0 && new Set(catalogue.ids).size === catalogue.ids.length && catalogue.ids.every((id) => typeof id === "string" && SERVER_CATALOGUE.has(id));
+const validCatalogue = (catalogue) => object(catalogue) && [ROB_CATALOGUE_VERSION, 1].includes(catalogue.version) && Array.isArray(catalogue.ids) && catalogue.ids.length > 0 && new Set(catalogue.ids).size === catalogue.ids.length && catalogue.ids.every((id) => typeof id === "string" && SERVER_CATALOGUE.has(id) && (catalogue.version === 1 ? id.startsWith("nevfit-") : id.startsWith("wger-")));
 const patternRoleMatch = (profile, slot) => profile.primaryStimulus.status === "known" && profile.primaryStimulus.contributions.some((item) => item.muscleGroup === slot.primaryMuscle) && profile.movementPattern.value === slot.movementPattern && profile.role.value === slot.role && (slot.selectionIntent == null || profile.selectionIntent.value === slot.selectionIntent);
 const rank = (entry, profile, slot, selectedIds, selectedProfiles) => {
   const conventionality = { standard: 24, variant: 12, specialist: 2, unknown: 0 }[profile.conventionality.value] ?? 0;
@@ -31,9 +31,9 @@ export function fulfilRobWeeklyBlueprint({ blueprint, requirements, catalogue })
     selections.push({ routineIndex, slotIndex, ...rationale(chosen.entry, chosen.profile, slot, chosen.score, selectedIds) }); selectedIds.add(chosen.entry.id); selectedProfiles.push(chosen.profile);
     return { exerciseId: chosen.entry.id, sets: slot.sets, repRange: slot.repRange, restSeconds: slot.restSeconds, note: null, proposalGroupKey: null };
   }).filter(Boolean) }));
-  if (unresolvedSlots.length) return { feasible: false, candidate: null, selections, unresolvedSlots, quality: null, catalogue: { version: ROB_CATALOGUE_VERSION, entries } };
+  if (unresolvedSlots.length) return { feasible: false, candidate: null, selections, unresolvedSlots, quality: null, catalogue: { version: catalogue.version, entries } };
   const raw = { version: 1, proposalType: "create_program", explanation: "Deterministic trusted-catalogue fulfilment of the weekly blueprint.", program: { name: "Rob Blueprint Program", summary: validatedBlueprint.weeklyStructure.rationale, days } };
   const parsed = parseProgramCandidate(JSON.stringify(raw), requirements, { entries });
   const candidate = parsed.candidate;
-  return { feasible: true, candidate, selections, unresolvedSlots: [], quality: createRobProgramQualityScorecard(candidate, requirements, { entries }), catalogue: { version: ROB_CATALOGUE_VERSION, entries } };
+  return { feasible: true, candidate, selections, unresolvedSlots: [], quality: createRobProgramQualityScorecard(candidate, requirements, { entries }), catalogue: { version: catalogue.version, entries } };
 }

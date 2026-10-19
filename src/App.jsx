@@ -76,6 +76,8 @@ import {
 import { starterProgram, starterPrograms } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
 import { getExerciseById, getVerifiedRobExerciseCatalogue, searchExercises } from "./services/exerciseProvider";
+import { runExerciseMigrationPreflight, downloadExerciseMigrationPlan } from "./services/exerciseMigrationPreflight";
+import { isSupportedExerciseId } from "./services/nevfitCatalogue";
 import {
   getInitialViewMode,
   getViewModeForLoadedActiveWorkout,
@@ -163,7 +165,6 @@ const getExerciseFromLibrary = (exerciseId, exerciseLibrary) =>
 
 const defaultProgramId = starterProgram.id;
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-const isWgerExerciseId = (exerciseId) => exerciseId?.startsWith?.("wger-");
 let hasRunFirebaseSmokeTest = false;
 
 const setFeedbackStyles = {
@@ -225,7 +226,7 @@ function persistSchedule(schedule) {
 }
 
 function normalizeRoutineDay(value, fallbackDay = null) {
-  return normalizeRoutineDayData(value, fallbackDay, isWgerExerciseId);
+  return normalizeRoutineDayData(value, fallbackDay, isSupportedExerciseId);
 }
 
 function normalizeProgram(value, fallbackProgram = null) {
@@ -1511,7 +1512,7 @@ function isValidWorkoutSession(value) {
       (exercise) =>
         exercise &&
         typeof exercise.exerciseId === "string" &&
-        isWgerExerciseId(exercise.exerciseId) &&
+        isSupportedExerciseId(exercise.exerciseId) &&
         (typeof exercise.exerciseName === "string" ||
           typeof exercise.exerciseName === "undefined") &&
         typeof exercise.prescribedSets === "number" &&
@@ -1923,6 +1924,8 @@ function App() {
   const [exerciseLibrary, setExerciseLibrary] = useState([]);
   const [exerciseSearchResults, setExerciseSearchResults] = useState([]);
   const [exerciseSearchStatus, setExerciseSearchStatus] = useState("idle");
+  const [migrationPreflight, setMigrationPreflight] = useState(null);
+  const [migrationPreflightStatus, setMigrationPreflightStatus] = useState("idle");
   const [exerciseSearchRetryKey, setExerciseSearchRetryKey] = useState(0);
   const [expandedExerciseIndex, setExpandedExerciseIndex] = useState(null);
   const [supersetPairingExerciseIndex, setSupersetPairingExerciseIndex] =
@@ -2484,7 +2487,7 @@ function App() {
       setExerciseSearchStatus("loading");
 
       searchExercises(exerciseSearchTerm, {
-        equipment: "all",
+        equipment: exerciseEquipmentFilter,
         muscle: exerciseMuscleFilter,
       })
         .then((results) => {
@@ -3031,6 +3034,20 @@ function App() {
     } catch (error) {
       console.error("Backup export failed:", error);
       setBackupMessage("Backup could not be exported.");
+    }
+  }
+
+  async function handleMigrationPreflight() {
+    if (!currentUser?.uid) return;
+    setMigrationPreflightStatus("loading");
+    try {
+      const plan = await runExerciseMigrationPreflight(currentUser.uid);
+      setMigrationPreflight(plan);
+      setMigrationPreflightStatus("ready");
+      downloadExerciseMigrationPlan(plan);
+    } catch (error) {
+      console.error("Exercise migration preflight failed:", error);
+      setMigrationPreflightStatus("error");
     }
   }
 
@@ -4398,18 +4415,18 @@ function App() {
       ? "✓ Saved"
       : "Save Program";
   const exerciseEquipmentOptions = getSortedUniqueValues(
-    exerciseSearchResults.flatMap((exercise) =>
+    exerciseLibrary.flatMap((exercise) =>
       (exercise.equipment ?? []).map(getEquipmentFilterValue),
     ),
   );
   const exerciseMuscleOptions = getSortedUniqueValues(
-    exerciseSearchResults.flatMap((exercise) => [
+    exerciseLibrary.flatMap((exercise) => [
       exercise.bodyPart,
       exercise.primaryMuscle,
       ...(exercise.secondaryMuscles ?? []),
     ]),
   );
-  const showExerciseEquipmentFilter = false;
+  const showExerciseEquipmentFilter = exerciseEquipmentOptions.length > 0;
   const showExerciseMuscleFilter = exerciseMuscleOptions.length > 0;
   const showHiddenFilterNotice =
     exerciseSearchStatus === "ready" &&
@@ -5643,7 +5660,7 @@ function App() {
             <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
               <h2 className="text-2xl font-bold text-white">NevFit</h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                Exercise data and images provided by wger and its contributors.
+                NevFit exercise catalogue. Historical WGER exercise records remain readable.
               </p>
             </div>
             <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
@@ -5683,6 +5700,23 @@ function App() {
                   {backupMessage}
                 </p>
               ) : null}
+              <div className="mt-5 border-t border-slate-800 pt-4">
+                <h3 className="font-semibold text-white">Historical exercise ID preflight</h3>
+                <p className="mt-1 text-sm text-slate-300">Read your account data and download a migration plan. This does not change any workouts or routines.</p>
+                <button type="button" onClick={handleMigrationPreflight} disabled={migrationPreflightStatus === "loading"}
+                  className="mt-3 rounded-lg border border-slate-600 px-4 py-2 font-semibold text-slate-200 disabled:opacity-50">
+                  {migrationPreflightStatus === "loading" ? "Checking..." : "Run read-only preflight"}
+                </button>
+                {migrationPreflightStatus === "error" ? <p className="mt-2 text-sm text-amber-200">Preflight could not read all account documents.</p> : null}
+                {migrationPreflight ? <p className="mt-2 text-sm text-slate-300">
+                  {migrationPreflight.counts.completedWorkouts} completed workouts inspected; {migrationPreflight.counts.historicalOccurrences} historical WGER occurrences;
+                  {" "}{migrationPreflight.counts.routineReferences} routine references; {migrationPreflight.counts.activeReferences} active-workout references;
+                  {" "}{migrationPreflight.counts.noteReferences} note references;
+                  {" "}{migrationPreflight.counts.confirmedCandidates} confirmed changes; {migrationPreflight.ambiguous.length} needing review;
+                  {" "}{migrationPreflight.unmappedWgerIds.length} unmapped WGER IDs; {migrationPreflight.conflicts.length} conflicts;
+                  {" "}{migrationPreflight.expectedAffectedDocuments.length} expected affected documents. The full plan was downloaded.
+                </p> : null}
+              </div>
             </div>
           </section>
         ) : null}
@@ -6608,7 +6642,7 @@ function App() {
                       ? `${exerciseSearchResults.length} exercise${
                           exerciseSearchResults.length === 1 ? "" : "s"
                         } found`
-                      : "Type an exercise name to search"}
+                      : `${exerciseSearchResults.length} exercises available`}
               </p>
               {exerciseSearchStatus === "error" ? (
                 <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">

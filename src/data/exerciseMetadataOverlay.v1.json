@@ -1,0 +1,228 @@
+{
+  "metadataVersion": 1,
+  "runtimeIdNamespace": "wger",
+  "entries": [
+    {
+      "id": "wger-222",
+      "aliases": [],
+      "displayName": "Cable Face Pull",
+      "equipment": [
+        "Cable"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 41,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Facepull and cable equipment align; upper-back versus rear-delt emphasis and rotator-cuff involvement remain unsettled."
+      }
+    },
+    {
+      "id": "wger-572",
+      "aliases": [],
+      "displayName": "Dumbbell Shrug",
+      "equipment": [
+        "Dumbbell"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 46,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Dumbbell shrug identity and equipment align; WGER shoulders conflicts with the master's upper-back browse group."
+      }
+    },
+    {
+      "id": "wger-1012",
+      "aliases": [],
+      "displayName": "Alternating Dumbbell Curl",
+      "equipment": [
+        "Dumbbell"
+      ],
+      "primaryMuscles": [
+        "Biceps"
+      ],
+      "secondaryMuscles": [
+        "Brachialis"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 62,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Alternating dumbbell curl, biceps and brachialis agree with snapshot; brachioradialis remains proposed only."
+      }
+    },
+    {
+      "id": "wger-172",
+      "aliases": [],
+      "displayName": "Abdominal Crunch Machine",
+      "equipment": [
+        "Machine"
+      ],
+      "primaryMuscles": [
+        "Abs"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 126,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Snapshot names machine crunches and abs; no secondary claim is activated."
+      }
+    },
+    {
+      "id": "wger-1748",
+      "aliases": [],
+      "displayName": "Hip Abduction Machine",
+      "equipment": [
+        "Machine"
+      ],
+      "primaryMuscles": [
+        "Glutes"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 164,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Machine hip abduction and broad glute classification align; glute subdivisions remain proposed."
+      }
+    },
+    {
+      "id": "wger-1652",
+      "aliases": [],
+      "displayName": "Dumbbell Romanian Deadlift",
+      "equipment": [
+        "Dumbbell"
+      ],
+      "primaryMuscles": [
+        "Hamstrings"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 175,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Exact dumbbell Romanian deadlift, dumbbell equipment and hamstrings agree; glutes/erectors not activated as secondary."
+      }
+    },
+    {
+      "id": "wger-364",
+      "aliases": [],
+      "displayName": "Seated Leg Curl",
+      "primaryMuscles": [
+        "Hamstrings"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 179,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "User's historical identity names Seated Leg Curl; WGER only confirms generic leg curl and hamstrings. Seated machine setup and calf secondary need review. Preferred wger-2626 is not substituted."
+      }
+    },
+    {
+      "id": "wger-1651",
+      "aliases": [],
+      "displayName": "Dumbbell Reverse Lunge",
+      "equipment": [
+        "Dumbbell"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 189,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Rear/reverse dumbbell lunge identity and equipment align; WGER glutes conflicts with master's quadriceps primary."
+      }
+    },
+    {
+      "id": "wger-369",
+      "aliases": [],
+      "displayName": "Leg Extension Machine",
+      "equipment": [
+        "Machine"
+      ],
+      "primaryMuscles": [
+        "Quadriceps"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 197,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Leg extension and quadriceps align; machine category is supported by the master and the ACE seated leg-extension reference."
+      }
+    },
+    {
+      "id": "wger-20",
+      "aliases": [],
+      "displayName": "Arnold Press",
+      "equipment": [
+        "Dumbbell"
+      ],
+      "primaryMuscles": [
+        "Shoulders"
+      ],
+      "secondaryMuscles": [
+        "Triceps"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 209,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Arnold shoulder press, dumbbell equipment, shoulders and triceps agree; anterior/lateral subdivision remains proposed."
+      }
+    },
+    {
+      "id": "wger-348",
+      "aliases": [],
+      "displayName": "Dumbbell Lateral Raise",
+      "equipment": [
+        "Dumbbell"
+      ],
+      "primaryMuscles": [
+        "Shoulders"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 226,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Lateral raise, dumbbell equipment and broad shoulders agree; exact delt head and upper-trap secondary remain proposed."
+      }
+    },
+    {
+      "id": "wger-1513",
+      "aliases": [],
+      "displayName": "Overhead Cable Triceps Extension",
+      "equipment": [
+        "Cable"
+      ],
+      "primaryMuscles": [
+        "Triceps"
+      ],
+      "subdivisions": [],
+      "reviewStatus": "partial_activation",
+      "confidence": "medium_for_listed_fields",
+      "provenance": {
+        "masterRow": 239,
+        "wgerSnapshotVersion": 2,
+        "reviewReason": "Overhead cable triceps extension, cable equipment and triceps agree."
+      }
+    }
+  ]
+}

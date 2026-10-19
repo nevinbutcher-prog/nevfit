@@ -1,0 +1,693 @@
+{
+  "reviewVersion": 1,
+  "sourceMappingSchemaVersion": 1,
+  "records": [
+    {
+      "id": "wger-1929",
+      "sourceRow": 12,
+      "proposedDisplayName": "Assisted Pull-up",
+      "proposedEquipment": "Bodyweight",
+      "proposedPrimaryBrowseGroup": "Back — Lats",
+      "proposedSecondaryMuscles": "Biceps; mid back",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Assisted Pull-Up",
+      "historicalWgerEquipment": [
+        "Resistance band"
+      ],
+      "historicalWgerPrimaryMuscle": "Lats",
+      "historicalWgerSecondaryMuscles": [
+        "Shoulders",
+        "Biceps",
+        "Abs",
+        "Serratus anterior"
+      ],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Historical source specifies a resistance band; master says bodyweight. Assistance setup and secondaries need review.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-354",
+      "sourceRow": 21,
+      "proposedDisplayName": "Underhand Lat Pulldown",
+      "proposedEquipment": "Cable",
+      "proposedPrimaryBrowseGroup": "Back — Lats",
+      "proposedSecondaryMuscles": "Biceps; mid back",
+      "preferredWgerIdRaw": "wger-684",
+      "historicalWgerName": "Lat Pull Down",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Lats",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Historical WGER entry is a generic lat pulldown; underhand grip belongs to an unapproved preferred reference.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-222",
+      "sourceRow": 41,
+      "proposedDisplayName": "Cable Face Pull",
+      "proposedEquipment": "Cable",
+      "proposedPrimaryBrowseGroup": "Back — Upper/mid back",
+      "proposedSecondaryMuscles": "Rear deltoids; rotator cuff",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Facepull",
+      "historicalWgerEquipment": [
+        "Cable machine"
+      ],
+      "historicalWgerPrimaryMuscle": "Trapezius",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Facepull and cable equipment align; upper-back versus rear-delt emphasis and rotator-cuff involvement remain unsettled.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-572",
+      "sourceRow": 46,
+      "proposedDisplayName": "Dumbbell Shrug",
+      "proposedEquipment": "Dumbbell",
+      "proposedPrimaryBrowseGroup": "Back — Upper/mid back",
+      "proposedSecondaryMuscles": "Upper trapezius",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Shrugs, Dumbbells",
+      "historicalWgerEquipment": [
+        "Dumbbell"
+      ],
+      "historicalWgerPrimaryMuscle": "Shoulders",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Dumbbell shrug identity and equipment align; WGER shoulders conflicts with the master's upper-back browse group.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1117",
+      "sourceRow": 50,
+      "proposedDisplayName": "Seated Row Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Back — Upper/mid back",
+      "proposedSecondaryMuscles": "Lats; biceps",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Seated Cable Row",
+      "historicalWgerEquipment": [
+        "Cable machine"
+      ],
+      "historicalWgerPrimaryMuscle": "Lats",
+      "historicalWgerSecondaryMuscles": [
+        "Biceps",
+        "Trapezius"
+      ],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Historical entry is a seated cable row, while the master specifies an unspecified row machine.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1012",
+      "sourceRow": 62,
+      "proposedDisplayName": "Alternating Dumbbell Curl",
+      "proposedEquipment": "Dumbbell",
+      "proposedPrimaryBrowseGroup": "Biceps",
+      "proposedSecondaryMuscles": "Brachialis; brachioradialis",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Alternating bicep curls",
+      "historicalWgerEquipment": [
+        "Dumbbell"
+      ],
+      "historicalWgerPrimaryMuscle": "Biceps",
+      "historicalWgerSecondaryMuscles": [
+        "Brachialis"
+      ],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles",
+        "secondaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Alternating dumbbell curl, biceps and brachialis agree with snapshot; brachioradialis remains proposed only.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1109",
+      "sourceRow": 74,
+      "proposedDisplayName": "Seated Biceps Curl Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Biceps",
+      "proposedSecondaryMuscles": "Brachialis",
+      "preferredWgerIdRaw": "wger-1424",
+      "historicalWgerName": "Cable Concentration Curl",
+      "historicalWgerEquipment": [
+        "Cable machine"
+      ],
+      "historicalWgerPrimaryMuscle": "Biceps",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Historical entry is Cable Concentration Curl, not a seated biceps curl machine; preferred ID is unapproved.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1466",
+      "sourceRow": 84,
+      "proposedDisplayName": "Standing Calf Raise Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Calves",
+      "proposedSecondaryMuscles": null,
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Calf Raise using Hack Squat Machine",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Calves",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Snapshot names a hack-squat-machine calf raise; master does not specify that machine style.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-237",
+      "sourceRow": 93,
+      "proposedDisplayName": "High-to-low Cable Fly",
+      "proposedEquipment": "Cable",
+      "proposedPrimaryBrowseGroup": "Chest",
+      "proposedSecondaryMuscles": "Anterior deltoids",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Fly With Cable",
+      "historicalWgerEquipment": [
+        "Cable machine"
+      ],
+      "historicalWgerPrimaryMuscle": "Chest",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Cable fly identity and chest agree, but the high-to-low cable path and anterior-delt secondary are unverified.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-129",
+      "sourceRow": 105,
+      "proposedDisplayName": "Incline Chest Press Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Chest",
+      "proposedSecondaryMuscles": "Triceps; anterior deltoids",
+      "preferredWgerIdRaw": "wger-2632",
+      "historicalWgerName": "Chest Press",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Chest",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Generic Chest Press snapshot does not establish incline angle or machine style; preferred ID is unapproved.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-926",
+      "sourceRow": 106,
+      "proposedDisplayName": "Pec Deck Fly",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Chest",
+      "proposedSecondaryMuscles": "Anterior deltoids",
+      "preferredWgerIdRaw": "wger-1904",
+      "historicalWgerName": "Machine chest fly",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Chest",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Machine chest fly snapshot does not establish the pec-deck variant; preferred ID is unapproved.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-2627",
+      "sourceRow": 108,
+      "proposedDisplayName": "Seated Chest Press Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Chest",
+      "proposedSecondaryMuscles": "Triceps; anterior deltoids",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Machine Chest Press",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Chest",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Machine chest press snapshot does not establish seated setup or secondary involvement.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-172",
+      "sourceRow": 126,
+      "proposedDisplayName": "Abdominal Crunch Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Core — Abs",
+      "proposedSecondaryMuscles": null,
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Crunches on Machine",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Abs",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Snapshot names machine crunches and abs; no secondary claim is activated.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1748",
+      "sourceRow": 164,
+      "proposedDisplayName": "Hip Abduction Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Glutes",
+      "proposedSecondaryMuscles": "Gluteus medius/minimus",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Machine Hip Abduction",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Glutes",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Machine hip abduction and broad glute classification align; glute subdivisions remain proposed.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1652",
+      "sourceRow": 175,
+      "proposedDisplayName": "Dumbbell Romanian Deadlift",
+      "proposedEquipment": "Dumbbell",
+      "proposedPrimaryBrowseGroup": "Hamstrings",
+      "proposedSecondaryMuscles": "Glutes; spinal erectors",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Dumbbell Romanian Deadlift",
+      "historicalWgerEquipment": [
+        "Dumbbell"
+      ],
+      "historicalWgerPrimaryMuscle": "Hamstrings",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Exact dumbbell Romanian deadlift, dumbbell equipment and hamstrings agree; glutes/erectors not activated as secondary.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-364",
+      "sourceRow": 179,
+      "proposedDisplayName": "Seated Leg Curl",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Hamstrings",
+      "proposedSecondaryMuscles": "Calves (gastrocnemius)",
+      "preferredWgerIdRaw": "wger-2626",
+      "historicalWgerName": "Leg Curl",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Hamstrings",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "primaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "User's historical identity names Seated Leg Curl; WGER only confirms generic leg curl and hamstrings. Seated machine setup and calf secondary need review. Preferred wger-2626 is not substituted.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1651",
+      "sourceRow": 189,
+      "proposedDisplayName": "Dumbbell Reverse Lunge",
+      "proposedEquipment": "Dumbbell",
+      "proposedPrimaryBrowseGroup": "Quadriceps",
+      "proposedSecondaryMuscles": "Glutes; hamstrings",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Dumbbell Rear Lunge",
+      "historicalWgerEquipment": [
+        "Dumbbell"
+      ],
+      "historicalWgerPrimaryMuscle": "Glutes",
+      "historicalWgerSecondaryMuscles": [
+        "Soleus"
+      ],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Rear/reverse dumbbell lunge identity and equipment align; WGER glutes conflicts with master's quadriceps primary.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-371",
+      "sourceRow": 196,
+      "proposedDisplayName": "Horizontal Leg Press",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Quadriceps",
+      "proposedSecondaryMuscles": "Glutes; adductors",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Leg Press",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Hamstrings",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Generic Leg Press snapshot does not establish horizontal machine; WGER hamstrings primary conflicts with master's quadriceps.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-369",
+      "sourceRow": 197,
+      "proposedDisplayName": "Leg Extension Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Quadriceps",
+      "proposedSecondaryMuscles": null,
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Leg Extension",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Quads",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Leg extension and quadriceps align; machine category is supported by the master and the ACE seated leg-extension reference.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot",
+        "ace_seated_leg_extension"
+      ]
+    },
+    {
+      "id": "wger-20",
+      "sourceRow": 209,
+      "proposedDisplayName": "Arnold Press",
+      "proposedEquipment": "Dumbbell",
+      "proposedPrimaryBrowseGroup": "Shoulders — Front delts",
+      "proposedSecondaryMuscles": "Triceps; lateral deltoids",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Arnold Shoulder Press",
+      "historicalWgerEquipment": [
+        "Dumbbell"
+      ],
+      "historicalWgerPrimaryMuscle": "Shoulders",
+      "historicalWgerSecondaryMuscles": [
+        "Trapezius",
+        "Triceps"
+      ],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles",
+        "secondaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Arnold shoulder press, dumbbell equipment, shoulders and triceps agree; anterior/lateral subdivision remains proposed.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-543",
+      "sourceRow": 213,
+      "proposedDisplayName": "Seated Shoulder Press Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Shoulders — Front delts",
+      "proposedSecondaryMuscles": "Triceps; lateral deltoids",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Shoulder Press, on Machine",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Shoulders",
+      "historicalWgerSecondaryMuscles": [
+        "Triceps"
+      ],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Machine shoulder press snapshot does not establish seated setup; deltoid subdivision needs review.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1381",
+      "sourceRow": 221,
+      "proposedDisplayName": "Rear Delt Row Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Shoulders — Rear delts",
+      "proposedSecondaryMuscles": "Mid traps; rhomboids",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Upper Back",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Shoulders",
+      "historicalWgerSecondaryMuscles": [
+        "Biceps",
+        "Lats"
+      ],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Historical WGER entry is generic Upper Back, insufficient for a rear-delt row machine interpretation.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1378",
+      "sourceRow": 224,
+      "proposedDisplayName": "Dual Cable Lateral Raise",
+      "proposedEquipment": "Cable",
+      "proposedPrimaryBrowseGroup": "Shoulders — Side delts",
+      "proposedSecondaryMuscles": "Upper trapezius",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Cable Lateral Raises",
+      "historicalWgerEquipment": [
+        "Cable machine"
+      ],
+      "historicalWgerPrimaryMuscle": "Shoulders",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Cable lateral raise agrees broadly, but the dual-cable variant and upper-trap secondary are unverified.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-348",
+      "sourceRow": 226,
+      "proposedDisplayName": "Dumbbell Lateral Raise",
+      "proposedEquipment": "Dumbbell",
+      "proposedPrimaryBrowseGroup": "Shoulders — Side delts",
+      "proposedSecondaryMuscles": "Upper trapezius",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Lateral Raises",
+      "historicalWgerEquipment": [
+        "Dumbbell"
+      ],
+      "historicalWgerPrimaryMuscle": "Shoulders",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Lateral raise, dumbbell equipment and broad shoulders agree; exact delt head and upper-trap secondary remain proposed.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1654",
+      "sourceRow": 230,
+      "proposedDisplayName": "Lateral Raise Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Shoulders — Side delts",
+      "proposedSecondaryMuscles": "Upper trapezius",
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Machine Lateral Raise",
+      "historicalWgerEquipment": [
+        "Gym mat"
+      ],
+      "historicalWgerPrimaryMuscle": "Shoulders",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Snapshot equipment says Gym mat despite Machine Lateral Raise name; equipment conflict requires review.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-805",
+      "sourceRow": 237,
+      "proposedDisplayName": "Cable Triceps Pushdown (Straight Bar)",
+      "proposedEquipment": "Cable",
+      "proposedPrimaryBrowseGroup": "Triceps",
+      "proposedSecondaryMuscles": null,
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Tricep Pushdown on Cable",
+      "historicalWgerEquipment": [
+        "Cable machine"
+      ],
+      "historicalWgerPrimaryMuscle": "Triceps",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Cable triceps pushdown agrees broadly, but straight-bar attachment is not established by WGER.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1513",
+      "sourceRow": 239,
+      "proposedDisplayName": "Overhead Cable Triceps Extension",
+      "proposedEquipment": "Cable",
+      "proposedPrimaryBrowseGroup": "Triceps",
+      "proposedSecondaryMuscles": null,
+      "preferredWgerIdRaw": null,
+      "historicalWgerName": "Overhead Cable Tricep Extension",
+      "historicalWgerEquipment": [
+        "Cable machine"
+      ],
+      "historicalWgerPrimaryMuscle": "Triceps",
+      "historicalWgerSecondaryMuscles": [],
+      "reviewStatus": "partial_activation",
+      "activatedFields": [
+        "displayName",
+        "equipment",
+        "primaryMuscles"
+      ],
+      "confidence": "medium_for_listed_fields",
+      "reason": "Overhead cable triceps extension, cable equipment and triceps agree.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    },
+    {
+      "id": "wger-1372",
+      "sourceRow": 247,
+      "proposedDisplayName": "Seated Dip Machine",
+      "proposedEquipment": "Machine",
+      "proposedPrimaryBrowseGroup": "Triceps",
+      "proposedSecondaryMuscles": "Chest; anterior deltoids",
+      "preferredWgerIdRaw": "wger-2634?",
+      "historicalWgerName": "Triceps Dips",
+      "historicalWgerEquipment": [],
+      "historicalWgerPrimaryMuscle": "Triceps",
+      "historicalWgerSecondaryMuscles": [
+        "Chest"
+      ],
+      "reviewStatus": "review_only",
+      "activatedFields": [],
+      "confidence": "low",
+      "reason": "Historical entry is generic triceps dips, not a seated dip machine; preferred ID text is unconfirmed.",
+      "provenance": [
+        "user_master_row",
+        "committed_wger_snapshot"
+      ]
+    }
+  ]
+}

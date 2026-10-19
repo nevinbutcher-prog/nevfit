@@ -5,6 +5,7 @@ const DEFAULT_REST_SECONDS = 120;
 const ENGLISH_LANGUAGE_ID = 2;
 const SEARCH_POOL_LIMIT = 1500;
 import { buildRobExerciseCatalogue, selectRobGenerationCandidates } from "./rob/robExerciseCatalogue.js";
+import { applyNevfitExerciseMetadata } from "./exerciseMetadataOverlay.js";
 let wgerExercisePoolPromise = null;
 
 const SEARCH_TOKEN_ALIASES = new Map([
@@ -440,7 +441,7 @@ function normalizeWgerExercise(sourceExercise) {
     return null;
   }
 
-  return {
+  return applyNevfitExerciseMetadata({
     id: `wger-${id}`,
     name,
     originalName,
@@ -466,7 +467,7 @@ function normalizeWgerExercise(sourceExercise) {
             stripHtml(translation.description),
         }
       : {}),
-  };
+  });
 }
 
 function dedupeExercises(exercises) {
@@ -602,7 +603,7 @@ export function normalizeExercise(sourceExercise) {
   ) {
     const images = normalizeExerciseImages(sourceExercise.images);
 
-    return {
+    return applyNevfitExerciseMetadata({
       ...sourceExercise,
       images,
       imageUrl: sourceExercise.imageUrl ?? getPreferredImageUrl(images),
@@ -610,7 +611,7 @@ export function normalizeExercise(sourceExercise) {
       defaultRepRange: sourceExercise.defaultRepRange ?? DEFAULT_REP_RANGE,
       defaultRestSeconds:
         sourceExercise.defaultRestSeconds ?? DEFAULT_REST_SECONDS,
-    };
+    });
   }
 
   if (

@@ -4,6 +4,7 @@
 
 ## Implemented
 
+- Checkpoint 049 activates field-level Nevfit metadata for 12 of the 28 reviewed historical WGER IDs in browser exercise lookup/search, with a versioned overlay and WGER fallback. All IDs and stored workouts remain unchanged; 16 mappings remain review-only. The review and expansion details are in `evaluation/exercise-metadata-expansion.md`.
 - Dashboard default landing screen
 - Normal authenticated launches default to Dashboard without restoring builder navigation
 - Today workout summary with Start/Resume action

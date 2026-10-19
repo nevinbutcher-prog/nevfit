@@ -1,0 +1,1241 @@
+{
+  "registryVersion": 1,
+  "policy": "IDs are assigned once. Rename display names without changing IDs; add new entries explicitly.",
+  "entries": [
+    {
+      "id": "nevfit-copenhagen-plank",
+      "sourceNameAtAssignment": "Copenhagen Plank",
+      "sourceName": "Copenhagen Plank"
+    },
+    {
+      "id": "nevfit-lateral-band-walk",
+      "sourceNameAtAssignment": "Lateral Band Walk",
+      "sourceName": "Lateral Band Walk"
+    },
+    {
+      "id": "nevfit-side-lying-hip-raise",
+      "sourceNameAtAssignment": "Side-lying Hip Raise",
+      "sourceName": "Side-lying Hip Raise"
+    },
+    {
+      "id": "nevfit-standing-cable-hip-abduction",
+      "sourceNameAtAssignment": "Standing Cable Hip Abduction",
+      "sourceName": "Standing Cable Hip Abduction"
+    },
+    {
+      "id": "nevfit-standing-cable-hip-adduction",
+      "sourceNameAtAssignment": "Standing Cable Hip Adduction",
+      "sourceName": "Standing Cable Hip Adduction"
+    },
+    {
+      "id": "nevfit-cossack-squat",
+      "sourceNameAtAssignment": "Cossack Squat",
+      "sourceName": "Cossack Squat"
+    },
+    {
+      "id": "nevfit-hip-abduction-machine-abductor-focus",
+      "sourceNameAtAssignment": "Hip Abduction Machine (Abductor Focus)",
+      "sourceName": "Hip Abduction Machine (Abductor Focus)"
+    },
+    {
+      "id": "nevfit-hip-adduction-machine",
+      "sourceNameAtAssignment": "Hip Adduction Machine",
+      "sourceName": "Hip Adduction Machine"
+    },
+    {
+      "id": "nevfit-barbell-bent-over-row",
+      "sourceNameAtAssignment": "Barbell Bent-over Row",
+      "sourceName": "Barbell Bent-over Row"
+    },
+    {
+      "id": "nevfit-landmine-row",
+      "sourceNameAtAssignment": "Landmine Row",
+      "sourceName": "Landmine Row"
+    },
+    {
+      "id": "nevfit-assisted-pull-up",
+      "sourceNameAtAssignment": "Assisted Pull-up",
+      "sourceName": "Assisted Pull-up"
+    },
+    {
+      "id": "nevfit-chin-up",
+      "sourceNameAtAssignment": "Chin-up",
+      "sourceName": "Chin-up"
+    },
+    {
+      "id": "nevfit-neutral-grip-pull-up",
+      "sourceNameAtAssignment": "Neutral-grip Pull-up",
+      "sourceName": "Neutral-grip Pull-up"
+    },
+    {
+      "id": "nevfit-pull-up",
+      "sourceNameAtAssignment": "Pull-up",
+      "sourceName": "Pull-up"
+    },
+    {
+      "id": "nevfit-cable-pullover",
+      "sourceNameAtAssignment": "Cable Pullover",
+      "sourceName": "Cable Pullover"
+    },
+    {
+      "id": "nevfit-close-grip-seated-cable-row",
+      "sourceNameAtAssignment": "Close-grip Seated Cable Row",
+      "sourceName": "Close-grip Seated Cable Row"
+    },
+    {
+      "id": "nevfit-neutral-grip-lat-pulldown",
+      "sourceNameAtAssignment": "Neutral-grip Lat Pulldown",
+      "sourceName": "Neutral-grip Lat Pulldown"
+    },
+    {
+      "id": "nevfit-single-arm-cable-lat-pulldown",
+      "sourceNameAtAssignment": "Single-arm Cable Lat Pulldown",
+      "sourceName": "Single-arm Cable Lat Pulldown"
+    },
+    {
+      "id": "nevfit-straight-arm-cable-pulldown",
+      "sourceNameAtAssignment": "Straight-arm Cable Pulldown",
+      "sourceName": "Straight-arm Cable Pulldown"
+    },
+    {
+      "id": "nevfit-underhand-lat-pulldown",
+      "sourceNameAtAssignment": "Underhand Lat Pulldown",
+      "sourceName": "Underhand Lat Pulldown"
+    },
+    {
+      "id": "nevfit-wide-grip-lat-pulldown",
+      "sourceNameAtAssignment": "Wide-grip Lat Pulldown",
+      "sourceName": "Wide-grip Lat Pulldown"
+    },
+    {
+      "id": "nevfit-chest-supported-dumbbell-row",
+      "sourceNameAtAssignment": "Chest-supported Dumbbell Row",
+      "sourceName": "Chest-supported Dumbbell Row"
+    },
+    {
+      "id": "nevfit-dumbbell-pullover",
+      "sourceNameAtAssignment": "Dumbbell Pullover",
+      "sourceName": "Dumbbell Pullover"
+    },
+    {
+      "id": "nevfit-single-arm-dumbbell-row",
+      "sourceNameAtAssignment": "Single-arm Dumbbell Row",
+      "sourceName": "Single-arm Dumbbell Row"
+    },
+    {
+      "id": "nevfit-chest-supported-machine-row",
+      "sourceNameAtAssignment": "Chest-supported Machine Row",
+      "sourceName": "Chest-supported Machine Row"
+    },
+    {
+      "id": "nevfit-iso-lateral-lat-pulldown-machine",
+      "sourceNameAtAssignment": "Iso-lateral Lat Pulldown Machine",
+      "sourceName": "Iso-lateral Lat Pulldown Machine"
+    },
+    {
+      "id": "nevfit-machine-pullover",
+      "sourceNameAtAssignment": "Machine Pullover",
+      "sourceName": "Machine Pullover"
+    },
+    {
+      "id": "nevfit-plate-loaded-high-row",
+      "sourceNameAtAssignment": "Plate-loaded High Row",
+      "sourceName": "Plate-loaded High Row"
+    },
+    {
+      "id": "nevfit-barbell-good-morning",
+      "sourceNameAtAssignment": "Barbell Good Morning",
+      "sourceName": "Barbell Good Morning"
+    },
+    {
+      "id": "nevfit-conventional-barbell-deadlift",
+      "sourceNameAtAssignment": "Conventional Barbell Deadlift",
+      "sourceName": "Conventional Barbell Deadlift"
+    },
+    {
+      "id": "nevfit-prone-back-extension",
+      "sourceNameAtAssignment": "Prone Back Extension",
+      "sourceName": "Prone Back Extension"
+    },
+    {
+      "id": "nevfit-superman-raise",
+      "sourceNameAtAssignment": "Superman Raise",
+      "sourceName": "Superman Raise"
+    },
+    {
+      "id": "nevfit-45-degree-back-extension",
+      "sourceNameAtAssignment": "45-degree Back Extension",
+      "sourceName": "45-degree Back Extension"
+    },
+    {
+      "id": "nevfit-back-extension-machine",
+      "sourceNameAtAssignment": "Back Extension Machine",
+      "sourceName": "Back Extension Machine"
+    },
+    {
+      "id": "nevfit-barbell-shrug",
+      "sourceNameAtAssignment": "Barbell Shrug",
+      "sourceName": "Barbell Shrug"
+    },
+    {
+      "id": "nevfit-pendlay-row",
+      "sourceNameAtAssignment": "Pendlay Row",
+      "sourceName": "Pendlay Row"
+    },
+    {
+      "id": "nevfit-t-bar-row",
+      "sourceNameAtAssignment": "T-bar Row",
+      "sourceName": "T-bar Row"
+    },
+    {
+      "id": "nevfit-inverted-row",
+      "sourceNameAtAssignment": "Inverted Row",
+      "sourceName": "Inverted Row"
+    },
+    {
+      "id": "nevfit-scapular-pull-up",
+      "sourceNameAtAssignment": "Scapular Pull-up",
+      "sourceName": "Scapular Pull-up"
+    },
+    {
+      "id": "nevfit-cable-face-pull",
+      "sourceNameAtAssignment": "Cable Face Pull",
+      "sourceName": "Cable Face Pull"
+    },
+    {
+      "id": "nevfit-cable-high-row",
+      "sourceNameAtAssignment": "Cable High Row",
+      "sourceName": "Cable High Row"
+    },
+    {
+      "id": "nevfit-cable-scapular-retraction",
+      "sourceNameAtAssignment": "Cable Scapular Retraction",
+      "sourceName": "Cable Scapular Retraction"
+    },
+    {
+      "id": "nevfit-wide-grip-seated-cable-row",
+      "sourceNameAtAssignment": "Wide-grip Seated Cable Row",
+      "sourceName": "Wide-grip Seated Cable Row"
+    },
+    {
+      "id": "nevfit-chest-supported-wide-elbow-dumbbell-row",
+      "sourceNameAtAssignment": "Chest-supported Wide-elbow Dumbbell Row",
+      "sourceName": "Chest-supported Wide-elbow Dumbbell Row"
+    },
+    {
+      "id": "nevfit-dumbbell-shrug",
+      "sourceNameAtAssignment": "Dumbbell Shrug",
+      "sourceName": "Dumbbell Shrug"
+    },
+    {
+      "id": "nevfit-incline-bench-dumbbell-row",
+      "sourceNameAtAssignment": "Incline Bench Dumbbell Row",
+      "sourceName": "Incline Bench Dumbbell Row"
+    },
+    {
+      "id": "nevfit-chest-supported-high-row-machine",
+      "sourceNameAtAssignment": "Chest-supported High Row Machine",
+      "sourceName": "Chest-supported High Row Machine"
+    },
+    {
+      "id": "nevfit-reverse-pec-deck-upper-back-emphasis",
+      "sourceNameAtAssignment": "Reverse Pec Deck (Upper-back Emphasis)",
+      "sourceName": "Reverse Pec Deck (Upper-back Emphasis)"
+    },
+    {
+      "id": "nevfit-seated-row-machine",
+      "sourceNameAtAssignment": "Seated Row Machine",
+      "sourceName": "Seated Row Machine"
+    },
+    {
+      "id": "nevfit-drag-curl",
+      "sourceNameAtAssignment": "Drag Curl",
+      "sourceName": "Drag Curl"
+    },
+    {
+      "id": "nevfit-ez-bar-curl",
+      "sourceNameAtAssignment": "EZ-bar Curl",
+      "sourceName": "EZ-bar Curl"
+    },
+    {
+      "id": "nevfit-preacher-ez-bar-curl",
+      "sourceNameAtAssignment": "Preacher EZ-bar Curl",
+      "sourceName": "Preacher EZ-bar Curl"
+    },
+    {
+      "id": "nevfit-reverse-barbell-curl",
+      "sourceNameAtAssignment": "Reverse Barbell Curl",
+      "sourceName": "Reverse Barbell Curl"
+    },
+    {
+      "id": "nevfit-standing-barbell-curl",
+      "sourceNameAtAssignment": "Standing Barbell Curl",
+      "sourceName": "Standing Barbell Curl"
+    },
+    {
+      "id": "nevfit-bayesian-cable-curl",
+      "sourceNameAtAssignment": "Bayesian Cable Curl",
+      "sourceName": "Bayesian Cable Curl"
+    },
+    {
+      "id": "nevfit-cable-preacher-curl",
+      "sourceNameAtAssignment": "Cable Preacher Curl",
+      "sourceName": "Cable Preacher Curl"
+    },
+    {
+      "id": "nevfit-high-cable-biceps-curl",
+      "sourceNameAtAssignment": "High Cable Biceps Curl",
+      "sourceName": "High Cable Biceps Curl"
+    },
+    {
+      "id": "nevfit-rope-hammer-curl",
+      "sourceNameAtAssignment": "Rope Hammer Curl",
+      "sourceName": "Rope Hammer Curl"
+    },
+    {
+      "id": "nevfit-single-arm-cable-curl",
+      "sourceNameAtAssignment": "Single-arm Cable Curl",
+      "sourceName": "Single-arm Cable Curl"
+    },
+    {
+      "id": "nevfit-standing-cable-curl",
+      "sourceNameAtAssignment": "Standing Cable Curl",
+      "sourceName": "Standing Cable Curl"
+    },
+    {
+      "id": "nevfit-alternating-dumbbell-curl",
+      "sourceNameAtAssignment": "Alternating Dumbbell Curl",
+      "sourceName": "Alternating Dumbbell Curl"
+    },
+    {
+      "id": "nevfit-concentration-curl",
+      "sourceNameAtAssignment": "Concentration Curl",
+      "sourceName": "Concentration Curl"
+    },
+    {
+      "id": "nevfit-cross-body-hammer-curl",
+      "sourceNameAtAssignment": "Cross-body Hammer Curl",
+      "sourceName": "Cross-body Hammer Curl"
+    },
+    {
+      "id": "nevfit-hammer-curl",
+      "sourceNameAtAssignment": "Hammer Curl",
+      "sourceName": "Hammer Curl"
+    },
+    {
+      "id": "nevfit-incline-dumbbell-curl",
+      "sourceNameAtAssignment": "Incline Dumbbell Curl",
+      "sourceName": "Incline Dumbbell Curl"
+    },
+    {
+      "id": "nevfit-preacher-dumbbell-curl",
+      "sourceNameAtAssignment": "Preacher Dumbbell Curl Curl",
+      "sourceName": "Preacher Dumbbell Curl Curl"
+    },
+    {
+      "id": "nevfit-reverse-dumbbell-curl",
+      "sourceNameAtAssignment": "Reverse Dumbbell Curl",
+      "sourceName": "Reverse Dumbbell Curl"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-curl",
+      "sourceNameAtAssignment": "Seated Dumbbell Curl",
+      "sourceName": "Seated Dumbbell Curl"
+    },
+    {
+      "id": "nevfit-spider-dumbbell-curl",
+      "sourceNameAtAssignment": "Spider Dumbbell Curl",
+      "sourceName": "Spider Dumbbell Curl"
+    },
+    {
+      "id": "nevfit-standing-dumbbell-curl",
+      "sourceNameAtAssignment": "Standing Dumbbell Curl",
+      "sourceName": "Standing Dumbbell Curl"
+    },
+    {
+      "id": "nevfit-zottman-curl",
+      "sourceNameAtAssignment": "Zottman Curl",
+      "sourceName": "Zottman Curl"
+    },
+    {
+      "id": "nevfit-machine-preacher-curl",
+      "sourceNameAtAssignment": "Machine Preacher Curl",
+      "sourceName": "Machine Preacher Curl"
+    },
+    {
+      "id": "nevfit-seated-biceps-curl-machine",
+      "sourceNameAtAssignment": "Seated Biceps Curl Machine",
+      "sourceName": "Seated Biceps Curl Machine"
+    },
+    {
+      "id": "nevfit-standing-barbell-calf-raise",
+      "sourceNameAtAssignment": "Standing Barbell Calf Raise",
+      "sourceName": "Standing Barbell Calf Raise"
+    },
+    {
+      "id": "nevfit-single-leg-calf-raise",
+      "sourceNameAtAssignment": "Single-leg Calf Raise",
+      "sourceName": "Single-leg Calf Raise"
+    },
+    {
+      "id": "nevfit-standing-bodyweight-calf-raise",
+      "sourceNameAtAssignment": "Standing Bodyweight Calf Raise",
+      "sourceName": "Standing Bodyweight Calf Raise"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-calf-raise",
+      "sourceNameAtAssignment": "Seated Dumbbell Calf Raise",
+      "sourceName": "Seated Dumbbell Calf Raise"
+    },
+    {
+      "id": "nevfit-single-leg-dumbbell-calf-raise",
+      "sourceNameAtAssignment": "Single-leg Dumbbell Calf Raise",
+      "sourceName": "Single-leg Dumbbell Calf Raise"
+    },
+    {
+      "id": "nevfit-standing-dumbbell-calf-raise",
+      "sourceNameAtAssignment": "Standing Dumbbell Calf Raise",
+      "sourceName": "Standing Dumbbell Calf Raise"
+    },
+    {
+      "id": "nevfit-donkey-calf-raise-machine",
+      "sourceNameAtAssignment": "Donkey Calf Raise Machine",
+      "sourceName": "Donkey Calf Raise Machine"
+    },
+    {
+      "id": "nevfit-leg-press-calf-raise",
+      "sourceNameAtAssignment": "Leg Press Calf Raise",
+      "sourceName": "Leg Press Calf Raise"
+    },
+    {
+      "id": "nevfit-seated-calf-raise-machine",
+      "sourceNameAtAssignment": "Seated Calf Raise Machine",
+      "sourceName": "Seated Calf Raise Machine"
+    },
+    {
+      "id": "nevfit-standing-calf-raise-machine",
+      "sourceNameAtAssignment": "Standing Calf Raise Machine",
+      "sourceName": "Standing Calf Raise Machine"
+    },
+    {
+      "id": "nevfit-decline-barbell-bench-press",
+      "sourceNameAtAssignment": "Decline Barbell Bench Press",
+      "sourceName": "Decline Barbell Bench Press"
+    },
+    {
+      "id": "nevfit-flat-barbell-bench-press",
+      "sourceNameAtAssignment": "Flat Barbell Bench Press",
+      "sourceName": "Flat Barbell Bench Press"
+    },
+    {
+      "id": "nevfit-incline-barbell-bench-press",
+      "sourceNameAtAssignment": "Incline Barbell Bench Press",
+      "sourceName": "Incline Barbell Bench Press"
+    },
+    {
+      "id": "nevfit-chest-focused-parallel-bar-dip",
+      "sourceNameAtAssignment": "Chest-focused Parallel Bar Dip",
+      "sourceName": "Chest-focused Parallel Bar Dip"
+    },
+    {
+      "id": "nevfit-decline-push-up",
+      "sourceNameAtAssignment": "Decline Push-up",
+      "sourceName": "Decline Push-up"
+    },
+    {
+      "id": "nevfit-incline-push-up",
+      "sourceNameAtAssignment": "Incline Push-up",
+      "sourceName": "Incline Push-up"
+    },
+    {
+      "id": "nevfit-push-up",
+      "sourceNameAtAssignment": "Push-up",
+      "sourceName": "Push-up"
+    },
+    {
+      "id": "nevfit-cable-chest-press",
+      "sourceNameAtAssignment": "Cable Chest Press",
+      "sourceName": "Cable Chest Press"
+    },
+    {
+      "id": "nevfit-high-to-low-cable-fly",
+      "sourceNameAtAssignment": "High-to-low Cable Fly",
+      "sourceName": "High-to-low Cable Fly"
+    },
+    {
+      "id": "nevfit-low-to-high-cable-fly",
+      "sourceNameAtAssignment": "Low-to-high Cable Fly",
+      "sourceName": "Low-to-high Cable Fly"
+    },
+    {
+      "id": "nevfit-single-arm-cable-fly",
+      "sourceNameAtAssignment": "Single-arm Cable Fly",
+      "sourceName": "Single-arm Cable Fly"
+    },
+    {
+      "id": "nevfit-standing-cable-chest-fly",
+      "sourceNameAtAssignment": "Standing Cable Chest Fly",
+      "sourceName": "Standing Cable Chest Fly"
+    },
+    {
+      "id": "nevfit-decline-dumbbell-press",
+      "sourceNameAtAssignment": "Decline Dumbbell Press",
+      "sourceName": "Decline Dumbbell Press"
+    },
+    {
+      "id": "nevfit-dumbbell-chest-fly",
+      "sourceNameAtAssignment": "Dumbbell Chest Fly",
+      "sourceName": "Dumbbell Chest Fly"
+    },
+    {
+      "id": "nevfit-dumbbell-floor-press",
+      "sourceNameAtAssignment": "Dumbbell Floor Press",
+      "sourceName": "Dumbbell Floor Press"
+    },
+    {
+      "id": "nevfit-flat-dumbbell-bench-press",
+      "sourceNameAtAssignment": "Flat Dumbbell Bench Press",
+      "sourceName": "Flat Dumbbell Bench Press"
+    },
+    {
+      "id": "nevfit-incline-dumbbell-bench-press",
+      "sourceNameAtAssignment": "Incline Dumbbell Bench Press",
+      "sourceName": "Incline Dumbbell Bench Press"
+    },
+    {
+      "id": "nevfit-incline-dumbbell-fly",
+      "sourceNameAtAssignment": "Incline Dumbbell Fly",
+      "sourceName": "Incline Dumbbell Fly"
+    },
+    {
+      "id": "nevfit-single-arm-dumbbell-chest-press",
+      "sourceNameAtAssignment": "Single-arm Dumbbell Chest Press",
+      "sourceName": "Single-arm Dumbbell Chest Press"
+    },
+    {
+      "id": "nevfit-decline-chest-press-machine",
+      "sourceNameAtAssignment": "Decline Chest Press Machine",
+      "sourceName": "Decline Chest Press Machine"
+    },
+    {
+      "id": "nevfit-incline-chest-press-machine",
+      "sourceNameAtAssignment": "Incline Chest Press Machine",
+      "sourceName": "Incline Chest Press Machine"
+    },
+    {
+      "id": "nevfit-pec-deck-fly",
+      "sourceNameAtAssignment": "Pec Deck Fly",
+      "sourceName": "Pec Deck Fly"
+    },
+    {
+      "id": "nevfit-plate-loaded-chest-press",
+      "sourceNameAtAssignment": "Plate-loaded Chest Press",
+      "sourceName": "Plate-loaded Chest Press"
+    },
+    {
+      "id": "nevfit-seated-chest-press-machine",
+      "sourceNameAtAssignment": "Seated Chest Press Machine",
+      "sourceName": "Seated Chest Press Machine"
+    },
+    {
+      "id": "nevfit-smith-machine-bench-press",
+      "sourceNameAtAssignment": "Smith Machine Bench Press",
+      "sourceName": "Smith Machine Bench Press"
+    },
+    {
+      "id": "nevfit-smith-machine-incline-press",
+      "sourceNameAtAssignment": "Smith Machine Incline Press",
+      "sourceName": "Smith Machine Incline Press"
+    },
+    {
+      "id": "nevfit-ab-wheel-rollout",
+      "sourceNameAtAssignment": "Ab Wheel Rollout",
+      "sourceName": "Ab Wheel Rollout"
+    },
+    {
+      "id": "nevfit-bicycle-crunch",
+      "sourceNameAtAssignment": "Bicycle Crunch",
+      "sourceName": "Bicycle Crunch"
+    },
+    {
+      "id": "nevfit-crunch",
+      "sourceNameAtAssignment": "Crunch",
+      "sourceName": "Crunch"
+    },
+    {
+      "id": "nevfit-dead-bug",
+      "sourceNameAtAssignment": "Dead Bug",
+      "sourceName": "Dead Bug"
+    },
+    {
+      "id": "nevfit-hanging-knee-raise",
+      "sourceNameAtAssignment": "Hanging Knee Raise",
+      "sourceName": "Hanging Knee Raise"
+    },
+    {
+      "id": "nevfit-hanging-leg-raise",
+      "sourceNameAtAssignment": "Hanging Leg Raise",
+      "sourceName": "Hanging Leg Raise"
+    },
+    {
+      "id": "nevfit-hollow-body-hold",
+      "sourceNameAtAssignment": "Hollow Body Hold",
+      "sourceName": "Hollow Body Hold"
+    },
+    {
+      "id": "nevfit-plank",
+      "sourceNameAtAssignment": "Plank",
+      "sourceName": "Plank"
+    },
+    {
+      "id": "nevfit-reverse-crunch",
+      "sourceNameAtAssignment": "Reverse Crunch",
+      "sourceName": "Reverse Crunch"
+    },
+    {
+      "id": "nevfit-cable-woodchop",
+      "sourceNameAtAssignment": "Cable Woodchop",
+      "sourceName": "Cable Woodchop"
+    },
+    {
+      "id": "nevfit-kneeling-cable-crunch",
+      "sourceNameAtAssignment": "Kneeling Cable Crunch",
+      "sourceName": "Kneeling Cable Crunch"
+    },
+    {
+      "id": "nevfit-pallof-press",
+      "sourceNameAtAssignment": "Pallof Press",
+      "sourceName": "Pallof Press"
+    },
+    {
+      "id": "nevfit-standing-cable-crunch",
+      "sourceNameAtAssignment": "Standing Cable Crunch",
+      "sourceName": "Standing Cable Crunch"
+    },
+    {
+      "id": "nevfit-dumbbell-side-bend",
+      "sourceNameAtAssignment": "Dumbbell Side Bend",
+      "sourceName": "Dumbbell Side Bend"
+    },
+    {
+      "id": "nevfit-weighted-dumbbell-crunch",
+      "sourceNameAtAssignment": "Weighted Dumbbell Crunch",
+      "sourceName": "Weighted Dumbbell Crunch"
+    },
+    {
+      "id": "nevfit-abdominal-crunch-machine",
+      "sourceNameAtAssignment": "Abdominal Crunch Machine",
+      "sourceName": "Abdominal Crunch Machine"
+    },
+    {
+      "id": "nevfit-torso-rotation-machine",
+      "sourceNameAtAssignment": "Torso Rotation Machine",
+      "sourceName": "Torso Rotation Machine"
+    },
+    {
+      "id": "nevfit-russian-twist",
+      "sourceNameAtAssignment": "Russian Twist",
+      "sourceName": "Russian Twist"
+    },
+    {
+      "id": "nevfit-side-plank",
+      "sourceNameAtAssignment": "Side Plank",
+      "sourceName": "Side Plank"
+    },
+    {
+      "id": "nevfit-suitcase-carry",
+      "sourceNameAtAssignment": "Suitcase Carry",
+      "sourceName": "Suitcase Carry"
+    },
+    {
+      "id": "nevfit-cable-side-bend",
+      "sourceNameAtAssignment": "Cable Side Bend",
+      "sourceName": "Cable Side Bend"
+    },
+    {
+      "id": "nevfit-cable-woodchop-high-to-low",
+      "sourceNameAtAssignment": "Cable Woodchop (High-to-low)",
+      "sourceName": "Cable Woodchop (High-to-low)"
+    },
+    {
+      "id": "nevfit-cable-woodchop-low-to-high",
+      "sourceNameAtAssignment": "Cable Woodchop (Low-to-high)",
+      "sourceName": "Cable Woodchop (Low-to-high)"
+    },
+    {
+      "id": "nevfit-pallof-press-hold",
+      "sourceNameAtAssignment": "Pallof Press Hold",
+      "sourceName": "Pallof Press Hold"
+    },
+    {
+      "id": "nevfit-dumbbell-side-bend-oblique-emphasis",
+      "sourceNameAtAssignment": "Dumbbell Side Bend (Oblique Emphasis)",
+      "sourceName": "Dumbbell Side Bend (Oblique Emphasis)"
+    },
+    {
+      "id": "nevfit-single-arm-farmer-carry",
+      "sourceNameAtAssignment": "Single-arm Farmer Carry",
+      "sourceName": "Single-arm Farmer Carry"
+    },
+    {
+      "id": "nevfit-barbell-reverse-curl",
+      "sourceNameAtAssignment": "Barbell Reverse Curl",
+      "sourceName": "Barbell Reverse Curl"
+    },
+    {
+      "id": "nevfit-barbell-wrist-curl",
+      "sourceNameAtAssignment": "Barbell Wrist Curl",
+      "sourceName": "Barbell Wrist Curl"
+    },
+    {
+      "id": "nevfit-reverse-barbell-wrist-curl",
+      "sourceNameAtAssignment": "Reverse Barbell Wrist Curl",
+      "sourceName": "Reverse Barbell Wrist Curl"
+    },
+    {
+      "id": "nevfit-dead-hang",
+      "sourceNameAtAssignment": "Dead Hang",
+      "sourceName": "Dead Hang"
+    },
+    {
+      "id": "nevfit-towel-hang",
+      "sourceNameAtAssignment": "Towel Hang",
+      "sourceName": "Towel Hang"
+    },
+    {
+      "id": "nevfit-cable-reverse-curl",
+      "sourceNameAtAssignment": "Cable Reverse Curl",
+      "sourceName": "Cable Reverse Curl"
+    },
+    {
+      "id": "nevfit-cable-wrist-curl",
+      "sourceNameAtAssignment": "Cable Wrist Curl",
+      "sourceName": "Cable Wrist Curl"
+    },
+    {
+      "id": "nevfit-dumbbell-farmer-carry",
+      "sourceNameAtAssignment": "Dumbbell Farmer Carry",
+      "sourceName": "Dumbbell Farmer Carry"
+    },
+    {
+      "id": "nevfit-dumbbell-pronation-supination",
+      "sourceNameAtAssignment": "Dumbbell Pronation / Supination",
+      "sourceName": "Dumbbell Pronation / Supination"
+    },
+    {
+      "id": "nevfit-dumbbell-wrist-curl",
+      "sourceNameAtAssignment": "Dumbbell Wrist Curl",
+      "sourceName": "Dumbbell Wrist Curl"
+    },
+    {
+      "id": "nevfit-reverse-dumbbell-wrist-curl",
+      "sourceNameAtAssignment": "Reverse Dumbbell Wrist Curl",
+      "sourceName": "Reverse Dumbbell Wrist Curl"
+    },
+    {
+      "id": "nevfit-barbell-glute-bridge",
+      "sourceNameAtAssignment": "Barbell Glute Bridge",
+      "sourceName": "Barbell Glute Bridge"
+    },
+    {
+      "id": "nevfit-barbell-hip-thrust",
+      "sourceNameAtAssignment": "Barbell Hip Thrust",
+      "sourceName": "Barbell Hip Thrust"
+    },
+    {
+      "id": "nevfit-barbell-sumo-deadlift",
+      "sourceNameAtAssignment": "Barbell Sumo Deadlift",
+      "sourceName": "Barbell Sumo Deadlift"
+    },
+    {
+      "id": "nevfit-clamshell",
+      "sourceNameAtAssignment": "Clamshell",
+      "sourceName": "Clamshell"
+    },
+    {
+      "id": "nevfit-frog-pump",
+      "sourceNameAtAssignment": "Frog Pump",
+      "sourceName": "Frog Pump"
+    },
+    {
+      "id": "nevfit-side-lying-hip-abduction",
+      "sourceNameAtAssignment": "Side-lying Hip Abduction",
+      "sourceName": "Side-lying Hip Abduction"
+    },
+    {
+      "id": "nevfit-single-leg-glute-bridge",
+      "sourceNameAtAssignment": "Single-leg Glute Bridge",
+      "sourceName": "Single-leg Glute Bridge"
+    },
+    {
+      "id": "nevfit-cable-glute-kickback",
+      "sourceNameAtAssignment": "Cable Glute Kickback",
+      "sourceName": "Cable Glute Kickback"
+    },
+    {
+      "id": "nevfit-cable-hip-abduction",
+      "sourceNameAtAssignment": "Cable Hip Abduction",
+      "sourceName": "Cable Hip Abduction"
+    },
+    {
+      "id": "nevfit-cable-pull-through-glute-emphasis",
+      "sourceNameAtAssignment": "Cable Pull-through (Glute Emphasis)",
+      "sourceName": "Cable Pull-through (Glute Emphasis)"
+    },
+    {
+      "id": "nevfit-dumbbell-glute-bridge",
+      "sourceNameAtAssignment": "Dumbbell Glute Bridge",
+      "sourceName": "Dumbbell Glute Bridge"
+    },
+    {
+      "id": "nevfit-dumbbell-hip-thrust",
+      "sourceNameAtAssignment": "Dumbbell Hip Thrust",
+      "sourceName": "Dumbbell Hip Thrust"
+    },
+    {
+      "id": "nevfit-dumbbell-reverse-lunge-glute-emphasis",
+      "sourceNameAtAssignment": "Dumbbell Reverse Lunge (Glute Emphasis)",
+      "sourceName": "Dumbbell Reverse Lunge (Glute Emphasis)"
+    },
+    {
+      "id": "nevfit-dumbbell-step-up-glute-emphasis",
+      "sourceNameAtAssignment": "Dumbbell Step-up (Glute Emphasis)",
+      "sourceName": "Dumbbell Step-up (Glute Emphasis)"
+    },
+    {
+      "id": "nevfit-glute-drive-machine",
+      "sourceNameAtAssignment": "Glute Drive Machine",
+      "sourceName": "Glute Drive Machine"
+    },
+    {
+      "id": "nevfit-glute-kickback-machine",
+      "sourceNameAtAssignment": "Glute Kickback Machine",
+      "sourceName": "Glute Kickback Machine"
+    },
+    {
+      "id": "nevfit-hip-abduction-machine",
+      "sourceNameAtAssignment": "Hip Abduction Machine",
+      "sourceName": "Hip Abduction Machine"
+    },
+    {
+      "id": "nevfit-hip-thrust-machine",
+      "sourceNameAtAssignment": "Hip Thrust Machine",
+      "sourceName": "Hip Thrust Machine"
+    },
+    {
+      "id": "nevfit-smith-machine-hip-thrust",
+      "sourceNameAtAssignment": "Smith Machine Hip Thrust",
+      "sourceName": "Smith Machine Hip Thrust"
+    },
+    {
+      "id": "nevfit-barbell-good-morning-hamstring-emphasis",
+      "sourceNameAtAssignment": "Barbell Good Morning (Hamstring Emphasis)",
+      "sourceName": "Barbell Good Morning (Hamstring Emphasis)"
+    },
+    {
+      "id": "nevfit-barbell-romanian-deadlift",
+      "sourceNameAtAssignment": "Barbell Romanian Deadlift",
+      "sourceName": "Barbell Romanian Deadlift"
+    },
+    {
+      "id": "nevfit-stiff-leg-deadlift",
+      "sourceNameAtAssignment": "Stiff-leg Deadlift",
+      "sourceName": "Stiff-leg Deadlift"
+    },
+    {
+      "id": "nevfit-nordic-hamstring-curl",
+      "sourceNameAtAssignment": "Nordic Hamstring Curl",
+      "sourceName": "Nordic Hamstring Curl"
+    },
+    {
+      "id": "nevfit-sliding-leg-curl",
+      "sourceNameAtAssignment": "Sliding Leg Curl",
+      "sourceName": "Sliding Leg Curl"
+    },
+    {
+      "id": "nevfit-stability-ball-leg-curl",
+      "sourceNameAtAssignment": "Stability Ball Leg Curl",
+      "sourceName": "Stability Ball Leg Curl"
+    },
+    {
+      "id": "nevfit-cable-pull-through",
+      "sourceNameAtAssignment": "Cable Pull-through",
+      "sourceName": "Cable Pull-through"
+    },
+    {
+      "id": "nevfit-standing-cable-leg-curl",
+      "sourceNameAtAssignment": "Standing Cable Leg Curl",
+      "sourceName": "Standing Cable Leg Curl"
+    },
+    {
+      "id": "nevfit-dumbbell-romanian-deadlift",
+      "sourceNameAtAssignment": "Dumbbell Romanian Deadlift",
+      "sourceName": "Dumbbell Romanian Deadlift"
+    },
+    {
+      "id": "nevfit-single-leg-dumbbell-romanian-deadlift",
+      "sourceNameAtAssignment": "Single-leg Dumbbell Romanian Deadlift",
+      "sourceName": "Single-leg Dumbbell Romanian Deadlift"
+    },
+    {
+      "id": "nevfit-lying-leg-curl",
+      "sourceNameAtAssignment": "Lying Leg Curl",
+      "sourceName": "Lying Leg Curl"
+    },
+    {
+      "id": "nevfit-nordic-curl-machine",
+      "sourceNameAtAssignment": "Nordic Curl Machine",
+      "sourceName": "Nordic Curl Machine"
+    },
+    {
+      "id": "nevfit-seated-leg-curl",
+      "sourceNameAtAssignment": "Seated Leg Curl",
+      "sourceName": "Seated Leg Curl"
+    },
+    {
+      "id": "nevfit-standing-single-leg-curl",
+      "sourceNameAtAssignment": "Standing Single-leg Curl",
+      "sourceName": "Standing Single-leg Curl"
+    },
+    {
+      "id": "nevfit-barbell-back-squat",
+      "sourceNameAtAssignment": "Barbell Back Squat",
+      "sourceName": "Barbell Back Squat"
+    },
+    {
+      "id": "nevfit-front-squat",
+      "sourceNameAtAssignment": "Front Squat",
+      "sourceName": "Front Squat"
+    },
+    {
+      "id": "nevfit-zercher-squat",
+      "sourceNameAtAssignment": "Zercher Squat",
+      "sourceName": "Zercher Squat"
+    },
+    {
+      "id": "nevfit-bodyweight-split-squat",
+      "sourceNameAtAssignment": "Bodyweight Split Squat",
+      "sourceName": "Bodyweight Split Squat"
+    },
+    {
+      "id": "nevfit-bodyweight-squat",
+      "sourceNameAtAssignment": "Bodyweight Squat",
+      "sourceName": "Bodyweight Squat"
+    },
+    {
+      "id": "nevfit-reverse-nordic-curl",
+      "sourceNameAtAssignment": "Reverse Nordic Curl",
+      "sourceName": "Reverse Nordic Curl"
+    },
+    {
+      "id": "nevfit-step-up",
+      "sourceNameAtAssignment": "Step-up",
+      "sourceName": "Step-up"
+    },
+    {
+      "id": "nevfit-dumbbell-bulgarian-split-squat",
+      "sourceNameAtAssignment": "Dumbbell Bulgarian Split Squat",
+      "sourceName": "Dumbbell Bulgarian Split Squat"
+    },
+    {
+      "id": "nevfit-dumbbell-reverse-lunge",
+      "sourceNameAtAssignment": "Dumbbell Reverse Lunge",
+      "sourceName": "Dumbbell Reverse Lunge"
+    },
+    {
+      "id": "nevfit-dumbbell-step-up",
+      "sourceNameAtAssignment": "Dumbbell Step-up",
+      "sourceName": "Dumbbell Step-up"
+    },
+    {
+      "id": "nevfit-dumbbell-walking-lunge",
+      "sourceNameAtAssignment": "Dumbbell Walking Lunge",
+      "sourceName": "Dumbbell Walking Lunge"
+    },
+    {
+      "id": "nevfit-goblet-squat",
+      "sourceNameAtAssignment": "Goblet Squat",
+      "sourceName": "Goblet Squat"
+    },
+    {
+      "id": "nevfit-45-degree-leg-press",
+      "sourceNameAtAssignment": "45-degree Leg Press",
+      "sourceName": "45-degree Leg Press"
+    },
+    {
+      "id": "nevfit-belt-squat-machine",
+      "sourceNameAtAssignment": "Belt Squat Machine",
+      "sourceName": "Belt Squat Machine"
+    },
+    {
+      "id": "nevfit-hack-squat-machine",
+      "sourceNameAtAssignment": "Hack Squat Machine",
+      "sourceName": "Hack Squat Machine"
+    },
+    {
+      "id": "nevfit-horizontal-leg-press",
+      "sourceNameAtAssignment": "Horizontal Leg Press",
+      "sourceName": "Horizontal Leg Press"
+    },
+    {
+      "id": "nevfit-leg-extension-machine",
+      "sourceNameAtAssignment": "Leg Extension Machine",
+      "sourceName": "Leg Extension Machine"
+    },
+    {
+      "id": "nevfit-pendulum-squat-machine",
+      "sourceNameAtAssignment": "Pendulum Squat Machine",
+      "sourceName": "Pendulum Squat Machine"
+    },
+    {
+      "id": "nevfit-single-leg-leg-extension",
+      "sourceNameAtAssignment": "Single-leg Leg Extension",
+      "sourceName": "Single-leg Leg Extension"
+    },
+    {
+      "id": "nevfit-single-leg-leg-press",
+      "sourceNameAtAssignment": "Single-leg Leg Press",
+      "sourceName": "Single-leg Leg Press"
+    },
+    {
+      "id": "nevfit-smith-machine-squat",
+      "sourceNameAtAssignment": "Smith Machine Squat",
+      "sourceName": "Smith Machine Squat"
+    },
+    {
+      "id": "nevfit-barbell-front-raise",
+      "sourceNameAtAssignment": "Barbell Front Raise",
+      "sourceName": "Barbell Front Raise"
+    },
+    {
+      "id": "nevfit-seated-barbell-overhead-press",
+      "sourceNameAtAssignment": "Seated Barbell Overhead Press",
+      "sourceName": "Seated Barbell Overhead Press"
+    },
+    {
+      "id": "nevfit-standing-barbell-overhead-press",
+      "sourceNameAtAssignment": "Standing Barbell Overhead Press",
+      "sourceName": "Standing Barbell Overhead Press"
+    },
+    {
+      "id": "nevfit-handstand-push-up",
+      "sourceNameAtAssignment": "Handstand Push-up",
+      "sourceName": "Handstand Push-up"
+    },
+    {
+      "id": "nevfit-pike-push-up",
+      "sourceNameAtAssignment": "Pike Push-up",
+      "sourceName": "Pike Push-up"
+    },
+    {
+      "id": "nevfit-cable-front-raise",
+      "sourceNameAtAssignment": "Cable Front Raise",
+      "sourceName": "Cable Front Raise"
+    },
+    {
+      "id": "nevfit-single-arm-cable-shoulder-press",
+      "sourceNameAtAssignment": "Single-arm Cable Shoulder Press",
+      "sourceName": "Single-arm Cable Shoulder Press"
+    },
+    {
+      "id": "nevfit-arnold-press",
+      "sourceNameAtAssignment": "Arnold Press",
+      "sourceName": "Arnold Press"
+    },
+    {
+      "id": "nevfit-dumbbell-front-raise",
+      "sourceNameAtAssignment": "Dumbbell Front Raise",
+      "sourceName": "Dumbbell Front Raise"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-shoulder-press",
+      "sourceNameAtAssignment": "Seated Dumbbell Shoulder Press",
+      "sourceName": "Seated Dumbbell Shoulder Press"
+    },
+    {
+      "id": "nevfit-standing-dumbbell-shoulder-press",
+      "sourceNameAtAssignment": "Standing Dumbbell Shoulder Press",
+      "sourceName": "Standing Dumbbell Shoulder Press"
+    },
+    {
+      "id": "nevfit-seated-shoulder-press-machine",
+      "sourceNameAtAssignment": "Seated Shoulder Press Machine",
+      "sourceName": "Seated Shoulder Press Machine"
+    },
+    {
+      "id": "nevfit-smith-machine-shoulder-press",
+      "sourceNameAtAssignment": "Smith Machine Shoulder Press",
+      "sourceName": "Smith Machine Shoulder Press"
+    },
+    {
+      "id": "nevfit-cable-reverse-fly",
+      "sourceNameAtAssignment": "Cable Reverse Fly",
+      "sourceName": "Cable Reverse Fly"
+    },
+    {
+      "id": "nevfit-face-pull",
+      "sourceNameAtAssignment": "Face Pull",
+      "sourceName": "Face Pull"
+    },
+    {
+      "id": "nevfit-single-arm-cable-rear-delt-fly",
+      "sourceNameAtAssignment": "Single-arm Cable Rear Delt Fly",
+      "sourceName": "Single-arm Cable Rear Delt Fly"
+    },
+    {
+      "id": "nevfit-bent-over-dumbbell-reverse-fly",
+      "sourceNameAtAssignment": "Bent-over Dumbbell Reverse Fly",
+      "sourceName": "Bent-over Dumbbell Reverse Fly"
+    },
+    {
+      "id": "nevfit-chest-supported-rear-delt-raise",
+      "sourceNameAtAssignment": "Chest-supported Rear Delt Raise",
+      "sourceName": "Chest-supported Rear Delt Raise"
+    },
+    {
+      "id": "nevfit-incline-bench-rear-delt-fly",
+      "sourceNameAtAssignment": "Incline Bench Rear Delt Fly",
+      "sourceName": "Incline Bench Rear Delt Fly"
+    },
+    {
+      "id": "nevfit-rear-delt-row-machine",
+      "sourceNameAtAssignment": "Rear Delt Row Machine",
+      "sourceName": "Rear Delt Row Machine"
+    },
+    {
+      "id": "nevfit-reverse-pec-deck",
+      "sourceNameAtAssignment": "Reverse Pec Deck",
+      "sourceName": "Reverse Pec Deck"
+    },
+    {
+      "id": "nevfit-behind-the-back-cable-lateral-raise",
+      "sourceNameAtAssignment": "Behind-the-back Cable Lateral Raise",
+      "sourceName": "Behind-the-back Cable Lateral Raise"
+    },
+    {
+      "id": "nevfit-dual-cable-lateral-raise",
+      "sourceNameAtAssignment": "Dual Cable Lateral Raise",
+      "sourceName": "Dual Cable Lateral Raise"
+    },
+    {
+      "id": "nevfit-single-arm-cable-lateral-raise",
+      "sourceNameAtAssignment": "Single-arm Cable Lateral Raise",
+      "sourceName": "Single-arm Cable Lateral Raise"
+    },
+    {
+      "id": "nevfit-dumbbell-lateral-raise",
+      "sourceNameAtAssignment": "Dumbbell Lateral Raise",
+      "sourceName": "Dumbbell Lateral Raise"
+    },
+    {
+      "id": "nevfit-incline-side-lying-lateral-raise",
+      "sourceNameAtAssignment": "Incline Side-lying Lateral Raise",
+      "sourceName": "Incline Side-lying Lateral Raise"
+    },
+    {
+      "id": "nevfit-leaning-dumbbell-lateral-raise",
+      "sourceNameAtAssignment": "Leaning Dumbbell Lateral Raise",
+      "sourceName": "Leaning Dumbbell Lateral Raise"
+    },
+    {
+      "id": "nevfit-seated-dumbbell-lateral-raise",
+      "sourceNameAtAssignment": "Seated Dumbbell Lateral Raise",
+      "sourceName": "Seated Dumbbell Lateral Raise"
+    },
+    {
+      "id": "nevfit-lateral-raise-machine",
+      "sourceNameAtAssignment": "Lateral Raise Machine",
+      "sourceName": "Lateral Raise Machine"
+    },
+    {
+      "id": "nevfit-barbell-lying-triceps-extension",
+      "sourceNameAtAssignment": "Barbell Lying Triceps Extension",
+      "sourceName": "Barbell Lying Triceps Extension"
+    },
+    {
+      "id": "nevfit-close-grip-bench-press",
+      "sourceNameAtAssignment": "Close-grip Bench Press",
+      "sourceName": "Close-grip Bench Press"
+    },
+    {
+      "id": "nevfit-ez-bar-skull-crusher",
+      "sourceNameAtAssignment": "EZ-bar Skull Crusher",
+      "sourceName": "EZ-bar Skull Crusher"
+    },
+    {
+      "id": "nevfit-jm-press",
+      "sourceNameAtAssignment": "JM Press",
+      "sourceName": "JM Press"
+    },
+    {
+      "id": "nevfit-close-grip-push-up",
+      "sourceNameAtAssignment": "Close-grip Push-up",
+      "sourceName": "Close-grip Push-up"
+    },
+    {
+      "id": "nevfit-parallel-bar-dip",
+      "sourceNameAtAssignment": "Parallel Bar Dip",
+      "sourceName": "Parallel Bar Dip"
+    },
+    {
+      "id": "nevfit-cable-triceps-pushdown-straight-bar",
+      "sourceNameAtAssignment": "Cable Triceps Pushdown (Straight Bar)",
+      "sourceName": "Cable Triceps Pushdown (Straight Bar)"
+    },
+    {
+      "id": "nevfit-cross-body-cable-triceps-extension",
+      "sourceNameAtAssignment": "Cross-body Cable Triceps Extension",
+      "sourceName": "Cross-body Cable Triceps Extension"
+    },
+    {
+      "id": "nevfit-overhead-cable-triceps-extension",
+      "sourceNameAtAssignment": "Overhead Cable Triceps Extension",
+      "sourceName": "Overhead Cable Triceps Extension"
+    },
+    {
+      "id": "nevfit-reverse-grip-cable-pushdown",
+      "sourceNameAtAssignment": "Reverse-grip Cable Pushdown",
+      "sourceName": "Reverse-grip Cable Pushdown"
+    },
+    {
+      "id": "nevfit-rope-triceps-pushdown",
+      "sourceNameAtAssignment": "Rope Triceps Pushdown",
+      "sourceName": "Rope Triceps Pushdown"
+    },
+    {
+      "id": "nevfit-single-arm-cable-pushdown",
+      "sourceNameAtAssignment": "Single-arm Cable Pushdown",
+      "sourceName": "Single-arm Cable Pushdown"
+    },
+    {
+      "id": "nevfit-dumbbell-overhead-triceps-extension",
+      "sourceNameAtAssignment": "Dumbbell Overhead Triceps Extension",
+      "sourceName": "Dumbbell Overhead Triceps Extension"
+    },
+    {
+      "id": "nevfit-dumbbell-skull-crusher",
+      "sourceNameAtAssignment": "Dumbbell Skull Crusher",
+      "sourceName": "Dumbbell Skull Crusher"
+    },
+    {
+      "id": "nevfit-dumbbell-triceps-kickback",
+      "sourceNameAtAssignment": "Dumbbell Triceps Kickback",
+      "sourceName": "Dumbbell Triceps Kickback"
+    },
+    {
+      "id": "nevfit-single-arm-dumbbell-overhead-extension",
+      "sourceNameAtAssignment": "Single-arm Dumbbell Overhead Extension",
+      "sourceName": "Single-arm Dumbbell Overhead Extension"
+    },
+    {
+      "id": "nevfit-seated-dip-machine",
+      "sourceNameAtAssignment": "Seated Dip Machine",
+      "sourceName": "Seated Dip Machine"
+    },
+    {
+      "id": "nevfit-seated-triceps-extension-machine",
+      "sourceNameAtAssignment": "Seated Triceps Extension Machine",
+      "sourceName": "Seated Triceps Extension Machine"
+    }
+  ]
+}

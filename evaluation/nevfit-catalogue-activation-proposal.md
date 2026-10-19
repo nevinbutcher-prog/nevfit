@@ -1,0 +1,11 @@
+# Proposed checkpoint 051 — activate Nevfit catalogue with read-only legacy compatibility
+
+This is a proposal for a separate approval and review cycle. Checkpoint 050 does not perform these steps.
+
+1. Introduce a provider-neutral exercise resolver that returns Nevfit catalogue records by `nevfit-*` ID and retains the existing WGER resolver for every `wger-*` ID, including IDs absent from the 247 entries. Search can present the 247 Nevfit entries and label provisional metadata without silently replacing legacy selections.
+2. Allow new routine selections and generated proposals to use Nevfit IDs only after routine validation, duplicate checks, backup parsing, active-workout snapshots, exercise notes, swaps and supersets accept both namespaces. Preserve all existing WGER IDs in saved routines and active workouts. Never rewrite completed snapshots.
+3. Keep exact-ID previous performance as the default. A read-only historical view may expose explicitly linked old records for a Nevfit exercise only when the relationship has been separately reviewed as unambiguous. Otherwise show the old WGER history under its original ID/name without attributing it to the new exercise. `wger-364`/`wger-2626` must not be merged by name or preferred-reference status.
+4. Update Rob's browser and server authorisation together. The server must authorise Nevfit IDs from a versioned server-owned copy of the catalogue; an AI or browser-provided mapping cannot create an ID. Keep the prior WGER generation path until equivalent eligibility and proposal validation are demonstrated.
+5. Gate activation with tests for old and new routine rows, resuming active workouts, previous-performance separation, old completed snapshots, notes, swaps, supersets, backup export/import, unknown legacy WGER IDs, Rob authorisation, search fallback and rollback. Use a small set of actual user routine examples for manual verification after independent review.
+
+**Rollback:** keep the prior WGER search/generation path and deploy a catalogue feature switch. Turning it off restores WGER selection while dual-ID read support remains so any new Nevfit routine or active workout still opens. No rollback step rewrites Firestore data. Do not enable new-ID writes until that dual-read rollback has been proven in tests and a staged deployment.

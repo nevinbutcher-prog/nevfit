@@ -1,0 +1,426 @@
+{
+  "crosswalkVersion": 1,
+  "activationStatus": "offline_only",
+  "relationships": [
+    {
+      "nevfitId": "nevfit-assisted-pull-up",
+      "historicalWgerId": "wger-1929",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "unresolved_history_context",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 12,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Historical source specifies a resistance band; master says bodyweight. Assistance setup and secondaries need review."
+    },
+    {
+      "nevfitId": "nevfit-underhand-lat-pulldown",
+      "historicalWgerId": "wger-354",
+      "preferredWgerId": "wger-684",
+      "preferredWgerIdRaw": "wger-684",
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 21,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Historical WGER entry is a generic lat pulldown; underhand grip belongs to an unapproved preferred reference."
+    },
+    {
+      "nevfitId": "nevfit-cable-face-pull",
+      "historicalWgerId": "wger-222",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 41,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Facepull and cable equipment align; upper-back versus rear-delt emphasis and rotator-cuff involvement remain unsettled."
+    },
+    {
+      "nevfitId": "nevfit-dumbbell-shrug",
+      "historicalWgerId": "wger-572",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 46,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Dumbbell shrug identity and equipment align; WGER shoulders conflicts with the master's upper-back browse group."
+    },
+    {
+      "nevfitId": "nevfit-seated-row-machine",
+      "historicalWgerId": "wger-1117",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 50,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Historical entry is a seated cable row, while the master specifies an unspecified row machine."
+    },
+    {
+      "nevfitId": "nevfit-alternating-dumbbell-curl",
+      "historicalWgerId": "wger-1012",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "unresolved_history_context",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 62,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Alternating dumbbell curl, biceps and brachialis agree with snapshot; brachioradialis remains proposed only."
+    },
+    {
+      "nevfitId": "nevfit-seated-biceps-curl-machine",
+      "historicalWgerId": "wger-1109",
+      "preferredWgerId": "wger-1424",
+      "preferredWgerIdRaw": "wger-1424",
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 74,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Historical entry is Cable Concentration Curl, not a seated biceps curl machine; preferred ID is unapproved."
+    },
+    {
+      "nevfitId": "nevfit-standing-calf-raise-machine",
+      "historicalWgerId": "wger-1466",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 84,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Snapshot names a hack-squat-machine calf raise; master does not specify that machine style."
+    },
+    {
+      "nevfitId": "nevfit-high-to-low-cable-fly",
+      "historicalWgerId": "wger-237",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 93,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Cable fly identity and chest agree, but the high-to-low cable path and anterior-delt secondary are unverified."
+    },
+    {
+      "nevfitId": "nevfit-incline-chest-press-machine",
+      "historicalWgerId": "wger-129",
+      "preferredWgerId": "wger-2632",
+      "preferredWgerIdRaw": "wger-2632",
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 105,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Generic Chest Press snapshot does not establish incline angle or machine style; preferred ID is unapproved."
+    },
+    {
+      "nevfitId": "nevfit-pec-deck-fly",
+      "historicalWgerId": "wger-926",
+      "preferredWgerId": "wger-1904",
+      "preferredWgerIdRaw": "wger-1904",
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 106,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Machine chest fly snapshot does not establish the pec-deck variant; preferred ID is unapproved."
+    },
+    {
+      "nevfitId": "nevfit-seated-chest-press-machine",
+      "historicalWgerId": "wger-2627",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 108,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Machine chest press snapshot does not establish seated setup or secondary involvement."
+    },
+    {
+      "nevfitId": "nevfit-abdominal-crunch-machine",
+      "historicalWgerId": "wger-172",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "unresolved_history_context",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 126,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Snapshot names machine crunches and abs; no secondary claim is activated."
+    },
+    {
+      "nevfitId": "nevfit-hip-abduction-machine",
+      "historicalWgerId": "wger-1748",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "unresolved_history_context",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 164,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Machine hip abduction and broad glute classification align; glute subdivisions remain proposed."
+    },
+    {
+      "nevfitId": "nevfit-dumbbell-romanian-deadlift",
+      "historicalWgerId": "wger-1652",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 175,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Exact dumbbell Romanian deadlift, dumbbell equipment and hamstrings agree; glutes/erectors not activated as secondary."
+    },
+    {
+      "nevfitId": "nevfit-seated-leg-curl",
+      "historicalWgerId": "wger-364",
+      "preferredWgerId": "wger-2626",
+      "preferredWgerIdRaw": "wger-2626",
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 179,
+        "reviewVersion": 1
+      },
+      "reviewReason": "User's historical identity names Seated Leg Curl; WGER only confirms generic leg curl and hamstrings. Seated machine setup and calf secondary need review. Preferred wger-2626 is not substituted."
+    },
+    {
+      "nevfitId": "nevfit-dumbbell-reverse-lunge",
+      "historicalWgerId": "wger-1651",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 189,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Rear/reverse dumbbell lunge identity and equipment align; WGER glutes conflicts with master's quadriceps primary."
+    },
+    {
+      "nevfitId": "nevfit-horizontal-leg-press",
+      "historicalWgerId": "wger-371",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 196,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Generic Leg Press snapshot does not establish horizontal machine; WGER hamstrings primary conflicts with master's quadriceps."
+    },
+    {
+      "nevfitId": "nevfit-leg-extension-machine",
+      "historicalWgerId": "wger-369",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "unresolved_history_context",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 197,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Leg extension and quadriceps align; machine category is supported by the master and the ACE seated leg-extension reference."
+    },
+    {
+      "nevfitId": "nevfit-arnold-press",
+      "historicalWgerId": "wger-20",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 209,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Arnold shoulder press, dumbbell equipment, shoulders and triceps agree; anterior/lateral subdivision remains proposed."
+    },
+    {
+      "nevfitId": "nevfit-seated-shoulder-press-machine",
+      "historicalWgerId": "wger-543",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 213,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Machine shoulder press snapshot does not establish seated setup; deltoid subdivision needs review."
+    },
+    {
+      "nevfitId": "nevfit-rear-delt-row-machine",
+      "historicalWgerId": "wger-1381",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 221,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Historical WGER entry is generic Upper Back, insufficient for a rear-delt row machine interpretation."
+    },
+    {
+      "nevfitId": "nevfit-dual-cable-lateral-raise",
+      "historicalWgerId": "wger-1378",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 224,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Cable lateral raise agrees broadly, but the dual-cable variant and upper-trap secondary are unverified."
+    },
+    {
+      "nevfitId": "nevfit-dumbbell-lateral-raise",
+      "historicalWgerId": "wger-348",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 226,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Lateral raise, dumbbell equipment and broad shoulders agree; exact delt head and upper-trap secondary remain proposed."
+    },
+    {
+      "nevfitId": "nevfit-lateral-raise-machine",
+      "historicalWgerId": "wger-1654",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 230,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Snapshot equipment says Gym mat despite Machine Lateral Raise name; equipment conflict requires review."
+    },
+    {
+      "nevfitId": "nevfit-cable-triceps-pushdown-straight-bar",
+      "historicalWgerId": "wger-805",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "low",
+      "ambiguityStatus": "unresolved_history_context",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 237,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Cable triceps pushdown agrees broadly, but straight-bar attachment is not established by WGER."
+    },
+    {
+      "nevfitId": "nevfit-overhead-cable-triceps-extension",
+      "historicalWgerId": "wger-1513",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": null,
+      "mappingConfidence": "medium_for_listed_fields",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 239,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Overhead cable triceps extension, cable equipment and triceps agree."
+    },
+    {
+      "nevfitId": "nevfit-seated-dip-machine",
+      "historicalWgerId": "wger-1372",
+      "preferredWgerId": null,
+      "preferredWgerIdRaw": "wger-2634?",
+      "mappingConfidence": "low",
+      "ambiguityStatus": "requires_variant_review",
+      "automaticHistoryAttributionAllowed": false,
+      "provenance": {
+        "source": "user_supplied_historical_mapping",
+        "masterRow": 247,
+        "reviewVersion": 1
+      },
+      "reviewReason": "Historical entry is generic triceps dips, not a seated dip machine; preferred ID text is unconfirmed."
+    }
+  ]
+}

@@ -6,7 +6,23 @@ const occurrenceKey = ({ kind, docId, path, historicalWgerId, recordedName }) =>
   JSON.stringify([kind, docId, path, historicalWgerId, recordedName]);
 const sourceIdentity = ({ kind, docId, path, historicalWgerId, recordedName, proposedNevfitId }) =>
   JSON.stringify([kind, docId, path, historicalWgerId, recordedName, proposedNevfitId]);
-const sameSources = (a, b) => a.length === b.length && a.every((item, index) => sourceIdentity(item) === sourceIdentity(b[index]));
+const sameSources = (a, b) => {
+  if (a.length !== b.length) return false;
+  const identities = new Map();
+  for (const item of a) {
+    const key = sourceIdentity(item);
+    identities.set(key, (identities.get(key) ?? 0) + 1);
+  }
+  // A document path identifies one occurrence. Repeated identical identities
+  // are invalid even if both inputs happen to contain the same duplicate.
+  if ([...identities.values()].some((count) => count !== 1)) return false;
+  for (const item of b) {
+    const key = sourceIdentity(item);
+    if (identities.get(key) !== 1) return false;
+    identities.delete(key);
+  }
+  return identities.size === 0;
+};
 
 // Pure, read-only preparation. A fresh downloaded preflight and full backup
 // must describe the same account snapshot before exact decisions are emitted.

@@ -36,6 +36,16 @@ test("current backup and preflight prepare exact confirmed decisions while B sta
   assert.deepEqual(rollbackExerciseMigration(migrated, rollback), data);
 });
 
+test("matching occurrences survive different completed-workout enumeration order", () => {
+  const { backup, preflight } = fixture();
+  const reordered = structuredClone(backup);
+  reordered.completedWorkouts.reverse();
+  const prepared = prepareExactExerciseMigration({ preflight, backup: reordered, approvalManifest: manifest(["wger-20"]) });
+  assert.equal(prepared.plan.confirmed.length, 2);
+  assert.deepEqual(new Set(prepared.decisions.map((item) => item.docId)), new Set(["one", "two"]));
+  assert.equal(prepared.plan.counts.completedWorkouts, 3);
+});
+
 test("explicit B approval creates exact decisions and an occurrence exclusion remains excluded", () => {
   const { backup, preflight } = fixture();
   const rejected = { kind: "completedWorkout", docId: "one", path: "exercises.0.exerciseId", historicalWgerId: "wger-1444", recordedName: "Unknown exercise", reason: "Synthetic occurrence exception." };
@@ -59,6 +69,23 @@ test("preparation rejects changed backup, changed occurrence and fabricated excl
   assert.throws(() => prepareExactExerciseMigration({ preflight, backup: { ...backup, version: 1 }, approvalManifest: manifest() }), /version 2 full backup/);
   const unobserved = { kind: "completedWorkout", docId: "one", path: "exercises.0.exerciseId", historicalWgerId: "wger-1012", nevfitId: "nevfit-alternating-dumbbell-curl", recordedName: "Alternating curl", confirmed: true, reason: "Fabricated approval." };
   assert.throws(() => createExerciseMigrationPlan({ ...fixture().data, decisions: [unobserved] }), /reviewed identity/);
+});
+
+test("missing, extra and duplicated occurrences fail even when aggregate counts appear valid", () => {
+  const { data, backup, preflight } = fixture();
+  const missing = structuredClone(preflight);
+  missing.occurrences.pop();
+  assert.throws(() => prepareExactExerciseMigration({ preflight: missing, backup, approvalManifest: manifest() }), /identities differ/);
+  const extra = structuredClone(preflight);
+  extra.occurrences.push({ ...extra.occurrences[0], docId: "extra" });
+  assert.throws(() => prepareExactExerciseMigration({ preflight: extra, backup, approvalManifest: manifest() }), /identities differ/);
+  const repeated = structuredClone(preflight);
+  repeated.occurrences[1] = structuredClone(repeated.occurrences[0]);
+  assert.throws(() => prepareExactExerciseMigration({ preflight: repeated, backup, approvalManifest: manifest() }), /identities differ/);
+  const duplicatedBackup = structuredClone(backup);
+  duplicatedBackup.completedWorkouts.push(structuredClone(duplicatedBackup.completedWorkouts[0]));
+  const duplicatedPreflight = createExerciseMigrationPlan({ ...data, completedWorkouts: duplicatedBackup.completedWorkouts });
+  assert.throws(() => prepareExactExerciseMigration({ preflight: duplicatedPreflight, backup: duplicatedBackup, approvalManifest: manifest() }), /identities differ/);
 });
 
 test("all six no-match legacy identities remain readable and outside prepared writes", () => {

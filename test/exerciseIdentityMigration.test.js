@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createExerciseMigrationPlan, applyExerciseMigrationPlan, rollbackExerciseMigration, validateHistoricalMappings } from "../src/services/exerciseIdentityMigration.js";
-import historicalCrosswalk from "../evaluation/nevfitHistoricalCrosswalk.v2.json" with { type: "json" };
+import historicalCrosswalk from "../evaluation/nevfitHistoricalCrosswalk.v3.json" with { type: "json" };
 import { getPreviousExercisePerformance } from "../src/services/workoutSnapshots.js";
 
 const fixture = () => ({
@@ -15,11 +15,17 @@ const location = { completedWorkout: ["w1", "exercises.0.exerciseId"], program: 
 const decision = (kind, recordedName) => ({ kind, historicalWgerId: "wger-364", nevfitId: "nevfit-seated-leg-curl", recordedName, docId: location[kind][0], path: location[kind][1], confirmed: true, reason: "Synthetic fixture movement verified." });
 const reviewed = (item) => ({ mappingConfidence: { A: "user_confirmed", B: "strong_proposed" }[item.reviewClass], historicalRecordedNames: ["Seated Leg Curl"], historicalNameMissingReferences: 0, evidence: { wgerSnapshotName: "Leg Curl", wgerSnapshotEquipment: [] }, provenance: { source: "synthetic_fixture" }, reviewReason: "Synthetic reviewed movement.", ...item });
 
-test("expanded crosswalk has complete reviewed identities and one scoped user confirmation", () => {
+test("final crosswalk keeps user confirmations, pending proposals and retained identities separate", () => {
   const mappings = validateHistoricalMappings(historicalCrosswalk);
   assert.equal(mappings.size, 69);
   assert.equal(historicalCrosswalk.observedHistoricalIds, 68);
-  assert.equal(historicalCrosswalk.relationships.filter((item) => item.reviewClass === "A").length, 1);
+  assert.equal(historicalCrosswalk.relationships.filter((item) => item.reviewClass === "A").length, 29);
+  assert.equal(historicalCrosswalk.relationships.filter((item) => item.reviewClass === "B").length, 33);
+  assert.equal(historicalCrosswalk.relationships.filter((item) => item.reviewClass === "D").length, 6);
+  assert.equal(mappings.get("wger-1444").userConfirmation.confirmed, true);
+  assert.equal(mappings.get("wger-129").nevfitId, "nevfit-incline-chest-press-machine");
+  assert.equal(mappings.get("wger-237").nevfitId, "nevfit-high-to-low-cable-fly");
+  assert.equal(mappings.get("wger-20").approvalStatus, "pending_collective_user_approval");
   assert.deepEqual(mappings.get("wger-364").userConfirmation.scope, ["completedWorkout", "program"]);
   assert.equal(mappings.get("wger-1012").provenance.source, "original_crosswalk_only");
   assert.equal(mappings.has("wger-2626"), false);

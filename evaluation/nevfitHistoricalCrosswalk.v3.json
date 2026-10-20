@@ -1,0 +1,2366 @@
+{
+  "crosswalkVersion": 3,
+  "activationStatus": "review_only",
+  "observedHistoricalIds": 68,
+  "relationships": [
+    {
+      "historicalWgerId": "wger-20",
+      "nevfitId": "nevfit-arnold-press",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Arnold Shoulder Press"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Arnold Shoulder Press",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": "nevfit-arnold-press"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Dumbbell Arnold press is identified by the recorded name and WGER equipment.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 2,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-48",
+      "nevfitId": "nevfit-reverse-barbell-wrist-curl",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Barbell Reverse Wrist Curl",
+        "wgerSnapshotEquipment": [
+          "Barbell",
+          "Bench"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed wger-48 represents nevfit-reverse-barbell-wrist-curl.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Routine has no recorded name; confirm the WGER reverse barbell wrist curl was intended.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 0,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-48 represents nevfit-reverse-barbell-wrist-curl. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-75",
+      "nevfitId": "nevfit-flat-dumbbell-bench-press",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Benchpress Dumbbells"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Benchpress Dumbbells",
+        "wgerSnapshotEquipment": [
+          "Bench",
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed wger-75 represents nevfit-flat-dumbbell-bench-press.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Dumbbell bench press is recorded without an angle; confirm flat versus incline or decline.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 8,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-75 represents nevfit-flat-dumbbell-bench-press. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-91",
+      "nevfitId": "nevfit-standing-barbell-curl",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Biceps Curls With Barbell"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Biceps Curls With Barbell",
+        "wgerSnapshotEquipment": [
+          "Barbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded barbell biceps curl and WGER barbell equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-129",
+      "nevfitId": "nevfit-incline-chest-press-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Incline Chest Press Machine",
+        "Chest Press"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Chest Press",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-incline-chest-press-machine"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed both Incline Chest Press Machine and generic Chest Press names were incline machine presses.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "One WGER ID has incline machine and generic chest press labels; split by actual movement.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 8,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed both Incline Chest Press Machine and generic Chest Press names were incline machine presses. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-172",
+      "nevfitId": "nevfit-abdominal-crunch-machine",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Crunches on Machine"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Crunches on Machine",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-abdominal-crunch-machine"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Machine crunch movement matches the recorded name.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 8,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-184",
+      "nevfitId": "nevfit-conventional-barbell-deadlift",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Deadlifts"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Deadlifts",
+        "wgerSnapshotEquipment": [
+          "Barbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed wger-184 represents nevfit-conventional-barbell-deadlift.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Barbell deadlift is clear, but conventional versus another stance is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-184 represents nevfit-conventional-barbell-deadlift. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-202",
+      "nevfitId": "nevfit-concentration-curl",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Dumbbell Concentration Curl"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Dumbbell Concentration Curl",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Dumbbell concentration curl movement and equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 5,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-222",
+      "nevfitId": "nevfit-cable-face-pull",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Facepull"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Facepull",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": "nevfit-cable-face-pull"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Recorded face pull and WGER cable equipment align; anatomical category differences do not change the movement.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 15,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-237",
+      "nevfitId": "nevfit-high-to-low-cable-fly",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Fly With Cable"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Fly With Cable",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": "nevfit-high-to-low-cable-fly"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-237 represents nevfit-high-to-low-cable-fly.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Cable fly path and angle are unrecorded; Nevfit has several variants.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-237 represents nevfit-high-to-low-cable-fly. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-238",
+      "nevfitId": "nevfit-dumbbell-chest-fly",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Fly With Dumbbells"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Fly With Dumbbells",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed wger-238 represents nevfit-dumbbell-chest-fly.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Dumbbell fly angle is unrecorded; confirm standard flat fly.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 5,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-238 represents nevfit-dumbbell-chest-fly. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-265",
+      "nevfitId": null,
+      "reviewClass": "D",
+      "mappingConfidence": "no_safe_match",
+      "historicalRecordedNames": [],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Glute Bridge",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Generic glute bridge lacks a matching unweighted Nevfit identity; weighted and single-leg variants differ.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 0,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "retain_legacy_identity"
+    },
+    {
+      "historicalWgerId": "wger-272",
+      "nevfitId": "nevfit-hammer-curl",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Hammer Curls"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Hammer Curls",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "WGER specifies dumbbells and the recorded hammer curl has no conflicting variant.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-348",
+      "nevfitId": "nevfit-dumbbell-lateral-raise",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Lateral Raises"
+      ],
+      "historicalNameMissingReferences": 2,
+      "evidence": {
+        "wgerSnapshotName": "Lateral Raises",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": "nevfit-dumbbell-lateral-raise"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "WGER specifies dumbbells and the recorded lateral raise has no conflicting variant.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 14,
+        "routineReferences": 2,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-354",
+      "nevfitId": "nevfit-underhand-lat-pulldown",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Lat Pull Down"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Lat Pull Down",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-underhand-lat-pulldown"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-354 represents nevfit-underhand-lat-pulldown.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Generic lat pulldown does not establish the underhand grip; do not borrow the preferred reference.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 7,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-354 represents nevfit-underhand-lat-pulldown. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-364",
+      "nevfitId": "nevfit-seated-leg-curl",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Leg Curl"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Leg Curl",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-seated-leg-curl"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed all historical workouts were seated leg curls; saved routine reference uses the same source identity.",
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed all wger-364 workouts used seated leg curl; same identity is saved in a routine. Identity decision only; no live migration authorisation."
+      },
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 10,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "identity_confirmed_execution_pending"
+    },
+    {
+      "historicalWgerId": "wger-369",
+      "nevfitId": "nevfit-leg-extension-machine",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Leg Extension"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Leg Extension",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-leg-extension-machine"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Recorded leg extension and WGER identity match the machine movement.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 10,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-371",
+      "nevfitId": "nevfit-horizontal-leg-press",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Leg Press"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Leg Press",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-horizontal-leg-press"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-371 represents nevfit-horizontal-leg-press.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Generic leg press does not distinguish horizontal, 45-degree or another machine.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 10,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-371 represents nevfit-horizontal-leg-press. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-465",
+      "nevfitId": "nevfit-preacher-ez-bar-curl",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Preacher Curls"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Preacher Curls",
+        "wgerSnapshotEquipment": [
+          "SZ-Bar"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "WGER SZ-bar equipment and recorded preacher curl match the EZ-bar variant.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 3,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-537",
+      "nevfitId": "nevfit-incline-dumbbell-bench-press",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Incline Bench Press - Dumbbell"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Incline Bench Press - Dumbbell",
+        "wgerSnapshotEquipment": [
+          "Dumbbell",
+          "Incline bench"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Incline bench and dumbbell equipment are explicit.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 3,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-538",
+      "nevfitId": "nevfit-incline-barbell-bench-press",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Incline Bench Press - Barbell"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Incline Bench Press - Barbell",
+        "wgerSnapshotEquipment": [
+          "Barbell",
+          "Incline bench"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Incline bench and barbell equipment are explicit.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-543",
+      "nevfitId": "nevfit-seated-shoulder-press-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Shoulder Press, on Machine"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Shoulder Press, on Machine",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-seated-shoulder-press-machine"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-543 represents nevfit-seated-shoulder-press-machine.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Machine press is clear but seated posture is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 9,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-543 represents nevfit-seated-shoulder-press-machine. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-567",
+      "nevfitId": "nevfit-seated-dumbbell-shoulder-press",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Shoulder Press, Dumbbells"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Shoulder Press, Dumbbells",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed wger-567 represents nevfit-seated-dumbbell-shoulder-press.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Dumbbell press is clear but seated versus standing is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 4,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-567 represents nevfit-seated-dumbbell-shoulder-press. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-572",
+      "nevfitId": "nevfit-dumbbell-shrug",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Shrugs, Dumbbells"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Shrugs, Dumbbells",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": "nevfit-dumbbell-shrug"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Recorded shrug and WGER dumbbell equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-584",
+      "nevfitId": "nevfit-preacher-dumbbell-curl",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Single-arm Preacher Curl"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Single-arm Preacher Curl",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Single-arm preacher curl and WGER dumbbell equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-627",
+      "nevfitId": "nevfit-stiff-leg-deadlift",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Stiff-legged Deadlifts"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Stiff-legged Deadlifts",
+        "wgerSnapshotEquipment": [
+          "Barbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Stiff-legged deadlift is explicitly recorded with barbell equipment.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 5,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-684",
+      "nevfitId": "nevfit-underhand-lat-pulldown",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Underhand Lat Pull Down"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Underhand Lat Pull Down",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded underhand grip distinguishes this from generic wger-354.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-687",
+      "nevfitId": "nevfit-standing-barbell-overhead-press",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Overhead Press"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Overhead Press",
+        "wgerSnapshotEquipment": [
+          "Barbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed standing barbell overhead press, shared with wger-1893.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "WGER identifies barbell but seated versus standing is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 5,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed standing barbell overhead press, shared with wger-1893. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-702",
+      "nevfitId": "nevfit-single-leg-calf-raise",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Calf raises, one legged"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Calf raises, one legged",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Single-leg calf raise and unweighted WGER setup align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 7,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-805",
+      "nevfitId": "nevfit-cable-triceps-pushdown-straight-bar",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Tricep Pushdown on Cable"
+      ],
+      "historicalNameMissingReferences": 2,
+      "evidence": {
+        "wgerSnapshotName": "Tricep Pushdown on Cable",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": "nevfit-cable-triceps-pushdown-straight-bar"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed straight-bar cable pushdown, shared with wger-1185.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Cable pushdown attachment is unrecorded; straight bar and rope must stay separate.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 8,
+        "routineReferences": 2,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed straight-bar cable pushdown, shared with wger-1185. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-926",
+      "nevfitId": "nevfit-pec-deck-fly",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Machine chest fly"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Machine chest fly",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-pec-deck-fly"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Machine chest fly matches pec deck movement.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 10,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1012",
+      "nevfitId": "nevfit-alternating-dumbbell-curl",
+      "reviewClass": "C",
+      "mappingConfidence": "requires_clarification",
+      "historicalRecordedNames": [],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": null,
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-alternating-dumbbell-curl"
+      },
+      "provenance": {
+        "source": "original_crosswalk_only",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Foundation crosswalk identity is not observed in this account's preflight; retain without migration approval.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 0,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "unobserved_unapproved"
+    },
+    {
+      "historicalWgerId": "wger-1109",
+      "nevfitId": "nevfit-seated-biceps-curl-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Concentration Curl Machine"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Cable Concentration Curl",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": "nevfit-seated-biceps-curl-machine"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed seated biceps curl machine, shared with wger-1424 despite conflicting WGER snapshot metadata.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Recorded concentration curl machine conflicts with WGER cable concentration curl; verify equipment and movement.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 8,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed seated biceps curl machine, shared with wger-1424 despite conflicting WGER snapshot metadata. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1117",
+      "nevfitId": "nevfit-close-grip-seated-cable-row",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Seated Cable Row"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Seated Cable Row",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": "nevfit-seated-row-machine"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-1117 represents nevfit-close-grip-seated-cable-row.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Recorded seated cable row is not the old proposed seated row machine; grip is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-1117 represents nevfit-close-grip-seated-cable-row. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1185",
+      "nevfitId": "nevfit-cable-triceps-pushdown-straight-bar",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Triceps Pushdown"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Triceps Pushdown",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed straight-bar cable pushdown, shared with wger-805.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Cable pushdown attachment is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed straight-bar cable pushdown, shared with wger-805. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1277",
+      "nevfitId": "nevfit-incline-dumbbell-bench-press",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Incline Dumbbell Press"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": null,
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded incline dumbbell press is explicit despite missing WGER snapshot entry.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1283",
+      "nevfitId": "nevfit-incline-bench-dumbbell-row",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Incline Chest-Supported Dumbbell Row"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Incline Chest-Supported Dumbbell Row",
+        "wgerSnapshotEquipment": [
+          "Bench",
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded incline chest-supported dumbbell row aligns with incline bench row.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1370",
+      "nevfitId": "nevfit-dumbbell-romanian-deadlift",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Dumbbell Deadlift"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Dumbbell Deadlift",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed wger-1370 represents nevfit-dumbbell-romanian-deadlift.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Dumbbell deadlift is explicit but Romanian versus conventional hinge range is not.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 2,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-1370 represents nevfit-dumbbell-romanian-deadlift. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1372",
+      "nevfitId": "nevfit-seated-dip-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Triceps Dips"
+      ],
+      "historicalNameMissingReferences": 2,
+      "evidence": {
+        "wgerSnapshotName": "Triceps Dips",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-seated-dip-machine"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-1372 represents nevfit-seated-dip-machine.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Triceps dips do not establish use of a seated dip machine rather than parallel bars.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 10,
+        "routineReferences": 2,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-1372 represents nevfit-seated-dip-machine. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1378",
+      "nevfitId": "nevfit-dual-cable-lateral-raise",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Cable Lateral Raises"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Cable Lateral Raises",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": "nevfit-dual-cable-lateral-raise"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-1378 represents nevfit-dual-cable-lateral-raise.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Cable lateral raise is clear, but single-arm versus dual cable is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 7,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-1378 represents nevfit-dual-cable-lateral-raise. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1381",
+      "nevfitId": "nevfit-rear-delt-row-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Upper Back"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Upper Back",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-rear-delt-row-machine"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-1381 represents nevfit-rear-delt-row-machine.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Upper Back is too broad to establish rear-delt row machine.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 3,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-1381 represents nevfit-rear-delt-row-machine. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1424",
+      "nevfitId": "nevfit-seated-biceps-curl-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Biceps Curl Machine"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Biceps Curl Machine",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed seated biceps curl machine, shared with wger-1109.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Generic biceps curl machine does not establish seated machine configuration.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed seated biceps curl machine, shared with wger-1109. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1444",
+      "nevfitId": "nevfit-incline-dumbbell-bench-press",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Unknown exercise",
+        "Incline Chest Press DB"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": null,
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed all six workouts were incline dumbbell bench presses, including four saved as Unknown exercise; preserve those names.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Two records identify incline dumbbell press; four say Unknown exercise and must be excluded pending clarification.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed all six workouts were incline dumbbell bench presses, including four saved as Unknown exercise; preserve those names. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1466",
+      "nevfitId": null,
+      "reviewClass": "D",
+      "mappingConfidence": "no_safe_match",
+      "historicalRecordedNames": [
+        "Calf Raise using Hack Squat Machine"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Calf Raise using Hack Squat Machine",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-standing-calf-raise-machine"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Hack-squat-machine calf raise has no exact Nevfit identity; standing calf machine is different equipment.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 4,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "retain_legacy_identity"
+    },
+    {
+      "historicalWgerId": "wger-1470",
+      "nevfitId": "nevfit-single-arm-cable-lat-pulldown",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "1-Arm Half-Kneeling Lat Pulldown"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "1-Arm Half-Kneeling Lat Pulldown",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "One-arm cable lat pulldown is explicit; half-kneeling setup can remain in the historical name.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 3,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1486",
+      "nevfitId": "nevfit-cable-high-row",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Alternating High Cable Row"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Alternating High Cable Row",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed alternating high cable row should share cable high row progression.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Alternating high cable row may differ from the standard bilateral high row.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 3,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed alternating high cable row should share cable high row progression. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1513",
+      "nevfitId": "nevfit-overhead-cable-triceps-extension",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Overhead Cable Tricep Extension"
+      ],
+      "historicalNameMissingReferences": 2,
+      "evidence": {
+        "wgerSnapshotName": "Overhead Cable Tricep Extension",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": "nevfit-overhead-cable-triceps-extension"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Overhead cable triceps extension movement and equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 13,
+        "routineReferences": 2,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1519",
+      "nevfitId": null,
+      "reviewClass": "D",
+      "mappingConfidence": "no_safe_match",
+      "historicalRecordedNames": [
+        "Overhead Triceps Extension"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Overhead Triceps Extension",
+        "wgerSnapshotEquipment": [
+          "SZ-Bar"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Overhead EZ-bar triceps extension lacks a corresponding Nevfit identity; cable and dumbbell versions differ.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "retain_legacy_identity"
+    },
+    {
+      "historicalWgerId": "wger-1530",
+      "nevfitId": null,
+      "reviewClass": "D",
+      "mappingConfidence": "no_safe_match",
+      "historicalRecordedNames": [
+        "Lying Dumbbell Curls"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Lying Dumbbell Curls",
+        "wgerSnapshotEquipment": [
+          "Bench",
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Lying dumbbell curl has no corresponding Nevfit identity; incline curl changes the movement setup.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 7,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "retain_legacy_identity"
+    },
+    {
+      "historicalWgerId": "wger-1551",
+      "nevfitId": "nevfit-push-up",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Push-Up"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Push-Up",
+        "wgerSnapshotEquipment": [
+          "none (bodyweight exercise)"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded and WGER bodyweight push-up align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 3,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1567",
+      "nevfitId": "nevfit-hammer-curl",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Alternating dumbbell hammer curl"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Alternating dumbbell hammer curl",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed alternating hammer curl should share hammer curl progression.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Alternating dumbbell hammer curl lacks an explicit alternating Nevfit variant; confirm shared progression.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed alternating hammer curl should share hammer curl progression. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1651",
+      "nevfitId": "nevfit-dumbbell-reverse-lunge",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Dumbbell Rear Lunge"
+      ],
+      "historicalNameMissingReferences": 2,
+      "evidence": {
+        "wgerSnapshotName": "Dumbbell Rear Lunge",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": "nevfit-dumbbell-reverse-lunge"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Rear lunge and reverse lunge name the same dumbbell step direction.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 4,
+        "routineReferences": 2,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1652",
+      "nevfitId": "nevfit-dumbbell-romanian-deadlift",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Dumbbell Romanian Deadlift"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Dumbbell Romanian Deadlift",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": "nevfit-dumbbell-romanian-deadlift"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Recorded Romanian deadlift and dumbbell equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1654",
+      "nevfitId": "nevfit-lateral-raise-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Machine Lateral Raise"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Machine Lateral Raise",
+        "wgerSnapshotEquipment": [
+          "Gym mat"
+        ],
+        "priorCrosswalkTarget": "nevfit-lateral-raise-machine"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed wger-1654 represents nevfit-lateral-raise-machine.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Recorded machine lateral raise conflicts with WGER gym-mat equipment metadata.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 3,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-1654 represents nevfit-lateral-raise-machine. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1694",
+      "nevfitId": "nevfit-seated-chest-press-machine",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Flat Machine Press"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Flat Machine Press",
+        "wgerSnapshotEquipment": [
+          "Bench"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Flat machine chest press aligns with the seated chest press machine; verify machine style before approval.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1726",
+      "nevfitId": "nevfit-straight-arm-cable-pulldown",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Straight-Arm Pulldown"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Straight-Arm Pulldown",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Straight-arm pulldown and WGER cable equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1748",
+      "nevfitId": "nevfit-hip-abduction-machine",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Machine Hip Abduction"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Machine Hip Abduction",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-hip-abduction-machine"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Recorded machine hip abduction aligns with the general machine identity.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 4,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1772",
+      "nevfitId": "nevfit-reverse-crunch",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Reverse crunch"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Reverse crunch",
+        "wgerSnapshotEquipment": [
+          "none (bodyweight exercise)"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded and WGER bodyweight reverse crunch align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 8,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1801",
+      "nevfitId": "nevfit-barbell-back-squat",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Barbell Full Squat"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Barbell Full Squat",
+        "wgerSnapshotEquipment": [
+          "Barbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Barbell full squat aligns with the general barbell back squat identity.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1828",
+      "nevfitId": null,
+      "reviewClass": "D",
+      "mappingConfidence": "no_safe_match",
+      "historicalRecordedNames": [
+        "Abdominal Draw-In"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Abdominal Draw-In",
+        "wgerSnapshotEquipment": [
+          "none (bodyweight exercise)"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Abdominal draw-in has no corresponding Nevfit identity.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 4,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "retain_legacy_identity"
+    },
+    {
+      "historicalWgerId": "wger-1830",
+      "nevfitId": null,
+      "reviewClass": "D",
+      "mappingConfidence": "no_safe_match",
+      "historicalRecordedNames": [
+        "Barbell Step Back Lunge"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Barbell Step Back Lunge",
+        "wgerSnapshotEquipment": [
+          "Barbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Barbell step-back lunge has no corresponding Nevfit identity; dumbbell reverse lunge differs.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 2,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "retain_legacy_identity"
+    },
+    {
+      "historicalWgerId": "wger-1893",
+      "nevfitId": "nevfit-standing-barbell-overhead-press",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Overhead Barbell Press"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Overhead Barbell Press",
+        "wgerSnapshotEquipment": [
+          "Barbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed standing barbell overhead press, shared with wger-687.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Barbell overhead press is explicit, but standing versus seated is unrecorded.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 1,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed standing barbell overhead press, shared with wger-687. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1900",
+      "nevfitId": "nevfit-rope-triceps-pushdown",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Tricep Rope Pushdowns"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Tricep Rope Pushdowns",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded rope pushdown and WGER cable equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 5,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-1929",
+      "nevfitId": "nevfit-assisted-pull-up",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Assisted Pull-Up"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Assisted Pull-Up",
+        "wgerSnapshotEquipment": [
+          "Resistance band"
+        ],
+        "priorCrosswalkTarget": "nevfit-assisted-pull-up"
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "User confirmed assisted pull-ups share the Nevfit assisted pull-up identity; preserve original assistance and performance details.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "WGER specifies band assistance; verify Nevfit assisted pull-up should share this progression.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 4,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed assisted pull-ups share the Nevfit assisted pull-up identity; preserve original assistance and performance details. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-1972",
+      "nevfitId": "nevfit-single-arm-cable-lat-pulldown",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Single-Arm Lat Pulldown"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Single-Arm Lat Pulldown",
+        "wgerSnapshotEquipment": [
+          "Cable machine"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Single-arm lat pulldown and WGER cable equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 6,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-2503",
+      "nevfitId": "nevfit-cable-face-pull",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Face Pulls"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": null,
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed wger-2503 represents nevfit-cable-face-pull.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Recorded Face Pulls lacks WGER snapshot metadata; confirm cable setup before merging with wger-222.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 2,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed wger-2503 represents nevfit-cable-face-pull. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-2614",
+      "nevfitId": "nevfit-hip-adduction-machine",
+      "reviewClass": "A",
+      "mappingConfidence": "user_confirmed",
+      "historicalRecordedNames": [
+        "Adductor Machine"
+      ],
+      "historicalNameMissingReferences": 0,
+      "evidence": {
+        "wgerSnapshotName": "Adductor Rock Backs",
+        "wgerSnapshotEquipment": [
+          "none (bodyweight exercise)"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "user_confirmed_051c_brief",
+        "reviewVersion": 3,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "User confirmed Hip Adduction Machine despite conflicting WGER bodyweight rock-back metadata.",
+      "approvalStatus": "identity_confirmed_execution_pending",
+      "previousReviewReason": "Recorded Adductor Machine conflicts with WGER bodyweight Adductor Rock Backs identity.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 2,
+        "routineReferences": 0,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "userConfirmation": {
+        "confirmed": true,
+        "scope": [
+          "completedWorkout",
+          "program"
+        ],
+        "reason": "User confirmed Hip Adduction Machine despite conflicting WGER bodyweight rock-back metadata. Identity approval only; production Firestore writes require separate authorisation."
+      }
+    },
+    {
+      "historicalWgerId": "wger-2627",
+      "nevfitId": "nevfit-seated-chest-press-machine",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Machine Chest Press"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Machine Chest Press",
+        "wgerSnapshotEquipment": [],
+        "priorCrosswalkTarget": "nevfit-seated-chest-press-machine"
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": true
+      },
+      "reviewReason": "Recorded machine chest press matches seated machine movement without an incline label.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 2,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    },
+    {
+      "historicalWgerId": "wger-2659",
+      "nevfitId": "nevfit-alternating-dumbbell-curl",
+      "reviewClass": "B",
+      "mappingConfidence": "strong_proposed",
+      "historicalRecordedNames": [
+        "Alternating Dumbbell Curl"
+      ],
+      "historicalNameMissingReferences": 1,
+      "evidence": {
+        "wgerSnapshotName": "Alternating Dumbbell Curl",
+        "wgerSnapshotEquipment": [
+          "Dumbbell"
+        ],
+        "priorCrosswalkTarget": null
+      },
+      "provenance": {
+        "source": "private_2026_10_20_preflight_aggregate",
+        "reviewVersion": 2,
+        "priorCrosswalk": false
+      },
+      "reviewReason": "Recorded alternating dumbbell curl and WGER equipment align.",
+      "historicalEstimate": {
+        "sourcePreflightDate": "2026-10-20",
+        "workoutOccurrences": 4,
+        "routineReferences": 1,
+        "activeReferences": 0,
+        "noteReferences": 0
+      },
+      "approvalStatus": "pending_collective_user_approval"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import crosswalk from "../../evaluation/nevfitHistoricalCrosswalk.v2.json" with { type: "json" };
+import crosswalk from "../../evaluation/nevfitHistoricalCrosswalk.v3.json" with { type: "json" };
 import { isNevfitExerciseId } from "./nevfitCatalogue.js";
 
 export const EXERCISE_MIGRATION_VERSION = 1;
@@ -28,7 +28,13 @@ export function validateHistoricalMappings(mapping = crosswalk) {
       || (item.reviewClass && !["A", "B", "C", "D"].includes(item.reviewClass))
       || (item.reviewClass === "A" && (item.userConfirmation?.confirmed !== true || !Array.isArray(item.userConfirmation.scope)))
       || (item.reviewClass !== "A" && item.userConfirmation?.confirmed === true)
-      || requiresEvidence) throw new Error(`Invalid historical mapping: ${item?.historicalWgerId}`);
+      || requiresEvidence
+      || (mapping.crosswalkVersion >= 3 && (
+        item.approvalStatus !== { A: "identity_confirmed_execution_pending", B: "pending_collective_user_approval", C: "unobserved_unapproved", D: "retain_legacy_identity" }[item.reviewClass]
+        || !Number.isInteger(item.historicalEstimate?.workoutOccurrences)
+        || !Number.isInteger(item.historicalEstimate?.routineReferences)
+        || typeof item.historicalEstimate?.sourcePreflightDate !== "string"
+      ))) throw new Error(`Invalid historical mapping: ${item?.historicalWgerId}`);
     seen.add(item.historicalWgerId);
   }
   return new Map(mapping.relationships.map((item) => [item.historicalWgerId, item]));
@@ -41,6 +47,7 @@ export function validateMigrationDecisions(decisions = [], mapping = crosswalk) 
   for (const decision of decisions) {
     const relation = historical.get(decision?.historicalWgerId);
     if (!relation || relation.nevfitId !== decision.nevfitId || !isNevfitExerciseId(decision.nevfitId)
+      || (mapping.crosswalkVersion >= 3 && relation.reviewClass === "C" && decision.confirmed)
       || !["completedWorkout", "program", "activeWorkout", "exerciseNotes"].includes(decision.kind)
       || typeof decision.docId !== "string" || !decision.docId.trim()
       || typeof decision.path !== "string" || !decision.path.trim()

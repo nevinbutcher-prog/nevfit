@@ -21,7 +21,14 @@ const decisions = [
 ];
 const initial = () => ({
   programs: [{ id: "p1", days: [{ id: "d1", exercises: [{ exerciseId: "wger-364", routineExerciseId: "ri-1", supersetGroupId: "pair-1", sets: 3 }] }], routines: [{ id: "d1", exercises: [{ exerciseId: "wger-364", routineExerciseId: "ri-1", supersetGroupId: "pair-1", sets: 3 }] }] }],
-  completedWorkouts: [{ id: "w1", completedAt: "2026-10-19T00:00:00.000Z", exercises: [{ exerciseId: "wger-364", exerciseName: "Leg Curl", supersetGroupId: "pair-1", sets: [{ setNumber: 1, weight: "45", reps: "10", unit: "kg" }] }] }],
+  completedWorkouts: [
+    { id: "w1", completedAt: "2026-10-19T00:00:00.000Z", exercises: [{ exerciseId: "wger-364", exerciseName: "Leg Curl", supersetGroupId: "pair-1", sets: [{ setNumber: 1, weight: "45", reps: "10", unit: "kg" }] }] },
+    { id: "w2", completedAt: "2026-10-18T00:00:00.000Z", exercises: [{ exerciseId: "wger-1444", exerciseName: "Unknown exercise", sets: [{ setNumber: 1, weight: "30", reps: "8", unit: "kg" }] }] },
+    { id: "w3", completedAt: "2026-10-17T00:00:00.000Z", exercises: [{ exerciseId: "wger-687", exerciseName: "Overhead Press", sets: [{ setNumber: 1, weight: "40", reps: "8", unit: "kg" }] }] },
+    { id: "w4", completedAt: "2026-10-18T00:00:00.000Z", exercises: [{ exerciseId: "wger-1893", exerciseName: "Overhead Barbell Press", sets: [{ setNumber: 1, weight: "45", reps: "8", unit: "kg" }] }] },
+    { id: "w5", completedAt: "2026-10-18T00:00:00.000Z", exercises: [{ exerciseId: "wger-20", exerciseName: "Arnold Shoulder Press", sets: [{ setNumber: 1, weight: "15", reps: "10", unit: "kg" }] }] },
+    { id: "w6", completedAt: "2026-10-18T00:00:00.000Z", exercises: [{ exerciseId: "wger-265", exerciseName: "Glute Bridge", sets: [{ setNumber: 1, weight: "0", reps: "12", unit: "kg" }] }] },
+  ],
   activeWorkout: { exercises: [{ exerciseId: "wger-364", exerciseName: "Leg Curl", sets: [{ weight: "50", reps: "8" }] }] },
   exerciseNotes: { "wger-364": "Seat 3" }, planning: {}, health: {},
 });
@@ -29,7 +36,7 @@ async function seed(uid) {
   const data = initial();
   await Promise.all([
     setDoc(doc(db, "users", uid, "programs", "p1"), data.programs[0]),
-    setDoc(doc(db, "users", uid, "completedWorkouts", "w1"), data.completedWorkouts[0]),
+    ...data.completedWorkouts.map((item) => setDoc(doc(db, "users", uid, "completedWorkouts", item.id), item)),
     setDoc(doc(db, "users", uid, "appState", "activeWorkout"), { activeWorkoutSession: data.activeWorkout }),
     setDoc(doc(db, "users", uid, "appState", "exerciseNotes"), { notes: data.exerciseNotes }),
     setDoc(doc(db, "users", uid, "appState", "planning"), data.planning),
@@ -41,13 +48,18 @@ async function seed(uid) {
 const uid = "synthetic-migration-account";
 const { data, backup } = await seed(uid);
 const plan = await runExerciseMigrationPreflight(uid, decisions);
-assert.equal(plan.confirmed.length, 4);
-assert.equal(plan.counts.completedWorkouts, 1);
+assert.equal(plan.confirmed.length, 7);
+assert.equal(plan.counts.completedWorkouts, 6);
 const result = await executeApprovedExerciseMigration({ uid, plan, decisions, backup, explicitApproval: "approved-after-real-account-review" });
-assert.equal(result.migratedOccurrences, 4);
+assert.equal(result.migratedOccurrences, 7);
 const migrated = await loadMigrationAccountData(uid);
 assert.equal(migrated.completedWorkouts[0].exercises[0].exerciseName, "Leg Curl");
 assert.deepEqual(migrated.completedWorkouts[0].exercises[0].sets, data.completedWorkouts[0].exercises[0].sets);
+assert.equal(migrated.completedWorkouts[1].exercises[0].exerciseName, "Unknown exercise");
+assert.deepEqual(migrated.completedWorkouts[1].exercises[0].sets, data.completedWorkouts[1].exercises[0].sets);
+assert.equal(migrated.completedWorkouts[4].exercises[0].exerciseId, "wger-20");
+assert.equal(migrated.completedWorkouts[5].exercises[0].exerciseId, "wger-265");
+assert.equal(getPreviousExercisePerformance("nevfit-standing-barbell-overhead-press", migrated.completedWorkouts, () => true)?.sets[0].weight, "45");
 assert.equal(migrated.programs[0].days[0].exercises[0].routineExerciseId, "ri-1");
 assert.equal(migrated.programs[0].routines[0].exercises[0].supersetGroupId, "pair-1");
 assert.equal(getPreviousExercisePerformance("nevfit-seated-leg-curl", migrated.completedWorkouts, () => true)?.sets[0].weight, "45");
@@ -62,6 +74,7 @@ await assert.rejects(executeApprovedExerciseMigration({ uid, plan, decisions, ba
 await rollbackApprovedExerciseMigration({ uid, plan, backup, explicitApproval: "approved-migration-rollback" });
 const restored = await loadMigrationAccountData(uid);
 assert.deepEqual(restored.completedWorkouts[0].exercises, data.completedWorkouts[0].exercises);
+assert.deepEqual(restored.completedWorkouts.map((item) => item.exercises), data.completedWorkouts.map((item) => item.exercises));
 assert.deepEqual(restored.programs[0].days, data.programs[0].days);
 assert.deepEqual(restored.programs[0].routines, data.programs[0].routines);
 assert.deepEqual(restored.exerciseNotes, data.exerciseNotes);
@@ -85,8 +98,8 @@ const already = structuredClone(partial.data.completedWorkouts[0].exercises);
 already[0].exerciseId = "nevfit-seated-leg-curl";
 await updateDoc(doc(db, "users", partialUid, "completedWorkouts", "w1"), { exercises: already });
 const resumed = await executeApprovedExerciseMigration({ uid: partialUid, plan: partialPlan, decisions, backup: partial.backup, explicitApproval: "approved-after-real-account-review" });
-assert.equal(resumed.migratedOccurrences, 4);
-assert.equal((await loadMigrationAccountData(partialUid)).completedWorkouts.length, 1);
+assert.equal(resumed.migratedOccurrences, 7);
+assert.equal((await loadMigrationAccountData(partialUid)).completedWorkouts.length, 6);
 await rollbackApprovedExerciseMigration({ uid: partialUid, plan: partialPlan, backup: partial.backup, explicitApproval: "approved-migration-rollback" });
 assert.equal((await loadMigrationAccountData(partialUid)).completedWorkouts[0].exercises[0].exerciseId, "wger-364");
 

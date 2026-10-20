@@ -13,6 +13,7 @@ dist-ssr
 eval-results/
 *.local
 nevfit-exercise-migration-dry-run-*.json
+migration-files/
 
 # Editor directories and files
 .vscode/*

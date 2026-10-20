@@ -1,5 +1,5 @@
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "./firebase.js";
 import { createExerciseMigrationPlan } from "./exerciseIdentityMigration.js";
 
 // Reads raw account documents. No write API is imported into this module.

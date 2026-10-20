@@ -1,16 +1,42 @@
-import crosswalk from "../../evaluation/nevfitLegacyExerciseCrosswalk.v1.json" with { type: "json" };
+import crosswalk from "../../evaluation/nevfitHistoricalCrosswalk.v2.json" with { type: "json" };
 import { isNevfitExerciseId } from "./nevfitCatalogue.js";
 
 export const EXERCISE_MIGRATION_VERSION = 1;
-const historical = new Map(crosswalk.relationships.map((item) => [item.historicalWgerId, item]));
 const clone = (value) => structuredClone(value);
 const isWger = (value) => typeof value === "string" && /^wger-[A-Za-z0-9._:-]+$/.test(value);
 const fingerprint = (value) => JSON.stringify(value);
 
 // A reviewed decision must name the historical ID, target ID and exact recorded
 // name. A preferred WGER reference is never a source identity.
-export function validateMigrationDecisions(decisions = []) {
+export function validateHistoricalMappings(mapping = crosswalk) {
+  if (!Number.isInteger(mapping?.crosswalkVersion) || !Array.isArray(mapping.relationships)) throw new Error("Invalid historical crosswalk.");
+  const seen = new Set();
+  for (const item of mapping.relationships) {
+    const requiresEvidence = mapping.crosswalkVersion >= 2 && (
+      !["A", "B", "C", "D"].includes(item?.reviewClass)
+      || item.mappingConfidence !== { A: "user_confirmed", B: "strong_proposed", C: "requires_clarification", D: "no_safe_match" }[item.reviewClass]
+      || !Array.isArray(item.historicalRecordedNames) || item.historicalRecordedNames.some((name) => typeof name !== "string" || !name.trim())
+      || !Number.isInteger(item.historicalNameMissingReferences) || item.historicalNameMissingReferences < 0
+      || typeof item.evidence?.wgerSnapshotName !== "string" && item.evidence?.wgerSnapshotName !== null
+      || !Array.isArray(item.evidence?.wgerSnapshotEquipment)
+      || typeof item.provenance?.source !== "string" || !item.provenance.source.trim()
+      || typeof item.reviewReason !== "string" || !item.reviewReason.trim()
+    );
+    if (!/^wger-[0-9]+$/.test(item?.historicalWgerId ?? "") || seen.has(item.historicalWgerId)
+      || (item.nevfitId !== null && !isNevfitExerciseId(item.nevfitId))
+      || (item.nevfitId === null && item.reviewClass !== "D")
+      || (item.reviewClass && !["A", "B", "C", "D"].includes(item.reviewClass))
+      || (item.reviewClass === "A" && (item.userConfirmation?.confirmed !== true || !Array.isArray(item.userConfirmation.scope)))
+      || (item.reviewClass !== "A" && item.userConfirmation?.confirmed === true)
+      || requiresEvidence) throw new Error(`Invalid historical mapping: ${item?.historicalWgerId}`);
+    seen.add(item.historicalWgerId);
+  }
+  return new Map(mapping.relationships.map((item) => [item.historicalWgerId, item]));
+}
+
+export function validateMigrationDecisions(decisions = [], mapping = crosswalk) {
   if (!Array.isArray(decisions)) throw new Error("Migration decisions must be an array.");
+  const historical = validateHistoricalMappings(mapping);
   const keys = new Set();
   for (const decision of decisions) {
     const relation = historical.get(decision?.historicalWgerId);
@@ -20,7 +46,7 @@ export function validateMigrationDecisions(decisions = []) {
       || typeof decision.path !== "string" || !decision.path.trim()
       || typeof decision.recordedName !== "string"
       || (!decision.recordedName.trim() && !["program", "exerciseNotes"].includes(decision.kind))
-      || decision.confirmed !== true || typeof decision.reason !== "string" || !decision.reason.trim()) {
+      || typeof decision.confirmed !== "boolean" || typeof decision.reason !== "string" || !decision.reason.trim()) {
       throw new Error("A migration decision is missing an exact, reviewed identity and reason.");
     }
     const key = `${decision.kind}\u0000${decision.historicalWgerId}\u0000${decision.recordedName}\u0000${decision.docId ?? ""}\u0000${decision.path ?? ""}`;
@@ -30,10 +56,11 @@ export function validateMigrationDecisions(decisions = []) {
   return new Map(decisions.map((item) => [`${item.kind}\u0000${item.historicalWgerId}\u0000${item.recordedName}\u0000${item.docId ?? ""}\u0000${item.path ?? ""}`, item]));
 }
 
-export function createExerciseMigrationPlan({ uid, programs = [], completedWorkouts = [], activeWorkout = null, exerciseNotes = {}, decisions = [] }) {
+export function createExerciseMigrationPlan({ uid, programs = [], completedWorkouts = [], activeWorkout = null, exerciseNotes = {}, decisions = [], mapping = crosswalk }) {
   if (typeof uid !== "string" || !uid.trim()) throw new Error("An authenticated account is required.");
-  const approved = validateMigrationDecisions(decisions);
-  const occurrences = [], documents = new Map(), unmapped = new Set(), ambiguous = [], conflicts = [];
+  const historical = validateHistoricalMappings(mapping);
+  const approved = validateMigrationDecisions(decisions, mapping);
+  const occurrences = [], documents = new Map(), unmapped = new Set(), ambiguous = [], conflicts = [], rejected = [];
   const counts = { completedWorkouts: completedWorkouts.length, historicalOccurrences: 0, routineReferences: 0, activeReferences: 0, noteReferences: 0, confirmedCandidates: 0 };
   const inspect = (kind, docId, path, exerciseId, recordedName) => {
     if (!isWger(exerciseId)) return;
@@ -44,13 +71,18 @@ export function createExerciseMigrationPlan({ uid, programs = [], completedWorko
     if (kind === "program") counts.routineReferences++;
     if (kind === "activeWorkout") counts.activeReferences++;
     if (kind === "exerciseNotes") counts.noteReferences++;
-    if (!relation) unmapped.add(exerciseId);
+    if (!relation || !relation.nevfitId) unmapped.add(exerciseId);
     else {
       const base = `${kind}\u0000${exerciseId}\u0000${name}`;
       const decision = approved.get(`${base}\u0000${docId}\u0000${path}`);
-      if (decision) {
-        occurrence.decision = "confirmed";
+      if (decision?.confirmed === false) {
+        occurrence.decision = "rejected";
         occurrence.reason = decision.reason;
+        rejected.push(occurrence);
+      } else if (decision?.confirmed === true || (relation.reviewClass === "A" && relation.userConfirmation?.scope.includes(kind))) {
+        occurrence.decision = "confirmed";
+        occurrence.reason = decision?.reason ?? relation.userConfirmation.reason;
+        occurrence.approvalSource = decision ? "exact_occurrence_decision" : "user_confirmed_mapping";
         counts.confirmedCandidates++;
         const key = `${kind}/${docId}`;
         if (!documents.has(key)) documents.set(key, []);
@@ -77,13 +109,18 @@ export function createExerciseMigrationPlan({ uid, programs = [], completedWorko
     const source = kind === "completedWorkout" ? completedWorkouts.find((item) => item.id === docId)
       : kind === "program" ? programs.find((item) => item.id === docId)
         : kind === "activeWorkout" ? activeWorkout : { notes: exerciseNotes };
-    const existing = kind === "exerciseNotes" ? Object.keys(exerciseNotes)
-      : kind === "program" ? (source.days ?? source.routines).flatMap((day) => day.exercises.map((item) => item.exerciseId))
-        : source.exercises.map((item) => item.exerciseId);
-    for (const change of changes) if (existing.includes(change.proposedNevfitId)) {
-      change.decision = "conflict";
-      counts.confirmedCandidates--;
-      conflicts.push(change);
+    for (const change of changes) {
+      const siblingsPath = change.path.replace(/\.\d+\.exerciseId$/, "");
+      const existing = kind === "exerciseNotes" ? Object.keys(exerciseNotes)
+        : kind === "program" ? at(source, siblingsPath)?.map((item) => item.exerciseId) ?? []
+          : source.exercises.map((item) => item.exerciseId);
+      const proposedPeers = changes.filter((peer) => peer !== change && peer.proposedNevfitId === change.proposedNevfitId
+        && peer.path.replace(/\.\d+\.exerciseId$/, "") === siblingsPath);
+      if (existing.includes(change.proposedNevfitId) || proposedPeers.length) {
+        change.decision = "conflict";
+        counts.confirmedCandidates--;
+        conflicts.push({ ...change, reason: "Target identity already occurs in this exercise list or another proposed conversion." });
+      }
     }
     if (kind === "program" && Array.isArray(source.days) && Array.isArray(source.routines)) for (const change of changes) {
       if (change.decision !== "confirmed") continue;
@@ -97,14 +134,15 @@ export function createExerciseMigrationPlan({ uid, programs = [], completedWorko
   }
   const safe = occurrences.filter((item) => item.decision === "confirmed");
   return {
-    version: EXERCISE_MIGRATION_VERSION, uid, crosswalkVersion: crosswalk.crosswalkVersion,
-    mappingReview: crosswalk.relationships.map((relation) => ({
+    version: EXERCISE_MIGRATION_VERSION, uid, crosswalkVersion: mapping.crosswalkVersion,
+    mappingReview: mapping.relationships.map((relation) => ({
       historicalWgerId: relation.historicalWgerId, proposedNevfitId: relation.nevfitId,
-      ambiguityStatus: relation.ambiguityStatus, automaticConversionSafe: false,
+      ambiguityStatus: relation.ambiguityStatus, reviewClass: relation.reviewClass ?? "C",
+      automaticConversionSafe: relation.reviewClass === "A" && relation.userConfirmation?.confirmed === true,
       reason: relation.reviewReason,
       observedNames: [...new Set(occurrences.filter((item) => item.historicalWgerId === relation.historicalWgerId).map((item) => item.recordedName))],
     })),
-    counts, confirmed: safe, ambiguous, unmappedWgerIds: [...unmapped].sort(), conflicts,
+    counts, confirmed: safe, ambiguous, rejected, unmappedWgerIds: [...unmapped].sort(), conflicts,
     expectedAffectedDocuments: [...new Set(safe.map((item) => `${item.kind}/${item.docId}`))].sort(),
     examples: safe.slice(0, 3).map(({ historicalWgerId, proposedNevfitId, recordedName }) =>
       ({ before: { exerciseId: historicalWgerId, exerciseName: recordedName }, after: { exerciseId: proposedNevfitId, exerciseName: recordedName } })),

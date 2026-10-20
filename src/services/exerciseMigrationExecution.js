@@ -1,8 +1,9 @@
 import { doc, getDoc, runTransaction } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "./firebase.js";
 import { validateBackup } from "./backupPayload.js";
 import { createExerciseMigrationPlan } from "./exerciseIdentityMigration.js";
 import { loadMigrationAccountData } from "./exerciseMigrationPreflight.js";
+import { migrationDocumentUpdates } from "./exerciseMigrationDocument.js";
 
 // Deliberately not imported by the UI or deployed as a job. A separate
 // authorisation and reviewed real-account plan are required before invocation.
@@ -51,7 +52,6 @@ function assertBackupMatches(backup, account, plan) {
   }
 }
 
-const fieldFor = { completedWorkout: "exercises", program: "days", activeWorkout: "activeWorkoutSession", exerciseNotes: "notes" };
 const refFor = (uid, kind, id) => kind === "completedWorkout" ? doc(db, "users", uid, "completedWorkouts", id)
   : kind === "program" ? doc(db, "users", uid, "programs", id) : doc(db, "users", uid, "appState", id);
 const at = (value, path) => path.split(".").reduce((current, key) => current?.[key], value);
@@ -59,30 +59,6 @@ const put = (value, path, next) => {
   const parts = path.split("."); const last = parts.pop();
   parts.reduce((current, key) => current[key], value)[last] = next;
 };
-
-function assertDocumentMatchesBackup(kind, id, data, changes, backup) {
-  const original = structuredClone(data);
-  for (const item of changes) {
-    if (!hasIdentity(original, item, item.proposedNevfitId)) continue;
-    if (kind === "exerciseNotes") {
-      original.notes[item.historicalWgerId] = original.notes[item.proposedNevfitId];
-      delete original.notes[item.proposedNevfitId];
-    } else {
-      put(original, item.path, item.historicalWgerId);
-      if (kind === "program" && Array.isArray(original.days) && Array.isArray(original.routines))
-        put(original, item.path.replace(/^days\./, "routines."), item.historicalWgerId);
-    }
-  }
-  const expected = kind === "completedWorkout" ? backup.completedWorkouts.find((item) => item.id === id)
-    : kind === "program" ? backup.programs.find((item) => item.id === id)
-      : kind === "activeWorkout" ? backup.activeWorkout : { notes: backup.exerciseNotes };
-  const project = kind === "completedWorkout" ? identity
-    : kind === "program" ? (item) => item.days ?? item.routines
-      : kind === "activeWorkout" ? (item) => item.activeWorkoutSession ?? item
-        : (item) => item.notes;
-  if (!expected || canonical(project(original)) !== canonical(project(expected)))
-    throw new Error(`Document changed since backup: ${kind}/${id}`);
-}
 
 export async function executeApprovedExerciseMigration({ uid, plan, decisions, backup, explicitApproval }) {
   if (explicitApproval !== "approved-after-real-account-review" || plan?.uid !== uid || !plan.confirmed?.length || plan.conflicts?.length)
@@ -113,29 +89,8 @@ export async function executeApprovedExerciseMigration({ uid, plan, decisions, b
       const ref = refFor(uid, kind, id);
       const snapshot = await transaction.get(ref);
       if (!snapshot.exists()) throw new Error(`Migration document disappeared: ${key}`);
-      const data = structuredClone(snapshot.data());
-      assertDocumentMatchesBackup(kind, id, data, changes, backup);
-      let changed = false;
-      for (const item of changes) {
-        if (hasIdentity(data, item, item.proposedNevfitId)) continue; // interrupted run: idempotent resume
-        if (!hasIdentity(data, item, item.historicalWgerId)) throw new Error(`Concurrent identity change: ${key}`);
-        if (kind === "exerciseNotes") {
-          if (Object.hasOwn(data.notes, item.proposedNevfitId)) throw new Error(`Note target conflict: ${key}`);
-          data.notes[item.proposedNevfitId] = data.notes[item.historicalWgerId];
-          delete data.notes[item.historicalWgerId];
-        } else {
-          put(data, item.path, item.proposedNevfitId);
-          if (kind === "program" && Array.isArray(data.days) && Array.isArray(data.routines)) {
-            const mirror = item.path.replace(/^days\./, "routines.");
-            if (at(data, mirror) !== item.historicalWgerId) throw new Error(`Routine mirror conflict: ${key}`);
-            put(data, mirror, item.proposedNevfitId);
-          }
-        }
-        changed = true;
-      }
-      if (changed) transaction.update(ref, kind === "program"
-        ? { ...(Array.isArray(data.days) ? { days: data.days } : {}), ...(Array.isArray(data.routines) ? { routines: data.routines } : {}) }
-        : { [fieldFor[kind]]: data[fieldFor[kind]] });
+      const updates = migrationDocumentUpdates({ kind, id, document: snapshot.data(), changes, backup });
+      if (updates) transaction.update(ref, updates);
     });
   }
   const after = await loadMigrationAccountData(uid);
@@ -175,29 +130,8 @@ export async function rollbackApprovedExerciseMigration({ uid, plan, backup, exp
       const ref = refFor(uid, kind, id);
       const snapshot = await transaction.get(ref);
       if (!snapshot.exists()) throw new Error(`Rollback document disappeared: ${key}`);
-      const data = structuredClone(snapshot.data());
-      assertDocumentMatchesBackup(kind, id, data, changes, backup);
-      let changed = false;
-      for (const item of changes) {
-        if (hasIdentity(data, item, item.historicalWgerId)) continue;
-        if (!hasIdentity(data, item, item.proposedNevfitId)) throw new Error(`Rollback identity conflict: ${key}`);
-        if (kind === "exerciseNotes") {
-          if (Object.hasOwn(data.notes, item.historicalWgerId)) throw new Error(`Rollback note conflict: ${key}`);
-          data.notes[item.historicalWgerId] = data.notes[item.proposedNevfitId];
-          delete data.notes[item.proposedNevfitId];
-        } else {
-          put(data, item.path, item.historicalWgerId);
-          if (kind === "program" && Array.isArray(data.days) && Array.isArray(data.routines)) {
-            const mirror = item.path.replace(/^days\./, "routines.");
-            if (at(data, mirror) !== item.proposedNevfitId) throw new Error(`Rollback routine mirror conflict: ${key}`);
-            put(data, mirror, item.historicalWgerId);
-          }
-        }
-        changed = true;
-      }
-      if (changed) transaction.update(ref, kind === "program"
-        ? { ...(Array.isArray(data.days) ? { days: data.days } : {}), ...(Array.isArray(data.routines) ? { routines: data.routines } : {}) }
-        : { [fieldFor[kind]]: data[fieldFor[kind]] });
+      const updates = migrationDocumentUpdates({ kind, id, document: snapshot.data(), changes, backup, direction: "rollback" });
+      if (updates) transaction.update(ref, updates);
     });
   }
   const restored = await loadMigrationAccountData(uid);

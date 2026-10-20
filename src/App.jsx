@@ -5712,7 +5712,7 @@ function App() {
                   {migrationPreflight.counts.completedWorkouts} completed workouts inspected; {migrationPreflight.counts.historicalOccurrences} historical WGER occurrences;
                   {" "}{migrationPreflight.counts.routineReferences} routine references; {migrationPreflight.counts.activeReferences} active-workout references;
                   {" "}{migrationPreflight.counts.noteReferences} note references;
-                  {" "}{migrationPreflight.counts.confirmedCandidates} confirmed changes; {migrationPreflight.ambiguous.length} needing review;
+                  {" "}{migrationPreflight.counts.confirmedCandidates} user-confirmed mapping candidates; {migrationPreflight.ambiguous.length} needing review;
                   {" "}{migrationPreflight.unmappedWgerIds.length} unmapped WGER IDs; {migrationPreflight.conflicts.length} conflicts;
                   {" "}{migrationPreflight.expectedAffectedDocuments.length} expected affected documents. The full plan was downloaded.
                 </p> : null}

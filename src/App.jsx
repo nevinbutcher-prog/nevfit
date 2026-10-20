@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import MuscleWorkload from "./components/MuscleWorkload";
-import { calculateMuscleWorkload } from "./services/muscleWorkload";
+import { calculateMuscleWorkload, DEFAULT_WORKLOAD_PERIOD } from "./services/muscleWorkload";
 import { getTodayHeadline, getTodayRestDescription } from "./services/dashboardToday";
 import {
   signInWithGoogle,
@@ -1952,7 +1952,7 @@ function App() {
   const [runNotes, setRunNotes] = useState("");
   const [runSaveMessage, setRunSaveMessage] = useState("");
   const [expandedDashboardEntry, setExpandedDashboardEntry] = useState(null);
-  const [workloadPeriod, setWorkloadPeriod] = useState("this-week");
+  const [workloadPeriod, setWorkloadPeriod] = useState(DEFAULT_WORKLOAD_PERIOD);
   const [workloadCalendarDay, setWorkloadCalendarDay] = useState(getTodayDateInputValue);
   useEffect(() => {
     const timer = window.setInterval(() => setWorkloadCalendarDay(getTodayDateInputValue()), 60_000);

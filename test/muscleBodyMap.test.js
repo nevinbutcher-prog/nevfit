@@ -14,4 +14,9 @@ test("body regions use workload group IDs and resolve zero and selected intensit
   assert.deepEqual([0, 1, 5, 10].map((value) => getBodyMapIntensity(value, 10)), [0, 1, 2, 3]);
   assert.match(component, /aria-pressed=\{onSelect \? selectedId === id/);
   assert.match(component, /onKeyDown=\{onSelect/);
+  assert.match(component, /data-region-id=\{id\} data-side=/);
+  assert.match(component, /role=\{onSelect \? "button"/);
+  assert.match(component, /tabIndex=\{onSelect \? 0/);
+  assert.match(component, /aria-label=\{onSelect \? `\$\{orientation\}/);
+  assert.match(component, /event\.key === "Enter" \|\| event\.key === " "/);
 });

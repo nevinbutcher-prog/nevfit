@@ -8,6 +8,14 @@ export const MUSCLE_GROUPS = [
   ["hip_adductors", "Adductors"], ["hip_abductors", "Abductors"],
 ];
 
+export const DEFAULT_WORKLOAD_PERIOD = "last-seven-days";
+
+// Historical WGER IDs stay intact. This reviewed movement is a calf raise;
+// the mapping is analytics-only and never inferred from an exercise name.
+const legacyWorkloadAttributions = new Map([
+  ["wger-1466", { primary: ["calves"], secondary: [] }],
+]);
+
 const muscleRollups = {
   chest: "chest", serratus_anterior: "chest",
   lats: "back", upper_mid_back: "back", spinal_erectors: "back",
@@ -45,6 +53,10 @@ export function getWorkloadWindow(period, now = new Date()) {
 }
 
 export function getWorkloadGroups(exerciseId) {
+  const legacyGroups = legacyWorkloadAttributions.get(exerciseId);
+  if (legacyGroups) return {
+    primary: [...legacyGroups.primary], secondary: [...legacyGroups.secondary],
+  };
   const entry = catalogueById.get(exerciseId);
   if (!entry) return null;
   const primary = new Set((entry.primaryMuscles ?? []).map(getMuscleGroupId).filter(Boolean));
@@ -62,7 +74,7 @@ export function isCompletedWorkingSet(set) {
     (weight === "" || weight == null || (Number.isFinite(Number(weight)) && Number(weight) >= 0));
 }
 
-export function calculateMuscleWorkload(workouts, period = "this-week", now = new Date()) {
+export function calculateMuscleWorkload(workouts, period = DEFAULT_WORKLOAD_PERIOD, now = new Date()) {
   const window = getWorkloadWindow(period, now);
   const groupMap = new Map(MUSCLE_GROUPS.map(([id, label]) => [id, {
     id, label, weightedSets: 0, completedSets: 0, exercises: new Map(),

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  calculateMuscleWorkload, getMuscleGroupId, getWorkloadGroups,
+  calculateMuscleWorkload, DEFAULT_WORKLOAD_PERIOD, getMuscleGroupId, getWorkloadGroups,
   getWorkloadWindow, isCompletedWorkingSet,
 } from "../src/services/muscleWorkload.js";
 
@@ -19,6 +19,33 @@ test("local calendar windows start on Monday or include seven local dates", () =
   assert.deepEqual([lastWeek.start.getDate(), lastWeek.end.getDate()], [12, 19]);
   assert.deepEqual([lastSeven.start.getDate(), lastSeven.end.getDate()], [14, 21]);
   assert.equal(thisWeek.start.getHours(), 0);
+});
+
+test("Last 7 Days is the default reporting window", () => {
+  const now = new Date(2026, 9, 20, 12);
+  assert.equal(DEFAULT_WORKLOAD_PERIOD, "last-seven-days");
+  const result = calculateMuscleWorkload([
+    workout(new Date(2026, 9, 14, 9).toISOString(), "nevfit-flat-barbell-bench-press", [set()]),
+    workout(new Date(2026, 9, 13, 9).toISOString(), "nevfit-flat-barbell-bench-press", [set()]),
+  ], undefined, now);
+  assert.equal(result.period, "last-seven-days");
+  assert.equal(result.totalWorkingSets, 1);
+  assert.equal(result.window.start.getDate(), 14);
+});
+
+test("only reviewed wger-1466 gains primary calf attribution without changing history", () => {
+  const now = new Date(2026, 9, 20, 12);
+  const historical = workout(now.toISOString(), "wger-1466", [set(), set("12", "40"), set("", "40"), set("8", "40", false)], "Calf Raise using Hack Squat Machine");
+  const before = structuredClone(historical);
+  const result = calculateMuscleWorkload([historical], undefined, now);
+  const calves = result.groups.find((group) => group.id === "calves");
+  assert.deepEqual(historical, before);
+  assert.deepEqual(getWorkloadGroups("wger-1466"), { primary: ["calves"], secondary: [] });
+  assert.equal(calves.completedSets, 2);
+  assert.equal(calves.weightedSets, 2);
+  assert.deepEqual(calves.exercises, [{ id: "wger-1466", name: historical.exercises[0].exerciseName, completedSets: 2, weightedSets: 2, factor: 1 }]);
+  assert.equal(result.unattributedSets, 0);
+  assert.equal(getWorkloadGroups("wger-1467"), null);
 });
 
 test("uses only completed working sets in the selected history window", () => {

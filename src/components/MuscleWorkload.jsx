@@ -2,7 +2,7 @@ import { useState } from "react";
 import MuscleBodyMap from "./MuscleBodyMap";
 
 const periods = [
-  ["this-week", "This Week"], ["last-seven-days", "Last 7 Days"], ["last-week", "Last Week"],
+  ["last-seven-days", "Last 7 Days"], ["this-week", "This Week"], ["last-week", "Last Week"],
 ];
 const formatSets = (value) => Number.isInteger(value) ? String(value) : value.toFixed(1);
 const formatDate = (date) => date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -45,14 +45,13 @@ export default function MuscleWorkload({ report, period, onPeriodChange, onOpen,
           </button>) : <p className="text-sm text-slate-300">No sets can be attributed to a muscle group.</p>}
         </div>
       </div>}
-    {report.unattributedSets > 0 && !loading ? <p className="mt-4 text-sm text-amber-100">{report.unattributedSets} completed sets have no muscle attribution, including retained legacy IDs or exercises without specific catalogue metadata.</p> : null}
     {detailed ? <>
       {selected ? <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950/50 p-4">
         <h3 className="text-lg font-bold">{selected.label}</h3>
         <p className="mt-1 text-sm text-slate-300">{selected.completedSets} completed set contributions · {formatSets(selected.weightedSets)} weighted sets</p>
         {selected.exercises.length ? <ul className="mt-3 divide-y divide-slate-800">{selected.exercises.map((exercise) => <li key={`${exercise.id}:${exercise.name}`} className="flex justify-between gap-3 py-2 text-sm"><span>{exercise.name}</span><span className="shrink-0 text-slate-300">{exercise.completedSets} sets · {formatSets(exercise.weightedSets)} weighted</span></li>)}</ul> : <p className="mt-3 text-sm text-slate-400">No contributing exercises this period.</p>}
       </div> : <p className="mt-4 text-sm text-slate-400">Choose a muscle on either map or in the list to see its exercises.</p>}
-      {report.unattributedExercises.length ? <details className="mt-4 text-sm text-slate-300"><summary className="cursor-pointer">Unattributed exercises ({report.unattributedSets} sets)</summary><ul className="mt-2 space-y-1">{report.unattributedExercises.map((exercise) => <li key={`${exercise.id}:${exercise.name}`}>{exercise.name} · {exercise.completedSets} sets</li>)}</ul></details> : null}
+      {report.unattributedExercises.length ? <details className="mt-4 text-sm text-slate-400"><summary className="cursor-pointer">Other completed sets without muscle attribution ({report.unattributedSets})</summary><ul className="mt-2 space-y-1">{report.unattributedExercises.map((exercise) => <li key={`${exercise.id}:${exercise.name}`}>{exercise.name} · {exercise.completedSets} sets</li>)}</ul></details> : null}
       <p className="mt-5 text-xs leading-5 text-slate-400">Each completed working set adds 1 to its primary group and 0.5 to each distinct secondary group. This is an estimate of training stimulus, not a measure of growth, adequacy or recovery. A new week changes the reporting window; history is retained.</p>
     </> : <button type="button" onClick={onOpen} className="mt-5 w-full rounded-xl border border-slate-600 px-4 py-3 font-semibold text-slate-100 hover:bg-slate-800">View Muscle Workload →</button>}
   </section>;

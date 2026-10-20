@@ -1,5 +1,9 @@
 # Checkpoints 051–051C: catalogue activation and migration operation
 
+## Production execution record — 2026-10-20
+
+After independent review of the executor ordering fix, the account owner authorised the one-time production migration. The retained version 2 backup, version 3 preflight, approval manifest and exact prepared plan were revalidated against the live account before writing. The guarded executor converted 354 references in 50 documents and marked the operation `verified`. A separate read-only Firestore check confirmed the 354 destination identities, all 21 retained legacy references, the affected-document count and preservation of backed-up workout, routine, app-state and other account data. Historical progression remained accessible through all 50 destination IDs represented in completed workouts. The original backup, plan, decisions, approval manifest and private execution report remain in the gitignored `migration-files/` folder for rollback. No rollback was performed.
+
 ## Current deployment boundary
 
 Nevfit search and new exercise selection use the committed 247-entry catalogue. Set `VITE_NEVFIT_CATALOGUE_ENABLED=false` at build time to restore WGER selection; Nevfit and WGER ID reads remain available in either mode. Rob's browser selection sends catalogue version 1 for Nevfit or version 2 for legacy WGER. Firebase authorises both against server-owned snapshots. `scripts/syncNevfitRobCatalogue.mjs --check` checks that the server snapshot matches the source catalogue.

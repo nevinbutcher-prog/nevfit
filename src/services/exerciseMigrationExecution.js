@@ -10,6 +10,23 @@ import { migrationDocumentUpdates } from "./exerciseMigrationDocument.js";
 const marker = (uid) => doc(db, "users", uid, "appState", "exerciseIdentityMigration");
 const canonical = (value) => JSON.stringify(value, (_, item) => item && typeof item === "object" && !Array.isArray(item)
   ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item);
+const occurrencePath = (item) => JSON.stringify([item.kind, item.docId, item.path]);
+export function sameMigrationOccurrences(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  const byPath = new Map();
+  for (const item of a) {
+    const key = occurrencePath(item);
+    if (byPath.has(key)) return false;
+    byPath.set(key, canonical(item));
+  }
+  const seen = new Set();
+  for (const item of b) {
+    const key = occurrencePath(item);
+    if (seen.has(key) || !byPath.has(key) || byPath.get(key) !== canonical(item)) return false;
+    seen.add(key);
+  }
+  return seen.size === byPath.size;
+}
 const identity = (item) => ({ completedAt: item.completedAt, exercises: item.exercises });
 const sourceFor = (account, item) => item.kind === "completedWorkout" ? account.completedWorkouts.find((value) => value.id === item.docId)
   : item.kind === "program" ? account.programs.find((value) => value.id === item.docId)
@@ -63,11 +80,14 @@ const put = (value, path, next) => {
 export async function executeApprovedExerciseMigration({ uid, plan, decisions, backup, explicitApproval }) {
   if (explicitApproval !== "approved-after-real-account-review" || plan?.uid !== uid || !plan.confirmed?.length || plan.conflicts?.length)
     throw new Error("A reviewed account plan and separate migration approval are required.");
+  const reviewed = createExerciseMigrationPlan({ ...backup, uid, decisions });
+  if (!sameMigrationOccurrences(plan.confirmed, reviewed.confirmed))
+    throw new Error("Reviewed migration occurrences differ from the backup and decisions.");
   const account = await loadMigrationAccountData(uid);
   assertBackupMatches(backup, account, plan);
   const current = createExerciseMigrationPlan({ ...account, decisions });
   const remainingExpected = plan.confirmed.filter((item) => hasIdentity(sourceFor(account, item), item, item.historicalWgerId));
-  if (canonical(current.confirmed) !== canonical(remainingExpected)) throw new Error("Account identities changed since the reviewed dry run.");
+  if (!sameMigrationOccurrences(current.confirmed, remainingExpected)) throw new Error("Account identities changed since the reviewed dry run.");
   const planHash = await digest({ uid, confirmed: plan.confirmed });
   const backupHash = await digest(backup);
   await runTransaction(db, async (transaction) => {

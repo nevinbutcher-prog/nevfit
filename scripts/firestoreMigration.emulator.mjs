@@ -3,7 +3,7 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../src/services/firebase.js";
 import { createBackup } from "../src/services/backupPayload.js";
 import { runExerciseMigrationPreflight, loadMigrationAccountData } from "../src/services/exerciseMigrationPreflight.js";
-import { executeApprovedExerciseMigration, rollbackApprovedExerciseMigration, getExerciseMigrationStatus } from "../src/services/exerciseMigrationExecution.js";
+import { executeApprovedExerciseMigration, rollbackApprovedExerciseMigration, getExerciseMigrationStatus, sameMigrationOccurrences } from "../src/services/exerciseMigrationExecution.js";
 import { getPreviousExercisePerformance } from "../src/services/workoutSnapshots.js";
 
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIRESTORE_EMULATOR_HOST.startsWith("127.0.0.1:"))
@@ -50,6 +50,20 @@ const { data, backup } = await seed(uid);
 const plan = await runExerciseMigrationPreflight(uid, decisions);
 assert.equal(plan.confirmed.length, 7);
 assert.equal(plan.counts.completedWorkouts, 6);
+const pair = plan.confirmed.slice(0, 2);
+assert.equal(sameMigrationOccurrences(pair, [...pair].reverse()), true);
+assert.equal(sameMigrationOccurrences(pair, pair.slice(0, 1)), false);
+assert.equal(sameMigrationOccurrences(pair, [...pair, { ...pair[0], path: "exercises.99.exerciseId" }]), false);
+assert.equal(sameMigrationOccurrences(pair, [{ ...pair[0], kind: "program" }, pair[1]]), false);
+assert.equal(sameMigrationOccurrences(pair, [{ ...pair[0], docId: "another-document" }, pair[1]]), false);
+assert.equal(sameMigrationOccurrences(pair, [{ ...pair[0], path: "exercises.99.exerciseId" }, pair[1]]), false);
+assert.equal(sameMigrationOccurrences(pair, [{ ...pair[0], historicalWgerId: "wger-48" }, pair[1]]), false);
+assert.equal(sameMigrationOccurrences(pair, [{ ...pair[0], proposedNevfitId: "nevfit-other" }, pair[1]]), false);
+assert.equal(sameMigrationOccurrences(pair, [{ ...pair[0], recordedName: "Changed name" }, pair[1]]), false);
+assert.equal(sameMigrationOccurrences(pair, [{ ...pair[0], approvalSource: "changed" }, pair[1]]), false);
+assert.equal(sameMigrationOccurrences(pair, [pair[0], pair[0]]), false);
+assert.equal(sameMigrationOccurrences([pair[0], pair[0]], [pair[0], pair[0]]), false);
+plan.confirmed.reverse();
 const result = await executeApprovedExerciseMigration({ uid, plan, decisions, backup, explicitApproval: "approved-after-real-account-review" });
 assert.equal(result.migratedOccurrences, 7);
 const migrated = await loadMigrationAccountData(uid);
@@ -91,9 +105,17 @@ await assert.rejects(executeApprovedExerciseMigration({ uid: concurrentUid, plan
 assert.equal((await getDoc(workoutRef)).data().exercises[0].exerciseId, "wger-364");
 assert.equal(await getExerciseMigrationStatus(concurrentUid), null);
 
+const invalidUid = "synthetic-invalid-reviewed-plan";
+const invalid = await seed(invalidUid);
+const invalidPlan = await runExerciseMigrationPreflight(invalidUid, decisions);
+invalidPlan.confirmed[1] = { ...invalidPlan.confirmed[0] };
+await assert.rejects(executeApprovedExerciseMigration({ uid: invalidUid, plan: invalidPlan, decisions, backup: invalid.backup, explicitApproval: "approved-after-real-account-review" }), /Reviewed migration occurrences differ/);
+assert.equal(await getExerciseMigrationStatus(invalidUid), null);
+
 const partialUid = "synthetic-partial-run";
 const partial = await seed(partialUid);
 const partialPlan = await runExerciseMigrationPreflight(partialUid, decisions);
+partialPlan.confirmed.reverse();
 const already = structuredClone(partial.data.completedWorkouts[0].exercises);
 already[0].exerciseId = "nevfit-seated-leg-curl";
 await updateDoc(doc(db, "users", partialUid, "completedWorkouts", "w1"), { exercises: already });

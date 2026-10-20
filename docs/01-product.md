@@ -23,6 +23,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 ## Implemented Features
 
 - Dashboard default landing screen
+- Compact Dashboard with today's strength/run context, current plan, weekly metrics, and Muscle Workload summary and detail view
 - Today-focused workout card with Start/Resume action
 - Current Program, Current Cycle, This Week, and Latest Workout dashboard cards
 - Weekly schedule persistence
@@ -44,6 +45,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 - Lightweight superset pairing in routines with grouped workout-mode display
 - Manual step entry with 7-day average dashboard metric
 - Manual run logging with configurable weekly run target
+- Muscle Workload reports completed strength sets for This Week, Last 7 Days, or Last Week. Each saved working set with positive repetitions and a valid load contributes one weighted set to each distinct catalogue primary muscle group and half a set to each distinct secondary group. Specific muscle IDs roll into broad display groups once; primary attribution takes precedence on overlap. Unmatched historical WGER IDs and catalogue entries without specific primary metadata stay readable and are counted as unattributed. Planned or incomplete sets, runs, and steps do not contribute. The map is a schematic guide; weighted sets estimate training stimulus and do not establish growth, recovery, or adequate training.
 - Firebase Google sign-in
 - Authenticated app gate with signed-out landing screen
 - Firestore `users/{uid}` profile document sync

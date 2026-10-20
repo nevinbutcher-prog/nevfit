@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import MuscleWorkload from "./components/MuscleWorkload";
+import { calculateMuscleWorkload } from "./services/muscleWorkload";
+import { getTodayHeadline, getTodayRestDescription } from "./services/dashboardToday";
 import {
   signInWithGoogle,
   signOutUser,
@@ -1949,6 +1952,16 @@ function App() {
   const [runNotes, setRunNotes] = useState("");
   const [runSaveMessage, setRunSaveMessage] = useState("");
   const [expandedDashboardEntry, setExpandedDashboardEntry] = useState(null);
+  const [workloadPeriod, setWorkloadPeriod] = useState("this-week");
+  const [workloadCalendarDay, setWorkloadCalendarDay] = useState(getTodayDateInputValue);
+  useEffect(() => {
+    const timer = window.setInterval(() => setWorkloadCalendarDay(getTodayDateInputValue()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const workloadReport = useMemo(
+    () => calculateMuscleWorkload(completedWorkouts, workloadPeriod, new Date(`${workloadCalendarDay}T12:00:00`)),
+    [completedWorkouts, workloadPeriod, workloadCalendarDay],
+  );
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
@@ -4501,6 +4514,7 @@ function App() {
   const recentStepEntries = getRecentStepEntries(stepsByDate);
   const runsThisWeek = getRunsThisWeek(runs);
   const recentRuns = getRecentRuns(runs);
+  const todayRun = runs.find((run) => run.date === todayDateInputValue) ?? null;
   const selectedCompletedWorkout =
     completedWorkouts.find(
       (workout) => workout.id === selectedCompletedWorkoutId,
@@ -4868,23 +4882,17 @@ function App() {
     >
       <div className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden">
         {viewMode !== "workout" ? (
-          <header className="mb-6">
-            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <h1 className="text-4xl font-bold">NevFit</h1>
-              <div className="flex min-w-0 flex-col items-start gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-3 sm:items-end">
+          <header className="mb-5">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">NevFit</h1>
+              <div className="flex min-w-0 items-center">
                 {authLoading ? (
                   <p className="text-sm font-semibold text-slate-400">
                     Checking sign-in...
                   </p>
                 ) : currentUser ? (
                   <>
-                    <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:justify-end">
-                      <p className="min-w-0 truncate text-sm font-semibold text-slate-200">
-                        Welcome,{" "}
-                        {currentUser.displayName ??
-                          currentUser.email ??
-                          "Athlete"}
-                      </p>
+                    <div className="flex items-center">
                       <button
                         type="button"
                         onClick={() => setViewMode("settings")}
@@ -4895,13 +4903,6 @@ function App() {
                         ⚙
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
-                    >
-                      Sign Out
-                    </button>
                   </>
                 ) : (
                   <button
@@ -4914,7 +4915,7 @@ function App() {
                 )}
               </div>
             </div>
-            <div className="mt-4 grid w-full grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem] sm:gap-2">
+            <div className="mt-4 grid w-full grid-cols-4 gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem] sm:gap-2">
               <button
                 type="button"
                 onClick={() => setViewMode("dashboard")}
@@ -5057,23 +5058,19 @@ function App() {
             ) : null}
 
             <article
-              className={`min-w-0 rounded-2xl border bg-slate-900 p-5 shadow-2xl sm:p-6 ${
+              className={`min-w-0 rounded-2xl border bg-slate-900 p-4 shadow-2xl sm:p-5 ${
                 todayCompletedWorkout
                   ? "border-emerald-300/70 shadow-emerald-950/40"
                   : "border-emerald-400/40 shadow-emerald-950/30"
               }`}
             >
-              <div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">
                     Today
                   </p>
-                  <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
-                    {todayCompletedWorkout
-                      ? `✓ ${todayRoutineDay.name} Complete`
-                      : todayRoutineDay
-                        ? todayRoutineDay.name
-                        : "Rest Day"}
+                  <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                    {getTodayHeadline({ routineDay: todayRoutineDay, completedWorkout: todayCompletedWorkout, run: todayRun })}
                   </h2>
                   {todayCompletedWorkout ? (
                     <p className="mt-3 text-base font-semibold text-emerald-200">
@@ -5093,8 +5090,8 @@ function App() {
                       ) : null}
                     </div>
                   ) : (
-                    <p className="mt-4 text-base text-slate-300">
-                      No workout scheduled today.
+                    <p className="mt-2 text-sm text-slate-300">
+                      {getTodayRestDescription(todayRun, formatRecentRunDetails)}
                     </p>
                   )}
                 </div>
@@ -5107,7 +5104,7 @@ function App() {
                         ? openCompletedWorkoutDetails(todayCompletedWorkout)
                         : openWorkout(todayScheduleDay, todayRoutineDay)
                     }
-                    className="w-full rounded-xl bg-emerald-400 px-5 py-4 text-base font-bold text-slate-950 transition hover:bg-emerald-300 md:w-auto md:min-w-52"
+                    className="w-full rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 sm:w-auto"
                   >
                     {todayCompletedWorkout
                       ? "View Workout"
@@ -5127,22 +5124,22 @@ function App() {
               </div>
             </article>
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+            <div className="grid gap-4">
               <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    <p className="text-sm font-semibold text-slate-400">
                       Current Plan
                     </p>
                     {dashboardProgram ? (
                       <>
-                        <h2 className="mt-3 text-3xl font-bold text-white">
+                        <h2 className="mt-1 text-2xl font-bold text-white">
                           {dashboardProgram.name}
                         </h2>
-                        <p className="mt-2 text-base font-semibold text-slate-300">
+                        <p className="mt-1 text-sm font-semibold text-slate-300">
                           {cycleWeekLabel}
                         </p>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="text-xs text-slate-500">
                           {dashboardProgram.days.length} routines
                         </p>
                       </>
@@ -5157,6 +5154,9 @@ function App() {
                       </>
                     )}
                   </div>
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                  <button type="button" onClick={() => setViewMode("routines")}
+                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500">View Program</button>
                   <button
                     type="button"
                     onClick={() => {
@@ -5176,6 +5176,7 @@ function App() {
                       ? "Edit Cycle"
                       : "Set Cycle"}
                   </button>
+                  </div>
                 </div>
 
                 {isCycleEditorOpen ? (
@@ -5213,11 +5214,11 @@ function App() {
               </article>
 
               <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
                   This Week
                 </p>
                 <div className="mt-4 grid grid-cols-3 gap-2">
-                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-2 sm:p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Workouts
                     </p>
@@ -5225,7 +5226,7 @@ function App() {
                       {completedWorkoutsThisWeek} / {plannedWorkoutsThisWeek}
                     </p>
                   </div>
-                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-2 sm:p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Runs
                     </p>
@@ -5233,7 +5234,7 @@ function App() {
                       {runsThisWeek} / {weeklyRunTarget}
                     </p>
                   </div>
-                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                  <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-2 sm:p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Avg Steps
                     </p>
@@ -5245,7 +5246,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() =>
@@ -5465,21 +5466,16 @@ function App() {
               </article>
             </div>
 
-            {["Progress Highlights"].map((placeholderTitle) => (
-              <article
-                key={placeholderTitle}
-                className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4"
-              >
-                <p className="text-sm font-semibold text-slate-300">
-                  {placeholderTitle}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-500">
-                  Coming Soon
-                </p>
-              </article>
-            ))}
+            <MuscleWorkload report={workloadReport} period={workloadPeriod}
+              onPeriodChange={setWorkloadPeriod} onOpen={() => setViewMode("muscle-workload")}
+              loading={workoutHistoryLoading} error={Boolean(workoutSyncError)} />
           </section>
         ) : null}
+
+        {viewMode === "muscle-workload" ? <MuscleWorkload detailed report={workloadReport}
+          period={workloadPeriod} onPeriodChange={setWorkloadPeriod}
+          onBack={() => setViewMode("dashboard")}
+          loading={workoutHistoryLoading} error={Boolean(workoutSyncError)} /> : null}
 
         {viewMode === "completed-workout" ? (
           <section className="min-w-0 rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -5657,6 +5653,8 @@ function App() {
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
               Settings
             </p>
+            {currentUser ? <button type="button" onClick={handleSignOut}
+              className="mt-4 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800">Sign Out</button> : null}
             <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
               <h2 className="text-2xl font-bold text-white">NevFit</h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">

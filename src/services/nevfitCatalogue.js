@@ -8,7 +8,7 @@ const labels = new Map(taxonomy.muscles.map(({ id, label }) => [id, label]));
 const equipmentLabels = {
   barbell_ezbar: "Barbell / EZ bar", bodyweight: "Bodyweight", cable: "Cable",
   dumbbell: "Dumbbell", machine: "Machine", band: "Band",
-  stability_ball: "Stability ball", ab_wheel: "Ab wheel",
+  stability_ball: "Stability ball", ab_wheel: "Ab wheel", bench: "Bench",
 };
 
 export const NEVFIT_EXERCISES = Object.freeze(catalogue.entries.map((entry) => Object.freeze({

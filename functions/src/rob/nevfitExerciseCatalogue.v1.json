@@ -3213,6 +3213,18 @@
         "machine"
       ],
       "movementPattern": "elbow_extension"
+    },
+    {
+      "id": "nevfit-lying-dumbbell-curl",
+      "name": "Lying Dumbbell Curl",
+      "bodyPart": "Biceps",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": [
+        "dumbbell",
+        "bench"
+      ],
+      "movementPattern": "elbow_flexion"
     }
   ]
 }

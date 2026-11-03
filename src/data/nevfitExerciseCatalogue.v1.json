@@ -9191,6 +9191,45 @@
         "wger": null,
         "candidateWgerId": null
       }
+    },
+    {
+      "id": "nevfit-lying-dumbbell-curl",
+      "displayName": "Lying Dumbbell Curl",
+      "aliases": [],
+      "browseGroup": "Biceps",
+      "primaryMuscles": [
+        "biceps"
+      ],
+      "secondaryMuscles": [],
+      "subdivisions": [],
+      "equipmentCategory": "dumbbell",
+      "accessoryEquipment": [
+        "bench"
+      ],
+      "movementPattern": "elbow_flexion",
+      "variantTags": [],
+      "possibleDuplicateGroup": null,
+      "metadata": {
+        "status": "provisional",
+        "confidence": "low",
+        "ambiguities": [
+          "Lie perpendicular to a flat bench with shoulders and upper back supported, feet planted and torso extending off the bench. Arms hang behind the shoulder line; curl with controlled elbow flexion. Distinct from incline and spider curls; do not remap wger-1530 history."
+        ],
+        "provenance": {
+          "source": "user_master_spreadsheet",
+          "sourceRow": 249,
+          "classification": "spreadsheet_proposal_plus_conservative_nevfit_normalisation",
+          "reviewedFields": []
+        }
+      },
+      "externalReferences": {
+        "wger": {
+          "id": "wger-1530",
+          "confidence": "medium",
+          "provenance": "checkpoint_048_strong_candidate"
+        },
+        "candidateWgerId": null
+      }
     }
   ]
 }

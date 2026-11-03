@@ -6,8 +6,8 @@ import snapshot from "../functions/src/rob/robExerciseCatalogue.v2.json" with { 
 test("master row coverage, ID provenance and collision warnings", () => {
   const entries = mapping.exercises;
   const ids = new Set(snapshot.exercises.map((entry) => entry.id));
-  assert.equal(entries.length, 247);
-  assert.deepEqual(entries.map((entry) => entry.sourceRow), Array.from({ length: 247 }, (_, index) => index + 2));
+  assert.equal(entries.length, 248);
+  assert.deepEqual(entries.map((entry) => entry.sourceRow), Array.from({ length: 248 }, (_, index) => index + 2));
   assert.equal(entries.filter((entry) => entry.historicalWgerId).length, 28);
   assert.equal(entries.filter((entry) => entry.matchStatus === "protected_existing_id").length, 28);
   assert.equal(entries.filter((entry) => entry.preferredWgerIdRaw).length, 6);

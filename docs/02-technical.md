@@ -49,6 +49,8 @@ Checkpoint 051C activates version 3 of the offline historical crosswalk as the p
 
 For a future addition, review the source row, assign a new unique `nevfit-*` ID explicitly in the registry, then add its source name and regenerate/validate. Never renumber existing IDs. If a source name changes, update the registry's `sourceName` but retain `id` and `sourceNameAtAssignment`. A display-only catalogue rename keeps the same ID. Preserve separate entries and flag possible duplicates until a reviewed decision establishes equivalence. The `--seed-registry` option was for the initial 247-row import only and refuses to run once the registry exists. Future media references, descriptions and instructions are optional; no media is stored in this version. The compatibility and activation boundaries are in `evaluation/nevfit-catalogue-activation-proposal.md`.
 
+The Lying Dumbbell Curl addition appends source row 249 and `nevfit-lying-dumbbell-curl` to the registry and generated client/server catalogues. It requires dumbbells and a bench. Its WGER snapshot reference is `wger-1530`, but the historical crosswalk and saved workout identities are unchanged.
+
 Root Firebase config files:
 
 - `firebase.json`

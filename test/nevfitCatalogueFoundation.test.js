@@ -9,23 +9,33 @@ import snapshot from "../functions/src/rob/robExerciseCatalogue.v2.json" with { 
 import { validateNevfitCatalogue } from "../evaluation/nevfitCatalogueValidation.js";
 import { getPreviousExercisePerformance } from "../src/services/workoutSnapshots.js";
 
-const inputs = { catalogue, registry, taxonomy, crosswalk, wgerSnapshot: snapshot, expectedCount: 247 };
+const inputs = { catalogue, registry, taxonomy, crosswalk, wgerSnapshot: snapshot, expectedCount: 248 };
 const byId = new Map(catalogue.entries.map((entry) => [entry.id, entry]));
 
-test("all 247 source exercises have unique committed Nevfit IDs and valid provisional metadata", () => {
+test("all 248 source exercises have unique committed Nevfit IDs and valid provisional metadata", () => {
   const result = validateNevfitCatalogue(inputs);
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.counts, { catalogue: 247, registry: 247, legacy: 28, selectedWger: 42, withoutWger: 205 });
+  assert.deepEqual(result.counts, { catalogue: 248, registry: 248, legacy: 28, selectedWger: 43, withoutWger: 205 });
   assert.equal(catalogue.entries.filter((entry) => entry.metadata.status === "partially_reviewed").length, 12);
-  assert.equal(catalogue.entries.filter((entry) => entry.metadata.status === "provisional").length, 235);
+  assert.equal(catalogue.entries.filter((entry) => entry.metadata.status === "provisional").length, 236);
   assert.equal(catalogue.entries.filter((entry) => entry.secondaryMuscles.length).length, 184);
   assert.equal(catalogue.entries.filter((entry) => entry.subdivisions.length).length, 46);
   assert.ok(catalogue.entries.every((entry) => entry.movementPattern !== "other"));
   assert.ok(catalogue.entries.every((entry) => entry.media === undefined));
-  assert.equal(new Set(catalogue.entries.map((entry) => entry.id)).size, 247);
-  assert.equal(new Set(catalogue.entries.map((entry) => entry.displayName.toLowerCase())).size, 247);
+  assert.equal(new Set(catalogue.entries.map((entry) => entry.id)).size, 248);
+  assert.equal(new Set(catalogue.entries.map((entry) => entry.displayName.toLowerCase())).size, 248);
   assert.equal(taxonomy.muscles.filter((item) => item.kind === "main").length, 18);
   assert.deepEqual(catalogue.entries.map((entry) => entry.metadata.provenance.sourceRow), mapping.exercises.map((entry) => entry.sourceRow));
+});
+
+test("lying dumbbell curl retains a distinct identity and bench requirement without remapping history", () => {
+  const entry = byId.get("nevfit-lying-dumbbell-curl");
+  assert.equal(entry.displayName, "Lying Dumbbell Curl");
+  assert.deepEqual(entry.primaryMuscles, ["biceps"]);
+  assert.equal(entry.equipmentCategory, "dumbbell");
+  assert.deepEqual(entry.accessoryEquipment, ["bench"]);
+  assert.equal(entry.movementPattern, "elbow_flexion");
+  assert.equal(crosswalk.relationships.some((item) => item.historicalWgerId === "wger-1530"), false);
 });
 
 test("identity registry remains authoritative when a display name changes; variants stay separate", () => {

@@ -1236,6 +1236,11 @@
       "id": "nevfit-seated-triceps-extension-machine",
       "sourceNameAtAssignment": "Seated Triceps Extension Machine",
       "sourceName": "Seated Triceps Extension Machine"
+    },
+    {
+      "id": "nevfit-lying-dumbbell-curl",
+      "sourceNameAtAssignment": "Lying Dumbbell Curl",
+      "sourceName": "Lying Dumbbell Curl"
     }
   ]
 }

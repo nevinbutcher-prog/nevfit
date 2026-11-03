@@ -9,14 +9,18 @@ import { createServerAuthorisedRobCatalogue, authorizeRobCatalogue } from "../fu
 import { getVerifiedRobExerciseCatalogue } from "../src/services/exerciseProvider.js";
 import { programGenerationMessages } from "../functions/src/rob/robProgramGeneration.js";
 
-test("all 247 Nevfit exercises search and resolve with stable identities and filters", async () => {
-  assert.equal(NEVFIT_EXERCISES.length, 247);
-  assert.equal((await searchExercises()).length, 247);
+test("all 248 Nevfit exercises search and resolve with stable identities and filters", async () => {
+  assert.equal(NEVFIT_EXERCISES.length, 248);
+  assert.equal((await searchExercises()).length, 248);
   for (const item of NEVFIT_EXERCISES) assert.equal((await getExerciseById(item.id))?.id, item.id);
   const selected = getNevfitExerciseById("nevfit-seated-leg-curl");
   assert.equal((await searchExercises(selected.name)).some((item) => item.id === selected.id), true);
   assert.equal((await searchExercises("curl", { equipment: "Machine", muscle: selected.primaryMuscle })).some((item) => item.id === selected.id), true);
   assert.equal((await searchExercises("curl", { equipment: "Dumbbell" })).some((item) => item.id === selected.id), false);
+  const lyingCurl = await getExerciseById("nevfit-lying-dumbbell-curl");
+  assert.equal(lyingCurl?.name, "Lying Dumbbell Curl");
+  assert.deepEqual(lyingCurl?.equipment, ["Dumbbell", "Bench"]);
+  assert.equal((await searchExercises("lying dumbbell curl")).some((item) => item.id === lyingCurl.id), true);
 });
 
 test("feature rollback restores WGER search while Nevfit read resolution stays available", async () => {

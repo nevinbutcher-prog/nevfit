@@ -85,6 +85,7 @@ function classify(entry) {
 }
 const equipmentMap = { "Barbell / EZ-bar": "barbell_ezbar", Bodyweight: "bodyweight", Cable: "cable", Dumbbell: "dumbbell", Machine: "machine" };
 function equipmentFor(entry) {
+  if (entry.displayName === "Lying Dumbbell Curl") return { category: "dumbbell", accessoryEquipment: ["bench"], discrepancy: null };
   if (entry.displayName === "Lateral Band Walk") return { category: "band", accessoryEquipment: [], discrepancy: "Master lists Bodyweight; movement names a band." };
   if (entry.displayName === "Stability Ball Leg Curl") return { category: "stability_ball", accessoryEquipment: [], discrepancy: "Master lists Bodyweight; movement names a stability ball." };
   if (entry.displayName === "Ab Wheel Rollout") return { category: "ab_wheel", accessoryEquipment: [], discrepancy: "Master lists Bodyweight; movement names an ab wheel." };

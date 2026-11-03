@@ -116,7 +116,7 @@ for (const entry of entries) {
     }
   }
 }
-if (entries.length !== 247 || entries.filter((entry) => entry.historicalWgerId).length !== 28) throw new Error("Unexpected workbook row or historical ID count");
+if (entries.length !== 248 || entries.filter((entry) => entry.historicalWgerId).length !== 28) throw new Error("Unexpected workbook row or historical ID count");
 writeFileSync("evaluation/exercise-catalogue-mapping.json", JSON.stringify({ schemaVersion: 1, purpose: "Offline proposal; no production consumer", sourceWorkbook: workbook, wgerSnapshotVersion: snapshot.version, exercises: entries }, null, 2) + "\n");
 const counts = Object.fromEntries(["protected_existing_id", "strong_candidate", "needs_review", "no_suitable_match"].map((status) => [status, entries.filter((entry) => entry.matchStatus === status).length]));
 console.log(JSON.stringify({ total: entries.length, ...counts, preferred: entries.filter((entry) => entry.preferredWgerIdRaw).length, historicalMissing: entries.filter((entry) => entry.discrepancies.includes("historical_id_missing_from_snapshot")).length, preferredMissing: entries.filter((entry) => entry.discrepancies.includes("preferred_id_missing_from_snapshot")).length, equipment: Object.fromEntries([...new Set(entries.map((entry) => entry.equipment))].map((value) => [value, entries.filter((entry) => entry.equipment === value).length])), groups: Object.fromEntries([...new Set(entries.map((entry) => entry.primaryBrowseGroup))].map((value) => [value, entries.filter((entry) => entry.primaryBrowseGroup === value).length])) }, null, 2));

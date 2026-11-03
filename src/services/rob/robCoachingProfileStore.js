@@ -1,11 +1,11 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, getDocFromServer, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 import { normalizeRobCoachingProfile, robCoachingProfileDocumentSegments } from "./robCoachingProfile.js";
 
 const profileDocument = (uid) => doc(db, ...robCoachingProfileDocumentSegments(uid));
 
-export async function loadRobCoachingProfile(uid) {
-  const snapshot = await getDoc(profileDocument(uid));
+export async function loadRobCoachingProfile(uid, { serverOnly = false } = {}) {
+  const snapshot = await (serverOnly ? getDocFromServer(profileDocument(uid)) : getDoc(profileDocument(uid)));
   return normalizeRobCoachingProfile(snapshot.exists() ? snapshot.data() : null);
 }
 

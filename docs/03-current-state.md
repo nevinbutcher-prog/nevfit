@@ -77,7 +77,7 @@
 - No Rob advice flow can read or write application data beyond its supplied in-memory coaching context
 - Ask Rob advisory surface with authenticated, server-owned persona/prompt instructions and transient recoverable responses
 - Rob advice automatically supplies bounded deterministic advice context but cannot modify routines, programs, workouts, or other application data
-- Rob Home offers one-click Review my week for the current local Monday–Sunday week. It compares completed strength workouts, logged runs and recorded steps with the preceding week through a bounded derived context and an authenticated, read-only weekly-review callable. Missing entries and incomplete weeks remain explicit.
+- Dashboard and Rob Home open a Monday Weekly Check-In for the previous fully completed local Monday–Sunday week. The user can correct individual step days, review recorded runs and completed strength sessions, optionally share a feeling and short note, and request a holistic Rob assessment. The check-in compares the week before, preserves missing steps as unknown, syncs corrections before generation, and saves the response per account and week for later viewing without another AI call. Existing completed workouts remain read-only in this flow.
 - Deterministic pure Rob context builder for advice, routine review, and program review
 - Account-scoped Rob coaching preferences, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for existing advice and review requests
 - Authenticated structured Rob routine and program reviews with server-validated JSON results, privacy-safe diagnostics, and no persistence or proposal application

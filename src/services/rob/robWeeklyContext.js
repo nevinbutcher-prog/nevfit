@@ -135,7 +135,7 @@ function compareExercise(current, previous, profile) {
   });
 }
 
-export function buildRobWeeklyContext({ selectedDate = null, completedWorkouts = [], runs = [], stepsByDate = {}, coachingProfile = null, now = new Date() }) {
+export function buildRobWeeklyContext({ selectedDate = null, completedWorkouts = [], runs = [], stepsByDate = {}, coachingProfile = null, selfReport = null, now = new Date() }) {
   const reviewedDate = selectedDate ?? localDate(now);
   const bounds = weeklyBounds(reviewedDate);
   const profile = normalizeRobCoachingProfile(coachingProfile);
@@ -154,5 +154,6 @@ export function buildRobWeeklyContext({ selectedDate = null, completedWorkouts =
       omittedRunDetails: current.runs.omittedRuns + preceding.runs.omittedRuns,
       workoutsWithUnusableDates: (Array.isArray(completedWorkouts) ? completedWorkouts : []).filter((workout) => !workoutDate(workout)).length },
     profile,
+    selfReport,
   };
 }

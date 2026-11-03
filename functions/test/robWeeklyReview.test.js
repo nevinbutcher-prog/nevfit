@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRobWeeklyReviewHandler } from "../src/index.js";
-import { generateRobWeeklyReview, validateRobWeeklyReviewRequest } from "../src/rob/robWeeklyReview.js";
+import { composeRobWeeklyReviewMessages, generateRobWeeklyReview, validateRobWeeklyReviewRequest } from "../src/rob/robWeeklyReview.js";
 
 const period = (start, end) => ({ start, end, strength: { exercises: [] }, runs: { runs: [] }, steps: { days: [] } });
 const context = { version: 1, requestType: "weekly_review", calendar: "device_local_monday_sunday", selectedDate: "2026-10-14", current: period("2026-10-12", "2026-10-18"), preceding: period("2026-10-05", "2026-10-11"), comparison: {}, evidenceLimits: {} };
@@ -30,4 +30,15 @@ test("malformed or oversized weekly evidence is rejected", () => {
   assert.throws(() => validateRobWeeklyReviewRequest({ context: { ...context, requestType: "advice" } }));
   assert.throws(() => validateRobWeeklyReviewRequest({ context, uid: "another-user" }));
   assert.throws(() => validateRobWeeklyReviewRequest({ context: { ...context, extra: "x".repeat(23000) } }));
+});
+
+test("optional self-report is bounded and informs the holistic review prompt", () => {
+  const withReport = { ...context, selfReport: { feeling: "tough", note: "Knees felt sore after running." } };
+  assert.equal(validateRobWeeklyReviewRequest({ context: withReport }), withReport);
+  const messages = composeRobWeeklyReviewMessages(withReport);
+  assert.match(messages[0].content, /maintaining the current approach/i);
+  assert.match(messages[0].content, /seven planned sessions/i);
+  assert.match(messages[1].content, /Knees felt sore after running/);
+  assert.throws(() => validateRobWeeklyReviewRequest({ context: { ...context, selfReport: { feeling: "tough", note: "x".repeat(401) } } }));
+  assert.throws(() => validateRobWeeklyReviewRequest({ context: { ...context, selfReport: { feeling: "diagnosed", note: "" } } }));
 });

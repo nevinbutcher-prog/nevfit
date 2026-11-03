@@ -86,8 +86,10 @@ import {
   getViewModeForLoadedActiveWorkout,
 } from "./utils/navigation";
 import { buildRobContext, ROB_CONTEXT_TYPES } from "./services/rob/robContext";
-import { requestRobAdvice, requestRobWeeklyReview } from "./services/rob/robClient";
-import { buildRobWeeklyContext } from "./services/rob/robWeeklyContext";
+import { requestRobAdvice } from "./services/rob/robClient";
+import { weeklyCheckInPeriod } from "./services/rob/weeklyCheckIn";
+import { loadWeeklyCheckIn } from "./services/rob/weeklyCheckInStore";
+import WeeklyCheckIn from "./components/rob/WeeklyCheckIn";
 import { emptyRobCoachingProfile } from "./services/rob/robCoachingProfile";
 import { loadRobCoachingProfile, saveRobCoachingProfile } from "./services/rob/robCoachingProfileStore";
 import RobCoachingPreferences from "./components/rob/RobCoachingPreferences";
@@ -148,6 +150,7 @@ const CYCLE_LENGTH_WEEKS_STORAGE_KEY = "nevfit_cycle_length_weeks";
 const STEPS_STORAGE_KEY = "nevfit_steps";
 const RUNS_STORAGE_KEY = "nevfit_runs";
 const WEEKLY_RUN_TARGET_STORAGE_KEY = "nevfit_weekly_run_target";
+const HEALTH_CACHE_OWNER_STORAGE_KEY = "nevfit_health_cache_owner";
 const DEFAULT_REST_SECONDS = 120;
 const DEFAULT_CYCLE_LENGTH_WEEKS = 12;
 const DEFAULT_WEEKLY_RUN_TARGET = 2;
@@ -548,11 +551,6 @@ function getDateInputValue(date) {
   return `${year}-${month}-${day}`;
 }
 
-function formatRobWeekRange(start, end) {
-  const format = (value) => new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-  return `${format(start)} – ${format(end)}`;
-}
-
 function getStartOfWeek(date, firstDayId = weekSchedule[0]?.id ?? "mon") {
   const firstDayIndex = dayIdsByDateIndex.indexOf(firstDayId);
   const normalizedFirstDayIndex = firstDayIndex >= 0 ? firstDayIndex : 1;
@@ -614,11 +612,12 @@ function normalizeStoredSteps(value) {
 
   return Object.fromEntries(
     Object.entries(value)
+      .filter(([, steps]) => steps !== null && steps !== undefined && String(steps).trim() !== "")
       .map(([date, steps]) => [date, Number(steps)])
       .filter(
         ([date, steps]) =>
           isValidDateInputValue(date) &&
-          Number.isInteger(steps) &&
+          Number.isSafeInteger(steps) &&
           steps >= 0,
       ),
   );
@@ -863,10 +862,11 @@ function normalizeHealthState(value, fallbackState = null) {
   };
 }
 
-function persistHealthCache(healthState) {
+function persistHealthCache(healthState, uid) {
   persistSteps(healthState.steps);
   persistRuns(healthState.runs);
   persistWeeklyRunTarget(healthState.weeklyRunTarget);
+  if (uid) window.localStorage.setItem(HEALTH_CACHE_OWNER_STORAGE_KEY, uid);
 }
 
 function logPlanningSync(actionName, uid, planningState, result, error = null) {
@@ -936,25 +936,29 @@ async function persistPlanningStateForUser(uid, planningState, actionName) {
   }
 }
 
-async function loadUserHealthState(uid) {
-  const defaultHealthState = normalizeHealthState(null);
+async function loadUserHealthState(uid, isCurrent = () => true) {
+  const cacheOwner = window.localStorage.getItem(HEALTH_CACHE_OWNER_STORAGE_KEY);
+  const defaultHealthState = cacheOwner && cacheOwner !== uid
+    ? { steps: {}, runs: [], weeklyRunTarget: DEFAULT_WEEKLY_RUN_TARGET }
+    : normalizeHealthState(null);
   const cloudHealthState = await loadHealthState(uid);
+  if (!isCurrent()) throw new Error("account_changed");
 
   if (cloudHealthState) {
     const healthState = normalizeHealthState(cloudHealthState, defaultHealthState);
-    persistHealthCache(healthState);
+    persistHealthCache(healthState, uid);
     logHealthSync("health-load", uid, healthState, "success");
     return healthState;
   }
 
-  persistHealthCache(defaultHealthState);
+  persistHealthCache(defaultHealthState, uid);
   await saveHealthState(uid, defaultHealthState);
   logHealthSync("health-initialize", uid, defaultHealthState, "success");
   return defaultHealthState;
 }
 
-async function persistHealthStateForUser(uid, healthState, actionName) {
-  persistHealthCache(healthState);
+async function persistHealthStateForUser(uid, healthState, actionName, isCurrent = () => true) {
+  if (isCurrent()) persistHealthCache(healthState, uid);
   logHealthSync(actionName, uid, healthState, "local");
 
   try {
@@ -1937,6 +1941,7 @@ function App() {
     loadCompletedWorkouts,
   );
   const [stepsByDate, setStepsByDate] = useState(loadStoredSteps);
+  const [healthOwnerUid, setHealthOwnerUid] = useState(null);
   const [stepEntryDate, setStepEntryDate] = useState(
     getYesterdayDateInputValue,
   );
@@ -1962,6 +1967,7 @@ function App() {
     () => calculateMuscleWorkload(completedWorkouts, workloadPeriod, new Date(`${workloadCalendarDay}T12:00:00`)),
     [completedWorkouts, workloadPeriod, workloadCalendarDay],
   );
+  const weeklyPeriod = useMemo(() => weeklyCheckInPeriod(new Date(`${workloadCalendarDay}T12:00:00`)), [workloadCalendarDay]);
   const [selectedDayId, setSelectedDayId] = useState(getCurrentWeekdayId);
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
@@ -1975,9 +1981,7 @@ function App() {
   const [robExchange, setRobExchange] = useState(null);
   const [robStatus, setRobStatus] = useState("idle");
   const [robError, setRobError] = useState(null);
-  const [robWeeklyResult, setRobWeeklyResult] = useState(null);
-  const [robWeeklyStatus, setRobWeeklyStatus] = useState("idle");
-  const [robWeeklyError, setRobWeeklyError] = useState(null);
+  const [weeklySavedState, setWeeklySavedState] = useState({ uid: null, weekStart: null, status: "loading", review: null });
   const [robCoachingProfile, setRobCoachingProfile] = useState(emptyRobCoachingProfile);
   const [robCoachingProfileUid, setRobCoachingProfileUid] = useState(null);
   const [robCoachingProfileLoading, setRobCoachingProfileLoading] = useState(true);
@@ -1998,7 +2002,6 @@ function App() {
   const [robProgramResolution, setRobProgramResolution] = useState({ session: null, error: null });
   const programDraftsRef = useRef(programDrafts);
   const robReviewLifecycleRef = useRef(createRobReviewLifecycle());
-  const robWeeklyRequestRef = useRef(0);
   const robSelectedProgramIdRef = useRef(null);
   const robProgramGenerationLifecycleRef = useRef(createRobProgramGenerationLifecycle());
   useEffect(() => {
@@ -2084,6 +2087,18 @@ function App() {
       }),
     [],
   );
+
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (!uid) return undefined;
+    let active = true;
+    setWeeklySavedState({ uid, weekStart: weeklyPeriod.start, status: "loading", review: null });
+    loadWeeklyCheckIn(uid, weeklyPeriod.start).then(
+      (review) => { if (active) setWeeklySavedState({ uid, weekStart: weeklyPeriod.start, status: "loaded", review }); },
+      () => { if (active) setWeeklySavedState({ uid, weekStart: weeklyPeriod.start, status: "error", review: null }); },
+    );
+    return () => { active = false; };
+  }, [currentUser?.uid, weeklyPeriod.start]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -2235,6 +2250,7 @@ function App() {
   useEffect(() => {
     if (!currentUser) {
       lastHealthLoadUidRef.current = null;
+      setHealthOwnerUid(null);
       setHealthLoading(false);
       return undefined;
     }
@@ -2251,7 +2267,7 @@ function App() {
     setHealthLoading(true);
     setAppStateSyncError("");
 
-    loadUserHealthState(loadUid)
+    loadUserHealthState(loadUid, () => currentUserUidRef.current === loadUid)
       .then((loadedHealthState) => {
         if (!shouldApplyResults) {
           return;
@@ -2260,6 +2276,7 @@ function App() {
         setStepsByDate(loadedHealthState.steps);
         setRuns(loadedHealthState.runs);
         setWeeklyRunTarget(loadedHealthState.weeklyRunTarget);
+        setHealthOwnerUid(loadUid);
       })
       .catch((error) => {
         if (!shouldApplyResults) {
@@ -2268,6 +2285,7 @@ function App() {
 
         console.error("Health state sync failed:", error);
         lastHealthLoadUidRef.current = null;
+        setHealthOwnerUid(null);
         setAppStateSyncError(
           "Health data is using this device cache. Cloud sync is unavailable.",
         );
@@ -2742,7 +2760,7 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (!currentUser || healthLoading) {
+    if (!currentUser || healthLoading || healthOwnerUid !== currentUser.uid) {
       return;
     }
 
@@ -2753,21 +2771,22 @@ function App() {
     });
     const queuedPersist = healthPersistQueueRef.current.then(
       () =>
-        persistHealthStateForUser(currentUser.uid, healthState, "health-save"),
+        persistHealthStateForUser(currentUser.uid, healthState, "health-save", () => currentUserUidRef.current === currentUser.uid),
       () =>
-        persistHealthStateForUser(currentUser.uid, healthState, "health-save"),
+        persistHealthStateForUser(currentUser.uid, healthState, "health-save", () => currentUserUidRef.current === currentUser.uid),
     );
 
     healthPersistQueueRef.current = queuedPersist.catch(() => {});
 
     queuedPersist.then((healthSynced) => {
+      if (currentUserUidRef.current !== currentUser.uid) return;
       setAppStateSyncError(
         healthSynced
           ? ""
           : "Health data is saved on this device. Cloud sync is unavailable.",
       );
     });
-  }, [currentUser, healthLoading, stepsByDate, runs, weeklyRunTarget]);
+  }, [currentUser, healthLoading, healthOwnerUid, stepsByDate, runs, weeklyRunTarget]);
 
   useEffect(() => {
     if (
@@ -3017,7 +3036,7 @@ function App() {
     persistPlanningCache(backup.planning);
     persistActiveWorkoutSession(backup.activeWorkout);
     persistCompletedWorkouts(backup.completedWorkouts);
-    persistHealthCache(backup.health);
+    persistHealthCache(backup.health, currentUser.uid);
     cacheExerciseNotes(currentUser.uid, backup.exerciseNotes);
 
     setProgramDefinitions(backup.programs);
@@ -4521,6 +4540,8 @@ function App() {
     ) ?? todayCompletedWorkout;
   const cycleWeekLabel = getCycleWeekLabel(cycleStartDate, cycleLengthWeeks);
   const currentRobProfile = robCoachingProfileUid === currentUser?.uid ? robCoachingProfile : emptyRobCoachingProfile();
+  const savedWeeklyReview = weeklySavedState.uid === currentUser?.uid && weeklySavedState.weekStart === weeklyPeriod.start ? weeklySavedState.review : null;
+  const savedWeeklyStatus = weeklySavedState.uid === currentUser?.uid && weeklySavedState.weekStart === weeklyPeriod.start ? weeklySavedState.status : "loading";
 
   async function saveCurrentRobProfile(profile) {
     const uid = currentUser?.uid;
@@ -4553,30 +4574,6 @@ function App() {
     } catch (error) {
       setRobError({ message: error?.code === "ai_invalid_request" ? "That question couldn't be sent. Try shortening or rewording it." : error?.message ?? "Rob couldn't get a response right now. Try again.", retryable: error?.retryable !== false });
       setRobStatus("error");
-    }
-  }
-
-  async function submitRobWeeklyReview() {
-    if (robWeeklyStatus === "loading" || healthLoading || workoutHistoryLoading) return;
-    const uid = currentUser?.uid;
-    if (!uid) return;
-    const requestId = ++robWeeklyRequestRef.current;
-    setRobWeeklyStatus("loading");
-    setRobWeeklyError(null);
-    setRobWeeklyResult(null);
-    try {
-      const [cloudWorkouts, cloudHealth, profile] = await Promise.all([loadCloudCompletedWorkouts(uid), loadHealthState(uid), loadRobCoachingProfile(uid)]);
-      if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
-      const health = normalizeHealthState(cloudHealth, { steps: {}, runs: [], weeklyRunTarget: DEFAULT_WEEKLY_RUN_TARGET });
-      const context = buildRobWeeklyContext({ completedWorkouts: cloudWorkouts, runs: health.runs, stepsByDate: health.steps, coachingProfile: profile });
-      const result = await requestRobWeeklyReview({ context });
-      if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
-      setRobWeeklyResult({ text: result.text, start: context.current.start, end: context.current.end, priorStart: context.preceding.start, priorEnd: context.preceding.end, incomplete: context.evidenceLimits.currentWeekInProgress });
-      setRobWeeklyStatus("success");
-    } catch {
-      if (requestId !== robWeeklyRequestRef.current || currentUserUidRef.current !== uid) return;
-      setRobWeeklyError("Rob couldn't load or review your synced activity right now. Try again.");
-      setRobWeeklyStatus("error");
     }
   }
 
@@ -4656,9 +4653,12 @@ function App() {
 
   function openRobHome() {
     invalidatePendingRobReview();
-    robWeeklyRequestRef.current++;
-    setRobWeeklyStatus("idle");
     setRobPanelMode(ROB_WORKFLOW_STEPS.HOME);
+    setViewMode("rob");
+  }
+
+  function openWeeklyCheckIn() {
+    setRobPanelMode(ROB_WORKFLOW_STEPS.WEEKLY_REVIEW);
     setViewMode("rob");
   }
 
@@ -4994,22 +4994,34 @@ function App() {
             <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Rob</p>
-                <h2 className="mt-2 text-3xl font-bold text-white">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "What would you like help with?" : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? "Coaching preferences" : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Review my week" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Review my program" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Build me a program" : robPanelMode === ROB_WORKFLOW_STEPS.ADVICE ? "Ask Rob a question" : "Rob's Review"}</h2>
-                <p className="mt-2 text-sm text-slate-300">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "Choose a coaching workflow. Rob will never change your training without your approval." : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? "Tell Rob what applies to your account. Leave unknown details blank." : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Review this week's completed workouts, runs and steps against last week." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Choose the program you want Rob to assess." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Answer a few practical questions, then confirm the brief Rob will use for a future program design." : robPanelMode === "routine_review" ? `Routine review · ${robReview?.routineName ?? robReviewOrigin?.routineName ?? "Routine"}` : robPanelMode === "program_review" ? `Program review · ${robReview?.programName ?? robReviewOrigin?.programName ?? "Program"}` : "Ask about training, exercises, volume, session structure or progression."}</p>
+                <h2 className="mt-2 text-3xl font-bold text-white">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "What would you like help with?" : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? "Coaching preferences" : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Weekly Check-In" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Review my program" : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Build me a program" : robPanelMode === ROB_WORKFLOW_STEPS.ADVICE ? "Ask Rob a question" : "Rob's Review"}</h2>
+                <p className="mt-2 text-sm text-slate-300">{robPanelMode === ROB_WORKFLOW_STEPS.HOME ? "Choose a coaching workflow. Rob will never change your training without your approval." : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? "Tell Rob what applies to your account. Leave unknown details blank." : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? "Review your last completed Monday–Sunday week before looking ahead." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? "Choose the program you want Rob to assess." : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? "Answer a few practical questions, then confirm the brief Rob will use for a future program design." : robPanelMode === "routine_review" ? `Routine review · ${robReview?.routineName ?? robReviewOrigin?.routineName ?? "Routine"}` : robPanelMode === "program_review" ? `Program review · ${robReview?.programName ?? robReviewOrigin?.programName ?? "Program"}` : "Ask about training, exercises, volume, session structure or progression."}</p>
               </div>
               {robPanelMode !== ROB_WORKFLOW_STEPS.HOME ? <button type="button" onClick={openRobHome} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">Rob Home</button> : null}
             </div>
             {robPanelMode === ROB_WORKFLOW_STEPS.HOME ? <div className="grid gap-3">
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.ADVICE)} className="rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 text-left transition hover:border-emerald-300"><h3 className="text-lg font-bold text-white">Ask Rob a question</h3><p className="mt-1 text-sm text-slate-300">Get help with training, exercises and progression.</p></button>
-              <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.WEEKLY_REVIEW)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my week</h3><p className="mt-1 text-sm text-slate-300">Get a coaching assessment of this week.</p></button>
+              <button type="button" onClick={openWeeklyCheckIn} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Weekly Check-In</h3><p className="mt-1 text-sm text-slate-300">Review last week's activity or reopen your saved review.</p></button>
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROFILE)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Coaching preferences</h3><p className="mt-1 text-sm text-slate-300">Set your goals, constraints and progression method for Rob.</p></button>
               <button type="button" onClick={() => openRobProgramReview(robSelectedProgramId)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my program</h3><p className="mt-1 text-sm text-slate-300">Have Rob analyse an existing training program.</p></button>
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_BUILD)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Build me a program</h3><p className="mt-1 text-sm text-slate-300">Work with Rob to design a complete training program.</p></button>
-            </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? (robCoachingProfileError ? <p role="alert" className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Coaching preferences could not be loaded. Refresh before editing them.</p> : <RobCoachingPreferences key={currentUser.uid} profile={currentRobProfile} onSave={saveCurrentRobProfile} />) : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="text-sm text-slate-300">Rob will review the current local Monday–Sunday week and compare it with the preceding week. The current week may still be incomplete.</p><button type="button" onClick={submitRobWeeklyReview} disabled={robWeeklyStatus === "loading"} className="mt-4 rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">{robWeeklyStatus === "loading" ? "Rob is reviewing…" : "Review my week"}</button></div>
-              {robWeeklyError ? <p role="alert" className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">{robWeeklyError} <button type="button" onClick={submitRobWeeklyReview} className="ml-2 font-semibold underline">Retry</button></p> : null}
-              {robWeeklyResult ? <article className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h3 className="text-sm font-semibold text-emerald-200">{formatRobWeekRange(robWeeklyResult.start, robWeeklyResult.end)}{robWeeklyResult.incomplete ? " · Week in progress" : ""}</h3><p className="mt-1 text-xs text-slate-400">Compared with {formatRobWeekRange(robWeeklyResult.priorStart, robWeeklyResult.priorEnd)}</p><p className="mt-3 whitespace-pre-wrap text-slate-100">{robWeeklyResult.text}</p></article> : null}
-            </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? <div className="space-y-3">
+            </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROFILE ? (robCoachingProfileError ? <p role="alert" className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-100">Coaching preferences could not be loaded. Refresh before editing them.</p> : <RobCoachingPreferences key={currentUser.uid} profile={currentRobProfile} onSave={saveCurrentRobProfile} />) : robPanelMode === ROB_WORKFLOW_STEPS.WEEKLY_REVIEW ? (
+              <WeeklyCheckIn
+                key={`${currentUser.uid}-${weeklyPeriod.start}`}
+                uid={currentUser.uid}
+                period={weeklyPeriod}
+                healthPersistQueueRef={healthPersistQueueRef}
+                ownerUidRef={currentUserUidRef}
+                onHealthSynced={(cloudHealth) => {
+                  const health = normalizeHealthState(cloudHealth, { steps: {}, runs: [], weeklyRunTarget: DEFAULT_WEEKLY_RUN_TARGET });
+                  setStepsByDate(health.steps);
+                  setRuns(health.runs);
+                  setWeeklyRunTarget(health.weeklyRunTarget);
+                }}
+                onSaved={(review) => setWeeklySavedState({ uid: currentUser.uid, weekStart: weeklyPeriod.start, status: "loaded", review })}
+                onOpenRunLogger={() => { setViewMode("dashboard"); setExpandedDashboardEntry("runs"); }}
+              />
+            ) : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_SELECTION ? <div className="space-y-3">
               {robProgramSelectionError ? <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">{robProgramSelectionError}</p> : null}
               {getReviewablePrograms(activeProgramDrafts).length ? getReviewablePrograms(activeProgramDrafts).map((program) => <button key={program.id} type="button" onClick={() => startRobProgramReview(program.id)} aria-pressed={robSelectedProgramId === program.id} className={`w-full rounded-2xl border bg-slate-900 p-5 text-left transition ${robSelectedProgramId === program.id ? "border-emerald-400/70" : "border-slate-800 hover:border-slate-600"}`}><h3 className="break-words font-bold text-white">{program.name}</h3><p className="mt-1 text-sm text-slate-400">{program.days?.filter((day) => !day.archived).length ?? 0} routines{isRobReviewingUnsavedDraft(program) ? " · Reviewing unsaved draft" : ""}</p></button>) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><p className="font-semibold text-white">No programs to review yet</p><p className="mt-1 text-sm text-slate-400">Create a program manually first, then return to Rob for a review.</p><button type="button" onClick={() => setViewMode("routines")} className="mt-3 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Go to Programs</button></div>}
             </div> : robPanelMode === ROB_WORKFLOW_STEPS.PROGRAM_BUILD ? <RobProgramIntake intake={robProgramIntake} resolution={robProgramResolution.session} resolutionError={robProgramResolution.error} onSearchExercise={handleRobProgramExerciseSearch} onSelectExercise={handleRobProgramExerciseSelect} onClearExercise={handleRobProgramExerciseClear} step={robProgramIntakeStep} setStep={setRobProgramIntakeStep} onChange={(next) => { setRobProgramIntake(next); invalidateRobProgramGeneration(); }} onConfirm={setRobProgramIntake} generation={robProgramGeneration} onGenerate={generateRobProgram} onStartOver={() => { if (!robProgramIntake.confirmedRequirements && window.confirm("Start over and discard the current program brief?")) { setRobProgramIntake(createRobProgramIntake()); setRobProgramIntakeStep("goal"); invalidateRobProgramGeneration(); } else if (robProgramIntake.confirmedRequirements) { setRobProgramIntake(createRobProgramIntake()); setRobProgramIntakeStep("goal"); invalidateRobProgramGeneration(); } }} /> : robPanelMode !== ROB_WORKFLOW_STEPS.ADVICE ? <>
@@ -5056,6 +5068,18 @@ function App() {
                 {saveMessage}
               </p>
             ) : null}
+
+            <article className="rounded-2xl border border-emerald-400/40 bg-slate-900 p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">Monday Weekly Check-In</p>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white">{savedWeeklyReview ? "Last week's review is saved" : "Review last week with Rob"}</h2>
+                  <p className="mt-1 text-sm text-slate-300">{weeklyPeriod.start} – {weeklyPeriod.end} · {savedWeeklyStatus === "loading" ? "Checking saved review…" : savedWeeklyStatus === "error" ? "Saved status unavailable" : savedWeeklyReview ? "Completed" : "Ready to complete"}</p>
+                  <p className="mt-1 text-xs text-slate-400">Next Monday: {weeklyPeriod.nextMonday} ({weeklyPeriod.daysUntilNextMonday} {weeklyPeriod.daysUntilNextMonday === 1 ? "day" : "days"})</p>
+                </div>
+                <button type="button" onClick={openWeeklyCheckIn} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950">{savedWeeklyReview ? "View saved review" : "Open check-in"}</button>
+              </div>
+            </article>
 
             <article
               className={`min-w-0 rounded-2xl border bg-slate-900 p-4 shadow-2xl sm:p-5 ${

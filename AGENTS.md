@@ -2,83 +2,43 @@
 
 ## Shared NevDev development workflow
 
-Follow `docs/nevdev_workflow.md` alongside these repository-specific instructions.
+Follow `docs/nevdev_workflow.md` alongside these repository-specific instructions when that document is available. The shared agreement governs goal-driven planning, incremental checkpoints, implementation scope, code review, user acceptance and deferred findings. If it is missing, report the gap; do not invent its contents.
 
-The shared agreement governs goal-driven planning, incremental checkpoints, implementation scope, code review, user acceptance and deferred findings.
+Each approved brief represents **one implementation checkpoint** unless the user explicitly authorises otherwise. Implement only the approved checkpoint; do not automatically generate subsequent cards, expand scope or begin the next step.
 
-Each approved brief represents **one implementation checkpoint** unless the user explicitly authorises otherwise.
-
-Implement only the agreed checkpoint. Do not automatically generate subsequent cards, expand the scope or begin the next step.
-
-These repository instructions govern operational permissions, brief lifecycle, Git actions and deployment. The shared workflow agreement does not revoke the standing authorisations below.
+These instructions govern operational permissions, brief lifecycle, Git actions and deployment. The shared workflow agreement does not revoke the standing authorisations below.
 
 ## Brief implementation
 
-When the user says "next brief", review `briefs/nextbrief.md`.
+When the user says **"next brief"**, use the approved implementation brief committed directly to `briefs/nextbrief.md` on `main` by ChatGPT. Do not rely on a pasted copy if the committed brief differs:
 
-Seek clarification only when an ambiguity materially affects the intended outcome or implementation boundaries. Otherwise, proceed.
+1. Check branch, working tree, remote and upstream.
+2. If the tree is clean and an upstream is configured, synchronise via fetch and fast-forward only (`git pull --ff-only`) **before** reading `briefs/nextbrief.md`. If already current, proceed.
+3. Never reset, discard, auto-stash, commit or overwrite local changes to allow synchronisation. If the tree is dirty, the branch diverged, upstream is missing, or synchronisation fails, stop and report the blocker instead of implementing a potentially outdated brief.
+4. Read the freshly synchronised `briefs/nextbrief.md`. If empty or missing, do not implement.
 
-Before implementation, review relevant material under `docs/` and inspect the existing architecture as necessary.
+Safe fast-forward synchronisation is authorised without additional approval.
 
-Prefer the smallest change that satisfies the agreed checkpoint. Reuse existing infrastructure and avoid speculative functionality or unrelated refactoring.
+Seek clarification only when ambiguity materially affects the intended outcome or scope. Review relevant `docs/` material and existing architecture before implementation. Make the smallest coherent change that satisfies the checkpoint, reusing infrastructure and avoiding speculative features or unrelated refactoring.
 
-Following implementation:
+Testing must be proportional to change impact and risk. Reuse existing test coverage; add a small number of focused tests only where they provide meaningful evidence. Do not create large suites, exhaustive matrices, or extensive stress testing for minor changes. Run the relevant existing checks, and expand coverage only for justified high-risk behaviours or regressions. Report what was and was not tested.
 
-- Make necessary freshness updates to `docs/`.
-- Rename `nextbrief.md` using the suggested commit message, with a sequential numerical prefix so archived briefs remain in implementation order.
-- Leave a blank `briefs/nextbrief.md` ready for subsequent approved work.
-
-Completing one brief does not authorise implementation of another.
+After implementation, update relevant `docs/` as necessary; archive `briefs/nextbrief.md` with a sequential numeric prefix and a filename based on the suggested commit message; leave a blank `briefs/nextbrief.md` for later approved work. Completing one brief does not authorise another.
 
 ## Git and frontend deployment
 
-When a brief changes deployable production behaviour, complete and verify the implementation, then commit the work using the brief's suggested commit message.
-
-Git commit and push authorisation is standing and explicit for repository work. Commit and push completed changes without requesting separate approval.
-
-Use the repository's Git integration as the frontend/Vercel deployment path. Do not deploy directly to Vercel.
-
-If Git-triggered deployment fails, report exactly what remains rather than describing deployment as complete.
+When a brief changes deployable production behaviour, implement and verify, then commit using the brief's suggested commit message. Git commit and push authorisation is standing and explicit; no separate approval is needed. Use Git-triggered frontend/Vercel deployment, not direct Vercel deployment. Report any failed deployment accurately.
 
 ## Firebase deployment
 
-Firebase deployment authorisation is standing and explicit for changes required to make an approved brief function in production.
+Firebase deployment authorisation is standing and explicit for approved, required, non-destructive production changes including Cloud Functions, Firestore rules/indexes, Storage rules, and other non-destructive configuration. Use the Firebase CLI against the configured project; deploy only required resources and verify deployment.
 
-After verification, deploy all in-scope Firebase changes required by the brief, including:
-
-- Cloud Functions.
-- Firestore rules and indexes.
-- Storage rules.
-- Other non-destructive Firebase configuration.
-
-Do not request separate approval for these authorised changes.
-
-Use the Firebase CLI against the repository's configured Firebase project, deploy only the necessary resources and verify the resulting deployed state.
-
-This authorisation does **not** cover deleting production data, removing Firebase resources, changing billing, broad IAM changes or creating/replacing secret values. Those actions require explicit user approval.
-
-Never describe a Firebase-dependent implementation as deployed while its required Firebase resources remain undeployed.
+Destructive data/resource changes, billing, broad IAM changes and creating/replacing secrets require explicit user approval. Never claim production deployment is complete when necessary Firebase resources remain undeployed.
 
 ## Completion and handoff
 
-After implementing a brief, provide a concise report covering:
-
-- What the user can now do.
-- What changed technically.
-- Commit reference.
-- Tests executed and their results.
-- Deployment status and any remaining configuration.
-- Known limitations and unresolved findings.
-- Specific user behaviours still requiring verification.
-
-Distinguish clearly between implementation, automated verification, deployment and user acceptance.
-
-Do not declare the checkpoint accepted or the overarching goal achieved. Those decisions occur after independent code review and user verification.
-
-Do not automatically initiate the next implementation checkpoint.
+Report: user-visible capability, technical changes, commit reference, tests/results, deployment/configuration state, unresolved findings and precise user verification needed. Distinguish implementation, code review, deployment and user acceptance. Do not declare the checkpoint or overarching goal achieved; those decisions follow independent code review and user verification. Do not automatically begin the next checkpoint.
 
 ## Documentation continuity
 
-As the project grows, if new standalone documentation seems necessary for AI continuity and does not fit under the existing product strategy umbrella, suggest its creation for user approval.
-
-Avoid duplicating the shared workflow agreement in project-specific documentation.
+Propose additional standalone documentation for user approval only when existing product strategy or other documents cannot hold the relevant knowledge. Avoid duplicating the shared workflow agreement.

@@ -65,6 +65,7 @@ import {
   addRoutineExercise,
   createWorkoutSessionSnapshot,
   duplicateRoutineExercises,
+  getActiveRoutineDays,
   hasRoutineExercise,
   moveRoutineExercise,
   normalizeRoutineDay as normalizeRoutineDayData,
@@ -5166,7 +5167,7 @@ function App() {
                           {cycleWeekLabel}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {dashboardProgram.days.length} routines
+                          {getActiveRoutineDays(dashboardProgram).length} routines
                         </p>
                       </>
                     ) : (
@@ -5630,9 +5631,7 @@ function App() {
                       <div className="mt-4 border-t border-slate-700 pt-4">
                         <div className="flex flex-wrap gap-2">
                           {[
-                            ...activeProgramDefinitions.flatMap(
-                              (program) => program.days,
-                            ),
+                            ...activeProgramDefinitions.flatMap(getActiveRoutineDays),
                             { id: null, name: "Rest" },
                           ].map((option) => {
                             const isAssigned = day.routineDayId === option.id;
@@ -5829,7 +5828,7 @@ function App() {
                         {program.name}
                       </span>
                       <span className="mt-1 block text-sm text-slate-400">
-                        {program.days.length} routines
+                        {getActiveRoutineDays(program).length} routines
                       </span>
                     </button>
                   );
@@ -5852,7 +5851,7 @@ function App() {
                         {selectedProgramDraft.name}
                       </h2>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-400">
-                        <span>{selectedProgramDraft.days.length} routines</span>
+                        <span>{getActiveRoutineDays(selectedProgramDraft).length} routines</span>
                         <span>{selectedProgramDayDraft?.exercises.length ?? 0} exercises</span>
                       </div>
                       {selectedProgramHasUnsavedChanges ? (
@@ -6533,7 +6532,7 @@ function App() {
                         {selectedProgramDraft.name}
                       </h2>
                       <p className="mt-2 text-sm text-slate-400">
-                        {selectedProgramDraft.days.length} routines
+                        {getActiveRoutineDays(selectedProgramDraft).length} routines
                       </p>
                     </div>
                     <button

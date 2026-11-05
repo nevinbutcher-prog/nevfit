@@ -21,6 +21,7 @@
 - Program editor
 - Custom programs and routines
 - Routine management: rename, duplicate, archive, add routine
+- Archived routines are excluded from the weekly schedule picker and visible program routine counts. Existing schedule references resolve to Rest without a workout action; archived program data and historical references remain preserved.
 - Multi-routine programs with stable routine IDs and safe routine selection
 - Compact routine builder with collapsed program management and day tabs
 - Collapsed exercise cards with single-item expanded editing

@@ -1,3 +1,7 @@
+export function getActiveRoutineDays(program) {
+  return program.days.filter((day) => !day.archived);
+}
+
 export function normalizeRoutineExercise(
   value,
   fallbackRoutineExerciseId,

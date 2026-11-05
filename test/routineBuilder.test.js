@@ -4,6 +4,7 @@ import {
   addRoutineExercise,
   createWorkoutSessionSnapshot,
   duplicateRoutineExercises,
+  getActiveRoutineDays,
   hasRoutineExercise,
   moveRoutineExercise,
   normalizeRoutineDay,
@@ -11,6 +12,30 @@ import {
   replaceRoutineExercise,
   updateRoutineExerciseSuperset,
 } from "../src/services/routineBuilder.js";
+import { maybeNormalizeCloudProgram, toProgramDocument } from "../src/services/programData.js";
+
+test("active routine options and counts exclude archives while saved data and history retain them", () => {
+  const program = {
+    id: "program-1",
+    days: Array.from({ length: 5 }, (_, index) => ({
+      id: `routine-${index + 1}`, name: `Routine ${index + 1}`, exercises: [],
+    })),
+  };
+  const schedule = [{ routineDayId: "routine-5" }];
+  const history = [{ id: "completed-1", routineDayId: "routine-5" }];
+  const original = structuredClone({ program, schedule, history });
+  assert.equal(getActiveRoutineDays(program).length, 5);
+  const archivedProgram = { ...program, days: program.days.map((day) => day.id === "routine-5" ? { ...day, archived: true } : day) };
+  const expectedIds = ["routine-1", "routine-2", "routine-3", "routine-4"];
+  assert.deepEqual([archivedProgram].flatMap(getActiveRoutineDays).map((day) => day.id), expectedIds);
+  const document = toProgramDocument(archivedProgram, () => "test-timestamp");
+  const reloaded = maybeNormalizeCloudProgram(JSON.parse(JSON.stringify(document)));
+  assert.equal(getActiveRoutineDays(reloaded).length, 4);
+  assert.deepEqual(getActiveRoutineDays(reloaded).map((day) => day.id), expectedIds);
+  assert.equal(reloaded.days.length, 5);
+  assert.equal(reloaded.days[4].archived, true);
+  assert.deepEqual({ program, schedule, history }, original);
+});
 
 const entry = (routineExerciseId, exerciseId, overrides = {}) => ({
   routineExerciseId,

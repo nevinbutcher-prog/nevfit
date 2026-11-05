@@ -25,6 +25,7 @@
 - Compact routine builder with collapsed program management and day tabs
 - Collapsed exercise cards with single-item expanded editing
 - Focused bottom-sheet exercise configuration with draft-only prescription, display-name, swap, and remove controls
+- Routine rep targets use Min reps / Max reps numeric entry and 44px decrement/increment buttons. Crossing a bound carries the other bound; fixed targets are supported. Edits retain the existing rep-range string and persist only through Save Program.
 - Exercise search and filtering
 - Provider-neutral selectable exercise results
 - Add and Swap exercise picker flows

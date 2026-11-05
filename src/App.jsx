@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import MuscleWorkload from "./components/MuscleWorkload";
+import RepRangeEditor from "./components/RepRangeEditor";
 import { calculateMuscleWorkload, DEFAULT_WORKLOAD_PERIOD } from "./services/muscleWorkload";
 import { getTodayHeadline, getTodayRestDescription } from "./services/dashboardToday";
 import {
@@ -6399,13 +6400,9 @@ function App() {
                                         />
                                       </label>
 
-                                      <label className="min-w-0 text-sm font-semibold text-slate-300">
-                                        Reps
-                                        <input
-                                          type="text"
-                                          inputMode="numeric"
-                                          value={routineExercise.repRange}
-                                          onChange={(event) =>
+                                      <RepRangeEditor
+                                        value={routineExercise.repRange}
+                                        onChange={(repRange) =>
                                             updateProgramDay(
                                               selectedProgramDraft.id,
                                               selectedProgramDayDraft.id,
@@ -6420,17 +6417,14 @@ function App() {
                                                         ? {
                                                             ...exerciseItem,
                                                             repRange:
-                                                              event.target
-                                                                .value,
+                                                              repRange,
                                                           }
                                                         : exerciseItem,
                                                   ),
                                               },
                                             )
-                                          }
-                                          className={`${routineEditorInputClassName} mt-1`}
-                                        />
-                                      </label>
+                                        }
+                                      />
 
                                       <label className="min-w-0 text-sm font-semibold text-slate-300">
                                         Rest

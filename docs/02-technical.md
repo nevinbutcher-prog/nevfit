@@ -861,6 +861,15 @@ routines preserve their stored order; adding, duplicating, or archiving a
 routine updates the full program document through the existing persistence path.
 Routine field edits remain draft-only until the explicit Save Program action.
 
+`RepRangeEditor` replaces the builder's free-text rep range with Min/Max controls.
+`src/services/repRangeEditor.js` parses valid stored ranges and emits the existing
+`min-max` string, including fixed targets such as `10-10`. Counts must be whole
+numbers from 1 to 999; crossing a bound moves the opposite bound. Manual numeric
+entry applies on blur or Enter, while invalid entry reverts to the last valid
+value. Nonstandard legacy strings remain visible and unchanged until the user
+sets a number, which starts a valid fixed target. These controls call the existing
+draft update path; storage, workout feedback and AI prescription limits are unchanged.
+
 `src/services/planningStore.js` stores planning state at:
 
 ```text

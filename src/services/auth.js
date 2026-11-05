@@ -3,8 +3,18 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  validatePassword,
 } from "firebase/auth";
 import { auth } from "./firebase";
+import { createEmailAuthActions } from "./authFlow.js";
+
+const emailActions = createEmailAuthActions(auth, { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, validatePassword });
+export const signInWithEmail = emailActions.signIn;
+export const registerWithEmail = emailActions.register;
+export const requestPasswordReset = emailActions.reset;
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -36,8 +46,7 @@ export function subscribeToAuthChanges(callback) {
   return onAuthStateChanged(
     auth,
     (user) => callback(normalizeUser(user)),
-    (error) => {
-      console.error("Firebase auth listener failed:", error);
+    () => {
       callback(null);
     },
   );

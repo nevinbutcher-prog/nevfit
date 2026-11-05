@@ -411,6 +411,15 @@ routine at a time; it does not schedule, activate, or generate whole programs.
 
 ## localStorage Keys
 
+Application cache keys listed below are stored under
+`nevfit_account:{encodedUid}:` by `src/services/accountCache.js`. Each UID keeps
+its own cache across sign-out and reload. Old unscoped keys are retained but are
+not automatically imported because their owner cannot be established. Existing
+accounts reload their data from their own Firestore paths; legacy cache-only
+changes would require explicit recovery rather than cross-account migration.
+Exercise notes already use separate UID-specific keys; Rob preferences load
+from the signed-in user's Firestore document.
+
 - `nevfit_schedule`
 - `nevfit_programs`
 - `nevfit_active_program`
@@ -821,16 +830,28 @@ Firebase is initialized in `src/services/firebase.js`.
 Authentication is isolated in `src/services/auth.js`:
 
 - `signInWithGoogle()`
+- `signInWithEmail(email, password)`
+- `registerWithEmail(email, password)`
+- `requestPasswordReset(email)`
 - `signOutUser()`
 - `subscribeToAuthChanges(callback)`
 
-The app tracks `currentUser` and `authLoading`. Signing in resolves cloud-backed
-program, planning, and health state before showing the authenticated app.
+The outer `App` subscribes to Firebase auth and shows a loading screen until the
+initial session resolves. Signed-out users see `SignInScreen`, which supports
+email sign-in, registration with confirmation and Firebase password-policy
+validation, neutral password-reset feedback, and the existing Google popup.
+`authFlow.js` maps errors without showing raw Firebase details, keeps credential
+errors neutral and prevents reset responses from identifying absent accounts.
+Passwords remain in transient form state and Firebase calls only. No account
+linking, merging, verification-email requirement or custom email service is added.
+Email/Password provider enablement is an existing Firebase console prerequisite.
+See [Firebase password authentication](https://firebase.google.com/docs/auth/web/password-auth).
 
-When `authLoading` is true, the app shows a loading screen and does not flash
-the main app. When `currentUser` is null, the app shows only the sign-in screen.
-Program, planning, health, active workout, and completed workout history loading
-can also show the loading screen while local/cloud migration resolves.
+On sign-in, the cache namespace is selected before `AccountApp` mounts. Its UID
+key remounts all in-memory state when accounts change; program, planning, health,
+active workout, history, notes and Rob preferences still hydrate before display.
+Late cloud hydration checks the active UID before cache writes or initialization;
+queued writes cannot update another UID's cache. Firestore paths remain unchanged.
 
 `src/services/userProfile.js` exports `ensureUserProfile(user)`, which creates
 or updates `users/{uid}` with `setDoc(..., { merge: true })`. This is the only
@@ -847,7 +868,7 @@ routine exercises, archive/delete flags, optional description, and timestamps.
 The service also writes a `routines` alias from `days` for the cloud document
 while loading either shape back into the app's existing `days` model.
 
-On authenticated load, the app reads `nevfit_programs`, then reads Firestore.
+On authenticated load, the app reads the UID-scoped `nevfit_programs` cache, then reads Firestore.
 Non-empty Firestore programs are treated as the source of truth and refresh the
 local cache. If Firestore is empty and local programs exist, the local programs
 are uploaded once. If both are empty, the starter program initializes and is

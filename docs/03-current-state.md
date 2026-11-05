@@ -59,10 +59,10 @@
 - Rep-range feedback and progression indicators
 - Workout completion workflow improvements
 - Safe in-workout exercise swaps with original-exercise traceability
-- Firebase Google sign-in gate
+- Firebase sign-in gate with Google and email/password sign-in, independent account registration, and native password-reset email requests. Registration checks matching passwords and Firebase's configured password policy; in-flight requests are guarded and auth errors use friendly messages.
 - Firestore user profile document sync at `users/{uid}`
 - Firestore-backed custom programs and routines at `users/{uid}/programs/{programId}`
-- Safe first-load program migration from `nevfit_programs` to Firestore
+- UID-scoped first-load program cache migration to Firestore. Programs, planning, health, active workouts and history use separate account cache namespaces; switching accounts remounts in-memory state. Old shared cache keys remain untouched and are not automatically imported because their owner is unknown.
 - Local program cache fallback with non-blocking cloud sync warnings
 - Firestore-backed planning state at `users/{uid}/appState/planning`
 - Firestore-backed health state at `users/{uid}/appState/health`

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import SignInScreen from "./components/SignInScreen";
+import { createAccountCache } from "./services/accountCache.js";
+import { authErrorMessage } from "./services/authFlow.js";
 import MuscleWorkload from "./components/MuscleWorkload";
 import RepRangeEditor from "./components/RepRangeEditor";
 import { calculateMuscleWorkload, DEFAULT_WORKLOAD_PERIOD } from "./services/muscleWorkload";
 import { getTodayHeadline, getTodayRestDescription } from "./services/dashboardToday";
 import {
-  signInWithGoogle,
   signOutUser,
   subscribeToAuthChanges,
 } from "./services/auth";
@@ -163,6 +165,14 @@ const routineEditorInputClassName =
 const routineEditorSelectClassName =
   "w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-white outline-none transition focus:border-emerald-400";
 
+// Selected before account state mounts. Async module helpers must check the UID
+// after cloud reads before using this active cache.
+let accountStorage;
+let activeCacheUid = null;
+function assertCurrentCache(uid) {
+  if (activeCacheUid !== uid) throw new Error("account_changed");
+}
+
 const getProgramDay = (dayId, programDefinitions) =>
   programDefinitions
     .flatMap((program) => program.days)
@@ -215,7 +225,7 @@ function isValidSchedule(value) {
 
 function loadStoredSchedule() {
   try {
-    const storedSchedule = window.localStorage.getItem(SCHEDULE_STORAGE_KEY);
+    const storedSchedule = accountStorage.getItem(SCHEDULE_STORAGE_KEY);
 
     if (!storedSchedule) {
       return weekSchedule;
@@ -230,7 +240,7 @@ function loadStoredSchedule() {
 }
 
 function persistSchedule(schedule) {
-  window.localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
+  accountStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(schedule));
 }
 
 function normalizeRoutineDay(value, fallbackDay = null) {
@@ -312,7 +322,7 @@ function normalizeProgramDefinitions(value) {
 
 function loadStoredProgramCache() {
   try {
-    const storedPrograms = window.localStorage.getItem(PROGRAMS_STORAGE_KEY);
+    const storedPrograms = accountStorage.getItem(PROGRAMS_STORAGE_KEY);
 
     if (!storedPrograms) {
       return null;
@@ -345,7 +355,7 @@ function getInitialPrograms(localPrograms = loadStoredProgramCache()) {
 }
 
 function persistPrograms(programDefinitions) {
-  window.localStorage.setItem(
+  accountStorage.setItem(
     PROGRAMS_STORAGE_KEY,
     JSON.stringify(programDefinitions),
   );
@@ -377,6 +387,7 @@ async function loadUserPrograms(uid) {
   const cloudPrograms = normalizeProgramDefinitions(
     await loadCloudPrograms(uid),
   );
+  assertCurrentCache(uid);
 
   if (cloudPrograms?.length) {
     persistPrograms(cloudPrograms);
@@ -408,7 +419,7 @@ async function persistProgramDefinitions(
     currentUser,
     actionName,
     {
-      persistLocal: persistPrograms,
+      persistLocal: (programs) => { if (activeCacheUid === currentUser?.uid) persistPrograms(programs); },
       saveCloud: savePrograms,
       logSync: logProgramSync,
     },
@@ -417,7 +428,7 @@ async function persistProgramDefinitions(
 
 function loadStoredActiveProgramId() {
   try {
-    const storedProgramId = window.localStorage.getItem(
+    const storedProgramId = accountStorage.getItem(
       ACTIVE_PROGRAM_STORAGE_KEY,
     );
 
@@ -429,7 +440,7 @@ function loadStoredActiveProgramId() {
 
 function loadStoredCycleStartDate() {
   try {
-    const storedCycleStartDate = window.localStorage.getItem(
+    const storedCycleStartDate = accountStorage.getItem(
       CYCLE_START_DATE_STORAGE_KEY,
     );
 
@@ -441,7 +452,7 @@ function loadStoredCycleStartDate() {
 
 function loadStoredCycleLengthWeeks() {
   try {
-    const storedCycleLengthWeeks = window.localStorage.getItem(
+    const storedCycleLengthWeeks = accountStorage.getItem(
       CYCLE_LENGTH_WEEKS_STORAGE_KEY,
     );
     const parsedCycleLengthWeeks = Number(storedCycleLengthWeeks);
@@ -627,7 +638,7 @@ function normalizeStoredSteps(value) {
 
 function loadStoredSteps() {
   try {
-    const storedSteps = window.localStorage.getItem(STEPS_STORAGE_KEY);
+    const storedSteps = accountStorage.getItem(STEPS_STORAGE_KEY);
 
     return storedSteps ? normalizeStoredSteps(JSON.parse(storedSteps)) : {};
   } catch {
@@ -636,7 +647,7 @@ function loadStoredSteps() {
 }
 
 function persistSteps(stepsByDate) {
-  window.localStorage.setItem(STEPS_STORAGE_KEY, JSON.stringify(stepsByDate));
+  accountStorage.setItem(STEPS_STORAGE_KEY, JSON.stringify(stepsByDate));
 }
 
 function getStepAverageForLastSevenDays(stepsByDate) {
@@ -728,7 +739,7 @@ function normalizeStoredRuns(value) {
 
 function loadStoredRuns() {
   try {
-    const storedRuns = window.localStorage.getItem(RUNS_STORAGE_KEY);
+    const storedRuns = accountStorage.getItem(RUNS_STORAGE_KEY);
 
     return storedRuns ? normalizeStoredRuns(JSON.parse(storedRuns)) : [];
   } catch {
@@ -737,19 +748,19 @@ function loadStoredRuns() {
 }
 
 function persistRuns(runs) {
-  window.localStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
+  accountStorage.setItem(RUNS_STORAGE_KEY, JSON.stringify(runs));
 }
 
 function loadStoredWeeklyRunTarget() {
   const target = Number(
-    window.localStorage.getItem(WEEKLY_RUN_TARGET_STORAGE_KEY),
+    accountStorage.getItem(WEEKLY_RUN_TARGET_STORAGE_KEY),
   );
 
   return [2, 3].includes(target) ? target : DEFAULT_WEEKLY_RUN_TARGET;
 }
 
 function persistWeeklyRunTarget(target) {
-  window.localStorage.setItem(WEEKLY_RUN_TARGET_STORAGE_KEY, String(target));
+  accountStorage.setItem(WEEKLY_RUN_TARGET_STORAGE_KEY, String(target));
 }
 
 function getCurrentPlanningState({
@@ -806,30 +817,30 @@ function persistPlanningCache(planningState) {
   persistSchedule(planningState.schedule);
 
   if (planningState.activeProgramId) {
-    window.localStorage.setItem(
+    accountStorage.setItem(
       ACTIVE_PROGRAM_STORAGE_KEY,
       planningState.activeProgramId,
     );
   } else {
-    window.localStorage.removeItem(ACTIVE_PROGRAM_STORAGE_KEY);
+    accountStorage.removeItem(ACTIVE_PROGRAM_STORAGE_KEY);
   }
 
   if (planningState.cycleStartDate) {
-    window.localStorage.setItem(
+    accountStorage.setItem(
       CYCLE_START_DATE_STORAGE_KEY,
       planningState.cycleStartDate,
     );
   } else {
-    window.localStorage.removeItem(CYCLE_START_DATE_STORAGE_KEY);
+    accountStorage.removeItem(CYCLE_START_DATE_STORAGE_KEY);
   }
 
   if (planningState.cycleLengthWeeks) {
-    window.localStorage.setItem(
+    accountStorage.setItem(
       CYCLE_LENGTH_WEEKS_STORAGE_KEY,
       String(planningState.cycleLengthWeeks),
     );
   } else {
-    window.localStorage.removeItem(CYCLE_LENGTH_WEEKS_STORAGE_KEY);
+    accountStorage.removeItem(CYCLE_LENGTH_WEEKS_STORAGE_KEY);
   }
 }
 
@@ -868,7 +879,7 @@ function persistHealthCache(healthState, uid) {
   persistSteps(healthState.steps);
   persistRuns(healthState.runs);
   persistWeeklyRunTarget(healthState.weeklyRunTarget);
-  if (uid) window.localStorage.setItem(HEALTH_CACHE_OWNER_STORAGE_KEY, uid);
+  if (uid) accountStorage.setItem(HEALTH_CACHE_OWNER_STORAGE_KEY, uid);
 }
 
 function logPlanningSync(actionName, uid, planningState, result, error = null) {
@@ -907,6 +918,7 @@ function logHealthSync(actionName, uid, healthState, result, error = null) {
 async function loadUserPlanningState(uid) {
   const defaultPlanningState = normalizePlanningState(null);
   const cloudPlanningState = await loadPlanningState(uid);
+  assertCurrentCache(uid);
 
   if (cloudPlanningState) {
     const planningState = normalizePlanningState(
@@ -925,7 +937,7 @@ async function loadUserPlanningState(uid) {
 }
 
 async function persistPlanningStateForUser(uid, planningState, actionName) {
-  persistPlanningCache(planningState);
+  if (activeCacheUid === uid) persistPlanningCache(planningState);
   logPlanningSync(actionName, uid, planningState, "local");
 
   try {
@@ -939,11 +951,12 @@ async function persistPlanningStateForUser(uid, planningState, actionName) {
 }
 
 async function loadUserHealthState(uid, isCurrent = () => true) {
-  const cacheOwner = window.localStorage.getItem(HEALTH_CACHE_OWNER_STORAGE_KEY);
+  const cacheOwner = accountStorage.getItem(HEALTH_CACHE_OWNER_STORAGE_KEY);
   const defaultHealthState = cacheOwner && cacheOwner !== uid
     ? { steps: {}, runs: [], weeklyRunTarget: DEFAULT_WEEKLY_RUN_TARGET }
     : normalizeHealthState(null);
   const cloudHealthState = await loadHealthState(uid);
+  assertCurrentCache(uid);
   if (!isCurrent()) throw new Error("account_changed");
 
   if (cloudHealthState) {
@@ -960,7 +973,7 @@ async function loadUserHealthState(uid, isCurrent = () => true) {
 }
 
 async function persistHealthStateForUser(uid, healthState, actionName, isCurrent = () => true) {
-  if (isCurrent()) persistHealthCache(healthState, uid);
+  if (isCurrent() && activeCacheUid === uid) persistHealthCache(healthState, uid);
   logHealthSync(actionName, uid, healthState, "local");
 
   try {
@@ -1155,7 +1168,7 @@ function normalizeCompletedWorkout(value) {
 
 function parseStoredCompletedWorkouts({ throwOnError = false } = {}) {
   try {
-    const storedWorkouts = window.localStorage.getItem(
+    const storedWorkouts = accountStorage.getItem(
       COMPLETED_WORKOUTS_STORAGE_KEY,
     );
 
@@ -1182,7 +1195,7 @@ function loadCompletedWorkouts() {
 }
 
 function persistCompletedWorkouts(completedWorkouts) {
-  window.localStorage.setItem(
+  accountStorage.setItem(
     COMPLETED_WORKOUTS_STORAGE_KEY,
     JSON.stringify(completedWorkouts),
   );
@@ -1339,26 +1352,6 @@ function LoadingScreen() {
       <p className="text-base font-semibold text-slate-300">
         Loading NevFit...
       </p>
-    </main>
-  );
-}
-
-function SignInScreen({ onSignIn }) {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
-      <section className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900 p-5">
-        <h1 className="text-4xl font-bold">NevFit</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-300">
-          Sign in to access your workout programs, schedule, and history.
-        </p>
-        <button
-          type="button"
-          onClick={onSignIn}
-          className="mt-5 w-full rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-        >
-          Sign in with Google
-        </button>
-      </section>
     </main>
   );
 }
@@ -1549,7 +1542,7 @@ function isValidWorkoutSession(value) {
 
 function loadStoredActiveWorkoutSession() {
   try {
-    const storedSession = window.localStorage.getItem(
+    const storedSession = accountStorage.getItem(
       ACTIVE_WORKOUT_STORAGE_KEY,
     );
 
@@ -1567,11 +1560,11 @@ function loadStoredActiveWorkoutSession() {
 
 function persistActiveWorkoutSession(workoutSession) {
   if (!workoutSession) {
-    window.localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
+    accountStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
     return;
   }
 
-  window.localStorage.setItem(
+  accountStorage.setItem(
     ACTIVE_WORKOUT_STORAGE_KEY,
     JSON.stringify(workoutSession),
   );
@@ -1620,6 +1613,7 @@ function logCompletedWorkoutSync(actionName, uid, workouts, result, error = null
 
 async function loadUserActiveWorkout(uid) {
   const cloudSession = await loadActiveWorkout(uid);
+  assertCurrentCache(uid);
 
   if (typeof cloudSession !== "undefined") {
     const activeSession = isValidWorkoutSession(cloudSession) ? cloudSession : null;
@@ -1647,7 +1641,7 @@ async function loadUserActiveWorkout(uid) {
 }
 
 async function persistActiveWorkoutForUser(uid, session, actionName) {
-  persistActiveWorkoutSession(session);
+  if (activeCacheUid === uid) persistActiveWorkoutSession(session);
   logActiveWorkoutSync(actionName, uid, session, "local");
 
   try {
@@ -1669,6 +1663,7 @@ async function loadUserCompletedWorkouts(uid) {
   const cloudWorkouts = (await loadCloudCompletedWorkouts(uid))
     .map(normalizeCompletedWorkout)
     .filter(Boolean);
+  assertCurrentCache(uid);
 
   if (cloudWorkouts.length) {
     persistCompletedWorkouts(cloudWorkouts);
@@ -1702,7 +1697,7 @@ async function loadUserCompletedWorkouts(uid) {
 }
 
 async function persistCompletedWorkoutForUser(uid, workout, nextWorkouts) {
-  persistCompletedWorkouts(nextWorkouts);
+  if (activeCacheUid === uid) persistCompletedWorkouts(nextWorkouts);
   logCompletedWorkoutSync("completed-workout-save", uid, nextWorkouts, "local");
 
   try {
@@ -1908,7 +1903,10 @@ function playTimerCompleteSound() {
   }
 }
 
-function App() {
+function AccountApp({ currentUser }) {
+  const accountStorage = useMemo(() => createAccountCache(window.localStorage, currentUser.uid), [currentUser.uid]);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
   const [schedule, setSchedule] = useState(loadStoredSchedule);
   const [programDefinitions, setProgramDefinitions] =
     useState(loadStoredPrograms);
@@ -2020,8 +2018,6 @@ function App() {
   const [cycleLengthWeeks, setCycleLengthWeeks] = useState(
     loadStoredCycleLengthWeeks,
   );
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [programsLoading, setProgramsLoading] = useState(true);
   const [planningLoading, setPlanningLoading] = useState(true);
   const [healthLoading, setHealthLoading] = useState(true);
@@ -2060,6 +2056,10 @@ function App() {
   const exerciseNotesImportingRef = useRef(false);
   const currentUserUidRef = useRef(currentUser?.uid ?? null);
   currentUserUidRef.current = currentUser?.uid ?? null;
+  useEffect(() => {
+    currentUserUidRef.current = currentUser.uid;
+    return () => { currentUserUidRef.current = null; };
+  }, [currentUser.uid]);
   const activeWorkoutLoadedRef = useRef(false);
   const workoutSetInputRefs = useRef(new Map());
   const backupFileInputRef = useRef(null);
@@ -2080,15 +2080,6 @@ function App() {
       console.error("Firebase smoke test failed:", error);
     });
   }, []);
-
-  useEffect(
-    () =>
-      subscribeToAuthChanges((user) => {
-        setCurrentUser(user);
-        setAuthLoading(false);
-      }),
-    [],
-  );
 
   useEffect(() => {
     const uid = currentUser?.uid;
@@ -2689,33 +2680,33 @@ function App() {
 
   useEffect(() => {
     if (!selectedProgramId) {
-      window.localStorage.removeItem(ACTIVE_PROGRAM_STORAGE_KEY);
+      accountStorage.removeItem(ACTIVE_PROGRAM_STORAGE_KEY);
       return;
     }
 
-    window.localStorage.setItem(ACTIVE_PROGRAM_STORAGE_KEY, selectedProgramId);
-  }, [selectedProgramId]);
+    accountStorage.setItem(ACTIVE_PROGRAM_STORAGE_KEY, selectedProgramId);
+  }, [selectedProgramId, accountStorage]);
 
   useEffect(() => {
     if (!cycleStartDate) {
-      window.localStorage.removeItem(CYCLE_START_DATE_STORAGE_KEY);
+      accountStorage.removeItem(CYCLE_START_DATE_STORAGE_KEY);
       return;
     }
 
-    window.localStorage.setItem(CYCLE_START_DATE_STORAGE_KEY, cycleStartDate);
-  }, [cycleStartDate]);
+    accountStorage.setItem(CYCLE_START_DATE_STORAGE_KEY, cycleStartDate);
+  }, [cycleStartDate, accountStorage]);
 
   useEffect(() => {
     if (!cycleLengthWeeks) {
-      window.localStorage.removeItem(CYCLE_LENGTH_WEEKS_STORAGE_KEY);
+      accountStorage.removeItem(CYCLE_LENGTH_WEEKS_STORAGE_KEY);
       return;
     }
 
-    window.localStorage.setItem(
+    accountStorage.setItem(
       CYCLE_LENGTH_WEEKS_STORAGE_KEY,
       String(cycleLengthWeeks),
     );
-  }, [cycleLengthWeeks]);
+  }, [cycleLengthWeeks, accountStorage]);
 
   useEffect(() => {
     if (!currentUser || planningLoading) {
@@ -3029,6 +3020,7 @@ function App() {
   }
 
   function applyImportedBackupToLocalState(backup) {
+    assertCurrentCache(currentUser.uid);
     const restoredProgram =
       backup.programs.find(
         (program) => program.id === backup.planning.activeProgramId,
@@ -3142,20 +3134,13 @@ function App() {
     });
   }
 
-  async function handleSignInWithGoogle() {
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      console.error("Google sign-in failed:", error);
-    }
-  }
-
   async function handleSignOut() {
-    try {
-      await signOutUser();
-    } catch (error) {
-      console.error("Google sign-out failed:", error);
-    }
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutError("");
+    try { await signOutUser(); }
+    catch (error) { setSignOutError(authErrorMessage(error)); }
+    finally { setSigningOut(false); }
   }
 
   function saveStepEntry() {
@@ -4036,14 +4021,6 @@ function App() {
     }
   }
 
-  if (authLoading) {
-    return <LoadingScreen />;
-  }
-
-  if (!currentUser) {
-    return <SignInScreen onSignIn={handleSignInWithGoogle} />;
-  }
-
   if (
     programsLoading ||
     planningLoading ||
@@ -4888,33 +4865,13 @@ function App() {
             <div className="flex min-w-0 items-center justify-between gap-3">
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">NevFit</h1>
               <div className="flex min-w-0 items-center">
-                {authLoading ? (
-                  <p className="text-sm font-semibold text-slate-400">
-                    Checking sign-in...
-                  </p>
-                ) : currentUser ? (
-                  <>
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => setViewMode("settings")}
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-700 text-xl font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-                        aria-label="Open settings"
-                        title="Settings"
-                      >
-                        ⚙
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSignInWithGoogle}
-                    className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-                  >
-                    Sign in with Google
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setViewMode("settings")}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-700 text-xl font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+                  aria-label="Open settings"
+                  title="Settings"
+                >⚙</button>
               </div>
             </div>
             <div className="mt-4 grid w-full grid-cols-4 gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem] sm:gap-2">
@@ -5678,8 +5635,9 @@ function App() {
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
               Settings
             </p>
-            {currentUser ? <button type="button" onClick={handleSignOut}
-              className="mt-4 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800">Sign Out</button> : null}
+            {currentUser ? <button type="button" onClick={handleSignOut} disabled={signingOut}
+              className="mt-4 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50">{signingOut ? "Signing out…" : "Sign Out"}</button> : null}
+            {signOutError ? <p role="alert" className="mt-2 text-sm text-amber-200">{signOutError}</p> : null}
             <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
               <h2 className="text-2xl font-bold text-white">NevFit</h2>
               <p className="mt-2 text-sm leading-6 text-slate-300">
@@ -6965,6 +6923,17 @@ function App() {
       ) : null}
     </main>
   );
+}
+
+function App() {
+  const [session, setSession] = useState({ loading: true, user: null });
+  useEffect(() => subscribeToAuthChanges((user) => {
+    activeCacheUid = user?.uid ?? null;
+    accountStorage = user ? createAccountCache(window.localStorage, user.uid) : null;
+    setSession({ loading: false, user });
+  }), []);
+  if (session.loading) return <LoadingScreen />;
+  return session.user ? <AccountApp key={session.user.uid} currentUser={session.user} /> : <SignInScreen />;
 }
 
 export default App;

@@ -5069,16 +5069,17 @@ function App() {
               </p>
             ) : null}
 
-            <article className="rounded-2xl border border-emerald-400/40 bg-slate-900 p-4 sm:p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">Monday Weekly Check-In</p>
-              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-white">{savedWeeklyReview ? "Last week's review is saved" : "Review last week with Rob"}</h2>
-                  <p className="mt-1 text-sm text-slate-300">{weeklyPeriod.start} – {weeklyPeriod.end} · {savedWeeklyStatus === "loading" ? "Checking saved review…" : savedWeeklyStatus === "error" ? "Saved status unavailable" : savedWeeklyReview ? "Completed" : "Ready to complete"}</p>
-                  <p className="mt-1 text-xs text-slate-400">Next Monday: {weeklyPeriod.nextMonday} ({weeklyPeriod.daysUntilNextMonday} {weeklyPeriod.daysUntilNextMonday === 1 ? "day" : "days"})</p>
-                </div>
-                <button type="button" onClick={openWeeklyCheckIn} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950">{savedWeeklyReview ? "View saved review" : "Open check-in"}</button>
-              </div>
+            <article className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border bg-slate-900 px-4 py-3 text-sm ${savedWeeklyStatus === "loaded" && !savedWeeklyReview ? "border-emerald-400/40" : "border-slate-700"}`}>
+              <p className="text-slate-300" role="status">
+                <span className="font-semibold">Weekly Check-In</span>
+                {" · "}
+                {savedWeeklyStatus === "loading" ? "Checking saved review…" : savedWeeklyStatus === "error" ? "Saved status unavailable" : savedWeeklyReview ? `${weeklyPeriod.daysUntilNextMonday} ${weeklyPeriod.daysUntilNextMonday === 1 ? "day" : "days"} until next check-in` : <span className="font-semibold text-emerald-200">Check-in available now</span>}
+              </p>
+              {savedWeeklyStatus === "loaded" && !savedWeeklyReview ? (
+                <button type="button" onClick={openWeeklyCheckIn} className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950">Open check-in</button>
+              ) : savedWeeklyStatus === "error" ? (
+                <button type="button" onClick={openWeeklyCheckIn} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Check saved status</button>
+              ) : null}
             </article>
 
             <article

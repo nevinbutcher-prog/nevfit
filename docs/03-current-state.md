@@ -78,6 +78,7 @@
 - Ask Rob advisory surface with authenticated, server-owned persona/prompt instructions and transient recoverable responses
 - Rob advice automatically supplies bounded deterministic advice context but cannot modify routines, programs, workouts, or other application data
 - Dashboard and Rob Home open a Monday Weekly Check-In for the previous fully completed local Monday–Sunday week. The user can correct individual step days, review recorded runs and completed strength sessions, optionally share a feeling and short note, and request a holistic Rob assessment. The check-in compares the week before, preserves missing steps as unknown, syncs corrections before generation, and saves the response per account and week for later viewing without another AI call. Existing completed workouts remain read-only in this flow.
+- The dashboard Weekly Check-In uses a compact countdown row after a saved review. An unsaved prior-week check-in stays actionable from Monday onward; loading and unavailable saved status are shown explicitly. Saved reviews remain accessible through Rob Home.
 - Deterministic pure Rob context builder for advice, routine review, and program review
 - Account-scoped Rob coaching preferences, stable program/routine/exercise IDs, and bounded newest-first meaningful workout history for existing advice and review requests
 - Authenticated structured Rob routine and program reviews with server-validated JSON results, privacy-safe diagnostics, and no persistence or proposal application

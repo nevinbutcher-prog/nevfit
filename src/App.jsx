@@ -54,6 +54,12 @@ import {
 } from "./services/activeWorkoutSwap";
 import {
   createCompletedWorkoutSnapshot,
+  createQuickWorkoutSession,
+  addQuickWorkoutExercise,
+  addQuickWorkoutSet,
+  normalizeCompletedWorkout,
+  hasWorkoutLoggedEffort,
+  isValidWorkoutSession as isValidWorkoutSessionData,
   getPreviousExercisePerformance as getPreviousExercisePerformanceData,
 } from "./services/workoutSnapshots";
 import {
@@ -1076,96 +1082,6 @@ function formatCompletedRelativeDate(completedAt) {
   });
 }
 
-function normalizeCompletedWorkout(value) {
-  if (
-    !(
-      value &&
-      typeof value.id === "string" &&
-      typeof value.completedAt === "string" &&
-      !Number.isNaN(Date.parse(value.completedAt)) &&
-      typeof value.scheduleDayId === "string" &&
-      typeof value.routineDayId === "string" &&
-      typeof value.routineDayName === "string" &&
-      Array.isArray(value.exercises)
-    )
-  ) {
-    return null;
-  }
-
-  const exercises = value.exercises.map((exercise) => {
-    if (
-      !(
-        exercise &&
-        typeof exercise.exerciseId === "string" &&
-        typeof exercise.exerciseName === "string" &&
-        (typeof exercise.originalExerciseId === "string" ||
-          typeof exercise.originalExerciseId === "undefined") &&
-        (typeof exercise.originalExerciseName === "string" ||
-          typeof exercise.originalExerciseName === "undefined") &&
-        Array.isArray(exercise.sets)
-      )
-    ) {
-      return null;
-    }
-
-    const sets = exercise.sets.map((set) => {
-      if (
-        !(
-          set &&
-          typeof set.setNumber === "number" &&
-          typeof set.weight === "string" &&
-          typeof set.reps === "string"
-        )
-      ) {
-        return null;
-      }
-
-      return {
-        setNumber: set.setNumber,
-        weight: set.weight,
-        reps: set.reps,
-        ...(typeof set.unit === "string" ? { unit: set.unit } : {}),
-      };
-    });
-
-    if (sets.some((set) => !set)) {
-      return null;
-    }
-
-    return {
-      exerciseId: exercise.exerciseId,
-      exerciseName: exercise.exerciseName,
-      ...(typeof exercise.originalExerciseId === "string"
-        ? { originalExerciseId: exercise.originalExerciseId }
-        : {}),
-      ...(typeof exercise.originalExerciseName === "string"
-        ? { originalExerciseName: exercise.originalExerciseName }
-        : {}),
-      restSeconds:
-        typeof exercise.restSeconds === "number" ? exercise.restSeconds : null,
-      supersetGroupId:
-        typeof exercise.supersetGroupId === "string"
-          ? exercise.supersetGroupId
-          : null,
-      sets,
-    };
-  });
-
-  if (exercises.some((exercise) => !exercise)) {
-    return null;
-  }
-
-  return {
-    id: value.id,
-    completedAt: value.completedAt,
-    ...(typeof value.weightUnit === "string" ? { weightUnit: value.weightUnit } : {}),
-    scheduleDayId: value.scheduleDayId,
-    routineDayId: value.routineDayId,
-    routineDayName: value.routineDayName,
-    exercises,
-  };
-}
-
 function parseStoredCompletedWorkouts({ throwOnError = false } = {}) {
   try {
     const storedWorkouts = accountStorage.getItem(
@@ -1208,12 +1124,6 @@ function hasMeaningfulLoggedEffort(set) {
   return (
     (Number.isFinite(reps) && reps > 0) ||
     (Number.isFinite(weight) && weight > 0)
-  );
-}
-
-function hasWorkoutLoggedEffort(workoutSession) {
-  return workoutSession.exercises.some((exercise) =>
-    exercise.sets.some(hasMeaningfulLoggedEffort),
   );
 }
 
@@ -1505,39 +1415,7 @@ function getSortedUniqueValues(values) {
 }
 
 function isValidWorkoutSession(value) {
-  return (
-    value &&
-    typeof value.scheduleDayId === "string" &&
-    typeof value.routineDayId === "string" &&
-    Array.isArray(value.exercises) &&
-    value.exercises.every(
-      (exercise) =>
-        exercise &&
-        typeof exercise.exerciseId === "string" &&
-        isSupportedExerciseId(exercise.exerciseId) &&
-        (typeof exercise.exerciseName === "string" ||
-          typeof exercise.exerciseName === "undefined") &&
-        typeof exercise.prescribedSets === "number" &&
-        typeof exercise.repRange === "string" &&
-        (typeof exercise.note === "string" ||
-          typeof exercise.note === "undefined") &&
-        (typeof exercise.restSeconds === "number" ||
-          typeof exercise.restSeconds === "undefined") &&
-        (typeof exercise.supersetGroupId === "string" ||
-          exercise.supersetGroupId === null ||
-          typeof exercise.supersetGroupId === "undefined") &&
-        Array.isArray(exercise.sets) &&
-        exercise.sets.every(
-          (set) =>
-            set &&
-            typeof set.setNumber === "number" &&
-            typeof set.weight === "string" &&
-            typeof set.reps === "string" &&
-            (typeof set.completed === "boolean" ||
-              typeof set.completed === "undefined"),
-        ),
-    )
-  );
+  return isValidWorkoutSessionData(value, isSupportedExerciseId);
 }
 
 function loadStoredActiveWorkoutSession() {
@@ -1734,7 +1612,7 @@ function createCompletedWorkoutRecord(
 
   return createCompletedWorkoutSnapshot(
     workoutSession,
-    routineDay.name,
+    routineDay?.name ?? "Quick Workout",
     completedAt,
     workoutId,
     (sessionExercise) => {
@@ -2052,6 +1930,7 @@ function AccountApp({ currentUser }) {
   const planningPersistQueueRef = useRef(Promise.resolve());
   const healthPersistQueueRef = useRef(Promise.resolve());
   const activeWorkoutPersistQueueRef = useRef(Promise.resolve());
+  const workoutFinishInFlightRef = useRef(false);
   const exerciseNotesPersistQueueRef = useRef(Promise.resolve());
   const exerciseNotesImportingRef = useRef(false);
   const currentUserUidRef = useRef(currentUser?.uid ?? null);
@@ -3404,6 +3283,13 @@ function AccountApp({ currentUser }) {
       return;
     }
 
+    if (exerciseFinderMode.type === "workout-add") {
+      setActiveWorkoutSession((session) => addQuickWorkoutExercise(
+        session, exercise, allowsBlankWorkoutWeight(null, exercise),
+      ));
+      return;
+    }
+
     if (exerciseFinderMode.type === "workout-swap") {
       const swapResult = swapActiveWorkoutExercise(
         activeWorkoutSession,
@@ -3681,6 +3567,11 @@ function AccountApp({ currentUser }) {
     applyRoutineAssignment(dayId, routineDayId);
   }
 
+  function openQuickWorkout() {
+    setActiveWorkoutSession((session) => session ?? createQuickWorkoutSession());
+    setViewMode("workout");
+  }
+
   function openWorkout(scheduleDay, routineDay) {
     if (
       activeWorkoutSession &&
@@ -3796,8 +3687,9 @@ function AccountApp({ currentUser }) {
   }
 
   async function finishWorkout() {
-    if (!activeWorkoutSession || !activeRoutineDay) {
-      return;
+    if (workoutFinishInFlightRef.current || !activeWorkoutSession ||
+        (!activeRoutineDay && activeWorkoutSession.sessionKind !== "quick")) {
+      return false;
     }
 
     if (!hasWorkoutLoggedEffort(activeWorkoutSession)) {
@@ -3805,7 +3697,7 @@ function AccountApp({ currentUser }) {
       setActiveWorkoutSession(null);
       setRestTimer(null);
       setViewMode("planner");
-      return;
+      return true;
     }
 
     const finishedAt = new Date();
@@ -3816,6 +3708,7 @@ function AccountApp({ currentUser }) {
       exerciseLibrary,
     );
 
+    workoutFinishInFlightRef.current = true;
     try {
       const nextWorkouts = [
         completedWorkout,
@@ -3845,11 +3738,15 @@ function AccountApp({ currentUser }) {
       setActiveWorkoutSession(null);
       setRestTimer(null);
       setViewMode("planner");
+      return true;
     } catch (error) {
       console.error("Completed workout local save failed:", error);
       setSaveMessage(
         "Workout could not be saved. Your active workout is still open.",
       );
+      return false;
+    } finally {
+      workoutFinishInFlightRef.current = false;
     }
   }
 
@@ -3881,7 +3778,8 @@ function AccountApp({ currentUser }) {
   async function finishPendingWorkoutAction() {
     const action = pendingWorkoutAction;
 
-    await finishWorkout();
+    const finished = await finishWorkout();
+    if (!finished) return;
     setPendingWorkoutAction(null);
     window.setTimeout(() => completePendingWorkoutAction(action), 0);
   }
@@ -4041,6 +3939,8 @@ function AccountApp({ currentUser }) {
     activeWorkoutSession?.routineDayId,
     programDefinitions,
   );
+  const isQuickWorkout = activeWorkoutSession?.sessionKind === "quick";
+  const activeWorkoutName = isQuickWorkout ? "Quick Workout" : activeRoutineDay?.name;
   const activeWorkoutSetCount =
     activeWorkoutSession?.exercises.reduce(
       (total, exercise) => total + exercise.sets.length,
@@ -4098,31 +3998,41 @@ function AccountApp({ currentUser }) {
     const isPersonalNoteExpanded =
       expandedPersonalNoteExerciseId === sessionExercise.exerciseId;
 
+    const addSetButton = isQuickWorkout ? (
+      <button type="button" onClick={() => setActiveWorkoutSession((session) => addQuickWorkoutSet(session, exerciseIndex))}
+        className="mt-3 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200">
+        + Add Set
+      </button>
+    ) : null;
+
     if (!isExerciseExpanded) {
       return (
-        <button
-          type="button"
-          onClick={() =>
-            setExpandedCompletedExerciseIds((currentIds) =>
-              new Set(currentIds).add(workoutDetailsKey),
-            )
-          }
-          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2.5 text-left transition hover:border-emerald-300"
-          aria-expanded="false"
-        >
-          <span className="min-w-0">
-            <span className="block truncate font-semibold text-white">
-              {sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise"}
+        <div>
+          <button
+            type="button"
+            onClick={() =>
+              setExpandedCompletedExerciseIds((currentIds) =>
+                new Set(currentIds).add(workoutDetailsKey),
+              )
+            }
+            className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2.5 text-left transition hover:border-emerald-300"
+            aria-expanded="false"
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-white">
+                {sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise"}
+              </span>
+              <span className="mt-1 block text-sm text-emerald-100">
+                ✓ {completedSetCount}/{sessionExercise.sets.length} sets completed
+              </span>
+              {personalNote ? <span className="mt-1 block text-xs text-emerald-200">Personal note saved</span> : null}
             </span>
-            <span className="mt-1 block text-sm text-emerald-100">
-              ✓ {completedSetCount}/{sessionExercise.sets.length} sets completed
+            <span className="shrink-0 text-sm font-semibold text-emerald-200">
+              Edit
             </span>
-            {personalNote ? <span className="mt-1 block text-xs text-emerald-200">Personal note saved</span> : null}
-          </span>
-          <span className="shrink-0 text-sm font-semibold text-emerald-200">
-            Edit
-          </span>
-        </button>
+          </button>
+        {addSetButton}
+        </div>
       );
     }
 
@@ -4140,7 +4050,7 @@ function AccountApp({ currentUser }) {
               {sessionExercise.exerciseName ?? exercise?.name ?? "Unknown exercise"}
             </p>
             <p className="mt-1 text-sm text-slate-400">
-              {completedSetCount}/{sessionExercise.sets.length} sets completed · {sessionExercise.repRange} reps
+              {completedSetCount}/{sessionExercise.sets.length} sets completed{sessionExercise.repRange ? ` · ${sessionExercise.repRange} reps` : ""}
               {sessionExercise.note ? `, ${sessionExercise.note}` : ""}
             </p>
           </div>
@@ -4373,6 +4283,7 @@ function AccountApp({ currentUser }) {
             );
           })}
         </div>
+        {addSetButton}
       </div>
     );
   }
@@ -4398,7 +4309,9 @@ function AccountApp({ currentUser }) {
     (day) => day.id === selectedProgramDayId && !day.archived,
   );
   const isExerciseAlreadyAdded = (exerciseId) =>
-    Boolean(
+    exerciseFinderMode.type === "workout-add"
+      ? Boolean(activeWorkoutSession?.exercises.some((exercise) => exercise.exerciseId === exerciseId))
+      : Boolean(
       selectedProgramDayDraft &&
         hasRoutineExercise(selectedProgramDayDraft.exercises, exerciseId),
     );
@@ -5107,6 +5020,11 @@ function AccountApp({ currentUser }) {
                 ) : null}
               </div>
             </article>
+
+            <button type="button" onClick={openQuickWorkout}
+              className="w-full rounded-xl border border-emerald-400/50 bg-slate-900 px-4 py-3 font-bold text-emerald-200 transition hover:border-emerald-300">
+              {activeWorkoutSession ? "Resume Workout" : "Quick Workout"}
+            </button>
 
             <div className="grid gap-4">
               <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -6512,7 +6430,7 @@ function AccountApp({ currentUser }) {
 
         {exerciseFinderOpen &&
         ((selectedProgramDraft && selectedProgramDayDraft) ||
-          (exerciseFinderMode.type === "workout-swap" &&
+          (["workout-swap", "workout-add"].includes(exerciseFinderMode.type) &&
             activeWorkoutSession)) ? (
           <div className="fixed inset-0 z-50 flex bg-slate-950/90 p-3 sm:p-4">
             <section className="mx-auto flex h-full max-h-[100dvh] w-full max-w-6xl min-w-0 flex-col rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-2xl sm:p-4">
@@ -6525,8 +6443,8 @@ function AccountApp({ currentUser }) {
                       : "Add Exercises"}
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-white">
-                    {exerciseFinderMode.type === "workout-swap"
-                      ? activeRoutineDay?.name ?? "Current workout"
+                    {["workout-swap", "workout-add"].includes(exerciseFinderMode.type)
+                      ? activeWorkoutName ?? "Current workout"
                       : selectedProgramDayDraft.name}
                   </h2>
                 </div>
@@ -6680,7 +6598,7 @@ function AccountApp({ currentUser }) {
                           )
                         }
                         disabled={
-                          exerciseFinderMode.type === "add" &&
+                          ["add", "workout-add"].includes(exerciseFinderMode.type) &&
                           isExerciseAlreadyAdded(exercise.id)
                         }
                         aria-label={
@@ -6716,8 +6634,7 @@ function AccountApp({ currentUser }) {
 
         {viewMode === "workout" &&
         activeWorkoutSession &&
-        activeWorkoutDay &&
-        activeRoutineDay ? (
+        (isQuickWorkout || (activeWorkoutDay && activeRoutineDay)) ? (
           <section className="mt-3 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-2.5 sm:p-3">
             <button
               type="button"
@@ -6730,16 +6647,27 @@ function AccountApp({ currentUser }) {
             <div className="flex min-w-0 flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold">
-                  {activeWorkoutDay.label} - {activeRoutineDay.name}
+                  {isQuickWorkout ? activeWorkoutName : `${activeWorkoutDay.label} - ${activeWorkoutName}`}
                 </h2>
                 <div className="mt-1 flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
-                  <span>{activeRoutineDay.name}</span>
+                  <span>{activeWorkoutName}</span>
                   <span>{activeWorkoutSession.exercises.length} exercises</span>
-                  <span>{activeWorkoutSetCount} prescribed sets</span>
+                  <span>{activeWorkoutSetCount} {isQuickWorkout ? "sets" : "prescribed sets"}</span>
                 </div>
               </div>
 
               <div className="flex min-w-0 flex-wrap gap-2">
+                {isQuickWorkout ? (
+                  <button type="button" onClick={() => {
+                    setExerciseFinderMode({ type: "workout-add", exerciseIndex: null });
+                    setExerciseSearchTerm("");
+                    setExerciseSearchResults([]);
+                    setExerciseSearchStatus("idle");
+                    setExerciseFinderOpen(true);
+                  }} className="rounded-lg bg-emerald-400 px-3 py-2 font-semibold text-slate-950">
+                    + Add Exercise
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={requestFooterFinishWorkout}
@@ -6750,6 +6678,9 @@ function AccountApp({ currentUser }) {
               </div>
             </div>
 
+            {isQuickWorkout && !activeWorkoutSession.exercises.length ? (
+              <p className="mt-4 text-sm text-slate-300">Add an exercise to start logging your workout.</p>
+            ) : null}
             <ul className="mt-3 grid min-w-0 gap-3 lg:grid-cols-2">
               {groupWorkoutExercises(activeWorkoutSession.exercises).map(
                 (workoutItem) => {

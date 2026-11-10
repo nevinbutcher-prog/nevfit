@@ -44,6 +44,7 @@
 - Pure proposal-to-draft application with stable routine-row targeting and no persistence side effects
 - Automated builder regression coverage for normalization, add/swap/remove/reorder, supersets, duplication, persistence fallback, and workout snapshots
 - Workout mode
+- Quick Workout from Dashboard starts a blank session without a program or schedule. Add catalogue exercises and further sets in the existing tracker; resume through the same account-scoped persistence and finish into normal history with a Quick Workout label. Previous performance remains reference-only. Implementation awaits independent review and user verification of mobile controls, refresh/re-authentication, cloud history and planned-workout regression.
 - Multiline personal exercise notes keyed by stable exercise ID, with edit and clear controls in active workouts and per-user Firestore sync
 - Supersetted exercises render in grouped workout-mode blocks
 - Faster workout logging with independent per-set drafts, right-edge confirmation, automatic weight carry-forward, compact prior-session summaries, and clear set states

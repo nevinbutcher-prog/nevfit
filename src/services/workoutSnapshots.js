@@ -1,3 +1,11 @@
+import { hasMeaningfulWorkoutSet } from "./activeWorkoutSwap.js";
+
+export function hasWorkoutLoggedEffort(workoutSession) {
+  return workoutSession.exercises.some((exercise) =>
+    exercise.sets.some(hasMeaningfulWorkoutSet),
+  );
+}
+
 export function createCompletedWorkoutSnapshot(
   workoutSession,
   routineDayName,
@@ -9,8 +17,9 @@ export function createCompletedWorkoutSnapshot(
     id: workoutId,
     completedAt: completedAt.toISOString(),
     weightUnit: "kg",
-    scheduleDayId: workoutSession.scheduleDayId,
-    routineDayId: workoutSession.routineDayId,
+    ...(workoutSession.sessionKind === "quick"
+      ? { sessionKind: "quick" }
+      : { scheduleDayId: workoutSession.scheduleDayId, routineDayId: workoutSession.routineDayId }),
     routineDayName,
     exercises: workoutSession.exercises.map((sessionExercise) => ({
       exerciseId: sessionExercise.exerciseId,
@@ -63,4 +72,178 @@ export function getPreviousExercisePerformance(
 
     return latestPerformance;
   }, null);
+}
+
+// Quick sessions have no program, routine or schedule association.
+function hasValidWorkoutAssociations(value) {
+  return value.sessionKind === "quick"
+    ? value.scheduleDayId == null && value.routineDayId == null
+    : typeof value.scheduleDayId === "string" && typeof value.routineDayId === "string";
+}
+
+export function createQuickWorkoutSession() {
+  return { sessionKind: "quick", exercises: [] };
+}
+
+export function addQuickWorkoutExercise(session, exercise, allowsBlankWeight = false) {
+  if (session?.sessionKind !== "quick" || !exercise?.id || !exercise?.name ||
+      session.exercises.some((entry) => entry.exerciseId === exercise.id)) return session;
+  return {
+    ...session,
+    exercises: [...session.exercises, {
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      prescribedSets: 1,
+      repRange: "",
+      allowsBlankWeight,
+      supersetGroupId: null,
+      sets: [{ setNumber: 1, weight: "", reps: "", completed: false }],
+    }],
+  };
+}
+
+export function addQuickWorkoutSet(session, exerciseIndex) {
+  if (session?.sessionKind !== "quick" || !session.exercises[exerciseIndex]) return session;
+  return {
+    ...session,
+    exercises: session.exercises.map((exercise, index) => {
+      if (index !== exerciseIndex) return exercise;
+      const lastSet = exercise.sets.at(-1);
+      return {
+        ...exercise,
+        prescribedSets: exercise.sets.length + 1,
+        sets: [...exercise.sets, {
+          setNumber: (lastSet?.setNumber ?? 0) + 1,
+          weight: lastSet?.completed ? lastSet.weight : "",
+          reps: "",
+          completed: false,
+        }],
+      };
+    }),
+  };
+}
+
+export function normalizeCompletedWorkout(value) {
+  if (
+    !(
+      value &&
+      typeof value.id === "string" &&
+      typeof value.completedAt === "string" &&
+      !Number.isNaN(Date.parse(value.completedAt)) &&
+      hasValidWorkoutAssociations(value) &&
+      typeof value.routineDayName === "string" &&
+      Array.isArray(value.exercises)
+    )
+  ) {
+    return null;
+  }
+
+  const exercises = value.exercises.map((exercise) => {
+    if (
+      !(
+        exercise &&
+        typeof exercise.exerciseId === "string" &&
+        typeof exercise.exerciseName === "string" &&
+        (typeof exercise.originalExerciseId === "string" ||
+          typeof exercise.originalExerciseId === "undefined") &&
+        (typeof exercise.originalExerciseName === "string" ||
+          typeof exercise.originalExerciseName === "undefined") &&
+        Array.isArray(exercise.sets)
+      )
+    ) {
+      return null;
+    }
+
+    const sets = exercise.sets.map((set) => {
+      if (
+        !(
+          set &&
+          typeof set.setNumber === "number" &&
+          typeof set.weight === "string" &&
+          typeof set.reps === "string"
+        )
+      ) {
+        return null;
+      }
+
+      return {
+        setNumber: set.setNumber,
+        weight: set.weight,
+        reps: set.reps,
+        ...(typeof set.unit === "string" ? { unit: set.unit } : {}),
+      };
+    });
+
+    if (sets.some((set) => !set)) {
+      return null;
+    }
+
+    return {
+      exerciseId: exercise.exerciseId,
+      exerciseName: exercise.exerciseName,
+      ...(typeof exercise.originalExerciseId === "string"
+        ? { originalExerciseId: exercise.originalExerciseId }
+        : {}),
+      ...(typeof exercise.originalExerciseName === "string"
+        ? { originalExerciseName: exercise.originalExerciseName }
+        : {}),
+      restSeconds:
+        typeof exercise.restSeconds === "number" ? exercise.restSeconds : null,
+      supersetGroupId:
+        typeof exercise.supersetGroupId === "string"
+          ? exercise.supersetGroupId
+          : null,
+      sets,
+    };
+  });
+
+  if (exercises.some((exercise) => !exercise)) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    completedAt: value.completedAt,
+    ...(typeof value.weightUnit === "string" ? { weightUnit: value.weightUnit } : {}),
+    ...(value.sessionKind === "quick"
+      ? { sessionKind: "quick" }
+      : { scheduleDayId: value.scheduleDayId, routineDayId: value.routineDayId }),
+    routineDayName: value.routineDayName,
+    exercises,
+  };
+}
+
+export function isValidWorkoutSession(value, isSupportedExerciseId) {
+  return (
+    value &&
+    hasValidWorkoutAssociations(value) &&
+    Array.isArray(value.exercises) &&
+    value.exercises.every(
+      (exercise) =>
+        exercise &&
+        typeof exercise.exerciseId === "string" &&
+        isSupportedExerciseId(exercise.exerciseId) &&
+        (typeof exercise.exerciseName === "string" ||
+          typeof exercise.exerciseName === "undefined") &&
+        typeof exercise.prescribedSets === "number" &&
+        typeof exercise.repRange === "string" &&
+        (typeof exercise.note === "string" ||
+          typeof exercise.note === "undefined") &&
+        (typeof exercise.restSeconds === "number" ||
+          typeof exercise.restSeconds === "undefined") &&
+        (typeof exercise.supersetGroupId === "string" ||
+          exercise.supersetGroupId === null ||
+          typeof exercise.supersetGroupId === "undefined") &&
+        Array.isArray(exercise.sets) &&
+        exercise.sets.every(
+          (set) =>
+            set &&
+            typeof set.setNumber === "number" &&
+            typeof set.weight === "string" &&
+            typeof set.reps === "string" &&
+            (typeof set.completed === "boolean" ||
+              typeof set.completed === "undefined"),
+        ),
+    )
+  );
 }

@@ -984,6 +984,24 @@ collection is empty and local completed workouts exist, the local snapshots are
 uploaded once during first migration. Previous performance continues to derive
 from the cloud-loaded completed workout state.
 
+Quick Workout uses the same tracker, UID-scoped active session and completed
+history collections. Dashboard starts `{ sessionKind: "quick", exercises: [] }`
+or resumes the existing active session. Quick sessions and completed records omit
+schedule/routine IDs; completed records retain `routineDayName: "Quick Workout"`
+and the usual metric unit and exercise/set snapshots. The existing picker has a
+session-only add mode with duplicate prevention. Each added exercise starts with
+one blank set and no rep target; Add Set extends only the session, carrying weight
+from a confirmed preceding set. No previous performance is used to prefill it.
+Notes, prior performance, confirmation and timers use the existing controls.
+Active/history validators in `workoutSnapshots.js` accept both quick and planned
+shapes, including during cache hydration and backup import. History totals,
+workload and Rob readers use the performed exercise snapshots without requiring
+routine associations. No Firebase schema/rule deployment is required.
+
+Finish retains the meaningful-effort check, so empty quick sessions close without
+history. Concurrent finish requests are guarded, and a failed local save keeps
+the active session without advancing a pending workout action.
+
 Firestore rules are intentionally narrow:
 
 - signed-in users can read/write only their own `users/{uid}` document

@@ -4,12 +4,21 @@ import {
   DEFAULT_VIEW_MODE,
   getInitialViewMode,
   getViewModeForLoadedActiveWorkout,
+  getViewModeAfterWorkout,
 } from "../src/utils/navigation.js";
 
 test("normal launch always starts at Dashboard", () => {
   assert.equal(DEFAULT_VIEW_MODE, "dashboard");
   assert.equal(getInitialViewMode(), "dashboard");
   assert.equal(getInitialViewMode(), DEFAULT_VIEW_MODE);
+});
+
+test("workout exit returns to Dashboard unless a specific pending transition was requested", () => {
+  assert.equal(getViewModeAfterWorkout(null), "dashboard");
+  assert.equal(getViewModeAfterWorkout({ type: "finish-workout" }), "dashboard");
+  assert.equal(getViewModeAfterWorkout({ type: "close-workout" }), "dashboard");
+  assert.equal(getViewModeAfterWorkout({ type: "open-workout" }), "workout");
+  assert.equal(getViewModeAfterWorkout({ type: "change-assignment" }), "planner");
 });
 
 test("only a confirmed active workout promotes launch to Workout", () => {

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SignInScreen from "./components/SignInScreen";
+import QuickWorkoutFooter from "./components/QuickWorkoutFooter";
+import { getRecentWorkoutExercises, groupRecentWorkoutExercises } from "./services/recentWorkoutExercises";
 import { createAccountCache } from "./services/accountCache.js";
 import { authErrorMessage } from "./services/authFlow.js";
 import MuscleWorkload from "./components/MuscleWorkload";
@@ -94,6 +96,7 @@ import { isSupportedExerciseId } from "./services/nevfitCatalogue";
 import {
   getInitialViewMode,
   getViewModeForLoadedActiveWorkout,
+  getViewModeAfterWorkout,
 } from "./utils/navigation";
 import { buildRobContext, ROB_CONTEXT_TYPES } from "./services/rob/robContext";
 import { requestRobAdvice } from "./services/rob/robClient";
@@ -1818,6 +1821,27 @@ function AccountApp({ currentUser }) {
   const [completedWorkouts, setCompletedWorkouts] = useState(
     loadCompletedWorkouts,
   );
+  const recentWorkoutExercises = useMemo(() => getRecentWorkoutExercises(completedWorkouts), [completedWorkouts]);
+  const recentExerciseGroups = useMemo(() => groupRecentWorkoutExercises(
+    recentWorkoutExercises, (id) => getExerciseFromLibrary(id, exerciseLibrary),
+  ), [recentWorkoutExercises, exerciseLibrary]);
+  const missingRecentExerciseIds = JSON.stringify(recentWorkoutExercises
+    .filter((exercise) => !getExerciseFromLibrary(exercise.id, exerciseLibrary))
+    .map((exercise) => exercise.id));
+  useEffect(() => {
+    if (!exerciseFinderOpen || exerciseFinderMode.type !== "workout-add") return;
+    const ids = JSON.parse(missingRecentExerciseIds);
+    if (!ids.length) return;
+    let current = true;
+    Promise.all(ids.map((id) => getExerciseById(id).catch(() => null))).then((results) => {
+      const found = results.filter(Boolean);
+      if (!current || !found.length) return;
+      setExerciseLibrary((library) => [...library, ...found.filter((exercise) =>
+        !library.some((entry) => entry.id === exercise.id),
+      )]);
+    });
+    return () => { current = false; };
+  }, [exerciseFinderOpen, exerciseFinderMode.type, missingRecentExerciseIds]);
   const [stepsByDate, setStepsByDate] = useState(loadStoredSteps);
   const [healthOwnerUid, setHealthOwnerUid] = useState(null);
   const [stepEntryDate, setStepEntryDate] = useState(
@@ -3679,7 +3703,7 @@ function AccountApp({ currentUser }) {
   function discardWorkout() {
     setActiveWorkoutSession(null);
     setRestTimer(null);
-    setViewMode("planner");
+    setViewMode("dashboard");
   }
 
   function requestFooterFinishWorkout() {
@@ -3696,7 +3720,7 @@ function AccountApp({ currentUser }) {
       setSaveMessage("Blank workout closed. No workout history was changed.");
       setActiveWorkoutSession(null);
       setRestTimer(null);
-      setViewMode("planner");
+      setViewMode("dashboard");
       return true;
     }
 
@@ -3737,7 +3761,7 @@ function AccountApp({ currentUser }) {
       );
       setActiveWorkoutSession(null);
       setRestTimer(null);
-      setViewMode("planner");
+      setViewMode("dashboard");
       return true;
     } catch (error) {
       console.error("Completed workout local save failed:", error);
@@ -3757,8 +3781,6 @@ function AccountApp({ currentUser }) {
 
     if (action.type === "change-assignment") {
       applyRoutineAssignment(action.dayId, action.routineDayId);
-      setViewMode("planner");
-      return;
     }
 
     if (action.type === "open-workout") {
@@ -3766,13 +3788,9 @@ function AccountApp({ currentUser }) {
         createWorkoutSession(action.scheduleDay, action.routineDay, exerciseLibrary),
       );
       setRestTimer(null);
-      setViewMode("workout");
-      return;
     }
 
-    if (action.type === "close-workout" || action.type === "finish-workout") {
-      setViewMode("planner");
-    }
+    setViewMode(getViewModeAfterWorkout(action));
   }
 
   async function finishPendingWorkoutAction() {
@@ -3781,7 +3799,7 @@ function AccountApp({ currentUser }) {
     const finished = await finishWorkout();
     if (!finished) return;
     setPendingWorkoutAction(null);
-    window.setTimeout(() => completePendingWorkoutAction(action), 0);
+    completePendingWorkoutAction(action);
   }
 
   function discardPendingWorkoutAction() {
@@ -3789,7 +3807,7 @@ function AccountApp({ currentUser }) {
 
     discardWorkout();
     setPendingWorkoutAction(null);
-    window.setTimeout(() => completePendingWorkoutAction(action), 0);
+    completePendingWorkoutAction(action);
   }
 
   function cancelPendingWorkoutAction() {
@@ -3940,6 +3958,7 @@ function AccountApp({ currentUser }) {
     programDefinitions,
   );
   const isQuickWorkout = activeWorkoutSession?.sessionKind === "quick";
+  const WorkoutFooterContainer = isQuickWorkout ? QuickWorkoutFooter : "div";
   const activeWorkoutName = isQuickWorkout ? "Quick Workout" : activeRoutineDay?.name;
   const activeWorkoutSetCount =
     activeWorkoutSession?.exercises.reduce(
@@ -4769,7 +4788,7 @@ function AccountApp({ currentUser }) {
   return (
     <main
       className={`min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-white sm:p-4 ${
-        isWorkoutActive ? "pb-52 sm:pb-36" : ""
+        isWorkoutActive ? (isQuickWorkout ? "quick-workout-active" : "pb-52 sm:pb-36") : ""
       }`}
     >
       <div className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden">
@@ -4787,7 +4806,7 @@ function AccountApp({ currentUser }) {
                 >⚙</button>
               </div>
             </div>
-            <div className="mt-4 grid w-full grid-cols-4 gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[32rem] sm:gap-2">
+            <div className="mt-4 grid w-full grid-cols-3 gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1 sm:inline-grid sm:min-w-[24rem] sm:gap-2">
               <button
                 type="button"
                 onClick={() => setViewMode("dashboard")}
@@ -4798,17 +4817,6 @@ function AccountApp({ currentUser }) {
                 }`}
               >
                 Dashboard
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("planner")}
-                className={`min-w-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
-                  viewMode === "planner"
-                    ? "bg-emerald-400 text-slate-950"
-                    : "text-slate-300 hover:bg-slate-800"
-                }`}
-              >
-                Week
               </button>
               <button
                 type="button"
@@ -5116,9 +5124,13 @@ function AccountApp({ currentUser }) {
               </article>
 
               <article className="min-w-0 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  This Week
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">This Week</p>
+                  <button type="button" onClick={() => setViewMode("planner")}
+                    className="rounded-lg border border-emerald-400/50 px-3 py-2 text-sm font-semibold text-emerald-200">
+                    Plan Your Week
+                  </button>
+                </div>
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/60 p-2 sm:p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -5454,6 +5466,10 @@ function AccountApp({ currentUser }) {
 
         {viewMode === "planner" ? (
           <>
+            <button type="button" onClick={() => setViewMode("dashboard")}
+              className="mb-4 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200">
+              Back to Dashboard
+            </button>
             {saveMessage ? (
               <p className="mb-4 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200">
                 {saveMessage}
@@ -6552,6 +6568,29 @@ function AccountApp({ currentUser }) {
               ) : null}
 
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {exerciseFinderMode.type === "workout-add" && !exerciseSearchTerm.trim() && recentExerciseGroups.length ? (
+                  <details className="mb-3 rounded-xl border border-slate-700 bg-slate-950/60 p-3">
+                    <summary className="cursor-pointer py-1 text-sm font-semibold text-emerald-200">Recently Used</summary>
+                    <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                      {recentExerciseGroups.map(({ muscle, exercises }) => (
+                        <section key={muscle}>
+                          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{muscle}</h3>
+                          {exercises.map((exercise) => (
+                            <div key={exercise.id} className="flex items-center justify-between gap-2 border-b border-slate-800 py-2">
+                              <span className="min-w-0 text-sm text-slate-200">{exercise.name}</span>
+                              <button type="button" disabled={isExerciseAlreadyAdded(exercise.id)}
+                                onClick={() => selectExerciseFromFinder(null, null, exercise, null)}
+                                aria-label={isExerciseAlreadyAdded(exercise.id) ? `${exercise.name} already added` : `Add ${exercise.name}`}
+                                className="min-h-11 shrink-0 rounded-lg border border-emerald-400/40 px-3 py-2 text-sm font-semibold text-emerald-200 disabled:opacity-50">
+                                {isExerciseAlreadyAdded(exercise.id) ? "Added" : "Add"}
+                              </button>
+                            </div>
+                          ))}
+                        </section>
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
                 {exerciseSearchStatus === "loading" ? (
                   <p className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-3 text-sm text-slate-300">
                     Searching exercises...
@@ -6638,10 +6677,10 @@ function AccountApp({ currentUser }) {
           <section className="mt-3 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-2.5 sm:p-3">
             <button
               type="button"
-              onClick={() => setViewMode("planner")}
+              onClick={() => setViewMode("dashboard")}
               className="mb-4 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition hover:border-slate-500"
             >
-              Back To Planner
+              Back to Dashboard
             </button>
 
             <div className="flex min-w-0 flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-start md:justify-between">
@@ -6657,17 +6696,6 @@ function AccountApp({ currentUser }) {
               </div>
 
               <div className="flex min-w-0 flex-wrap gap-2">
-                {isQuickWorkout ? (
-                  <button type="button" onClick={() => {
-                    setExerciseFinderMode({ type: "workout-add", exerciseIndex: null });
-                    setExerciseSearchTerm("");
-                    setExerciseSearchResults([]);
-                    setExerciseSearchStatus("idle");
-                    setExerciseFinderOpen(true);
-                  }} className="rounded-lg bg-emerald-400 px-3 py-2 font-semibold text-slate-950">
-                    + Add Exercise
-                  </button>
-                ) : null}
                 <button
                   type="button"
                   onClick={requestFooterFinishWorkout}
@@ -6739,13 +6767,28 @@ function AccountApp({ currentUser }) {
       </div>
 
       {isWorkoutActive ? (
-        <div
+        <WorkoutFooterContainer
           className={`workout-footer fixed inset-x-0 bottom-0 z-30 border-t px-3 pt-2 shadow-2xl backdrop-blur sm:px-4 ${
             restTimer?.status === "complete"
               ? "rest-timer-complete border-yellow-200 bg-yellow-300 text-slate-950"
               : "border-slate-700 bg-slate-950/95 text-white"
           }`}
         >
+          {isQuickWorkout ? (
+            <div className="mx-auto mb-2 w-full max-w-7xl">
+              <button type="button" onClick={() => {
+                setExerciseFinderMode({ type: "workout-add", exerciseIndex: null });
+                setExerciseSearchTerm("");
+                setExerciseEquipmentFilter("all");
+                setExerciseMuscleFilter("all");
+                setExerciseSearchResults([]);
+                setExerciseSearchStatus("idle");
+                setExerciseFinderOpen(true);
+              }} className="min-h-11 w-full rounded-lg border border-emerald-400/60 bg-slate-900 px-3 py-2 text-sm font-semibold text-emerald-200">
+                + Add Exercise
+              </button>
+            </div>
+          ) : null}
           <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p
@@ -6812,7 +6855,7 @@ function AccountApp({ currentUser }) {
               </button>
             </div>
           </div>
-        </div>
+        </WorkoutFooterContainer>
       ) : null}
 
       {pendingWorkoutAction ? (

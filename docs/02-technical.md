@@ -825,6 +825,14 @@ when the user explicitly opens the builder. During authenticated active-workout
 hydration, a valid resumable workout still promotes the view to Workout; a
 normal launch without one remains on Dashboard.
 
+Primary tabs are Dashboard, Programs and Rob. Dashboard's This Week card opens
+the existing planner through Plan Your Week; the planner and workout screens
+have Back to Dashboard controls. Finish, empty close and discard return to
+Dashboard. An explicit pending workout switch or schedule assignment still
+opens its requested destination, applied directly without a delayed callback.
+Failed local history saves retain the active workout and do not advance the
+pending action; the existing local-save/cloud-failure fallback is unchanged.
+
 Firebase is initialized in `src/services/firebase.js`.
 
 Authentication is isolated in `src/services/auth.js`:
@@ -993,6 +1001,18 @@ session-only add mode with duplicate prevention. Each added exercise starts with
 one blank set and no rep target; Add Set extends only the session, carrying weight
 from a confirmed preceding set. No previous performance is used to prefill it.
 Notes, prior performance, confirmation and timers use the existing controls.
+Quick Workout's single Add Exercise action sits above the timer in its fixed
+footer. `QuickWorkoutFooter` measures that stack (including safe-area padding)
+to reserve scroll space and hides it when a focused editor and reduced viewport
+indicate an on-screen keyboard. Planned sessions retain their existing footer.
+In quick-add mode only, the empty-query picker offers a collapsible Recently
+Used section. `recentWorkoutExercises.js` derives at most 24 unique, meaningfully
+performed exercise IDs from this account's history, newest first. Groups use
+canonical catalogue or hydrated provider primary-muscle metadata, with Other /
+Uncategorised for missing metadata. Historical names remain a fallback, and no
+historical set values enter the add path. Missing provider metadata is fetched
+only while quick-add is open; cancelled/account-unmounted results are ignored.
+There is no persisted recent list and builder Add/Swap pickers are unchanged.
 Active/history validators in `workoutSnapshots.js` accept both quick and planned
 shapes, including during cache hydration and backup import. History totals,
 workload and Rob readers use the performed exercise snapshots without requiring

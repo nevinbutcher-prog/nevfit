@@ -19,6 +19,10 @@ body {
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
+.quick-workout-active {
+  padding-bottom: calc(var(--quick-workout-footer-height, 15rem) + 1rem);
+}
+
 .rest-timer-complete {
   animation: rest-timer-pulse 700ms ease-in-out infinite;
 }

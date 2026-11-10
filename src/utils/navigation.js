@@ -7,3 +7,9 @@ export function getInitialViewMode() {
 export function getViewModeForLoadedActiveWorkout(activeWorkoutSession) {
   return activeWorkoutSession ? "workout" : DEFAULT_VIEW_MODE;
 }
+
+export function getViewModeAfterWorkout(action) {
+  if (action?.type === "open-workout") return "workout";
+  if (action?.type === "change-assignment") return "planner";
+  return DEFAULT_VIEW_MODE;
+}

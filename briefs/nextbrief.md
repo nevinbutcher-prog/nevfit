@@ -1,0 +1,29 @@
+# NevFit — Checkpoint 067: Verified Training Data Backup and Read-Only Migration Preflight
+
+**Status:** Approved as the next small prerequisite to implementing the approved Training UI.
+**Suggested implementation commit:** `feat: add training migration backup and preflight`
+**Workflow:** `AGENTS.md`, `docs/nevdev_workflow.md`
+
+## User goal and decisions
+Replace the unintuitive Programs/Routines screen with **Training**, comprising **Workouts** and **Programs**. Reusable workouts exist standalone or inside exactly one program. A program can add an existing standalone workout (moving it) or create a new workout internally. Workouts can be detached, duplicated, archived/restored or explicitly deleted; programs can be archived/deleted without destroying completed training history. Refer to the approved conceptual mockups and the 20 clean UI icons in `public/assets/training-icons/`. **Do not copy the explanatory banners** about workouts being independent or programs optional from the mockups; user explicitly rejected those. The workout summary/editor design is especially important and should replace the existing nested editor in a later UI checkpoint. No generated exercise pictograms are required.
+
+The user is currently the only active user. Their **existing saved workouts/programs, active workout and completed history must be preserved**. Data from test accounts need not be migrated, but do not delete or rewrite any account in this checkpoint. Architecture foundation 066 exists as pure helpers only, still unactivated. We must get a trustworthy, independently reviewed backup and preflight before any live cutover.
+
+## This checkpoint
+Implement the **smallest proportionate, read-only migration readiness facility** for the authenticated account, not the UI redesign or migration:
+1. Inspect actual App/program/backup stores, Firestore rules, user/appState/history/Rob state, 066 model/planner and docs. Determine feasible read coverage using existing authentication and repository tooling; do not invent an all-account enumeration API on the browser SDK.
+2. Supply a practical **user-initiated read-only backup/export** mechanism suitable for safeguarding the user's current data before the later migration. Cover every *known relevant* account document and collection including raw legacy program documents (both `days`/`routines`), planning, active workout, completed history, health, notes, Rob preferences/reviews as accessible; preserve exact IDs/paths and Firestore value types (at least timestamps). Account identity must be explicit and verified; no cross-account caches. If exhaustive Firestore subcollection enumeration or faithful restore cannot be safely supported with the current client, describe the limitation plainly and provide an appropriate offline/manual/admin alternative **without implementing a privileged exporter or treating an incomplete backup as comprehensive**. Never request or store admin credentials in source.
+3. Provide a deterministic **read-only preflight** of the actual legacy program data (after serializing typed values for the pure 066 planner) with counts, validation errors, ID collision mappings, schedule/active linkage ambiguity, duplicate IDs, and noncanonical fields. Preflight must not change the current source-of-truth, startup, accounts or plan. Keep the report local/downloadable only if already in the user's authenticated context, avoid logging private exercise/history payloads to console.
+4. Verify the exported representation against the fetched sources using counts/hashes and pure decode/encode roundtrip as appropriate. Explicitly explain that an export + dry-run check is not by itself proof of a tested destructive restore; report what would still be required before migration approval. If required full-account backup/restore cannot be safely fulfilled in this checkpoint, **stop at a truthful read-only preflight and clearly mark cutover blocked**. Proportional safeguards for one active user; do not build a large migration framework.
+5. Preserve existing Settings export/import behaviour (v1/v2) and ordinary app runtime, unless narrowly necessary for a separate optional backup/preflight entry point. Do not auto-generate or overwrite files on account boot.
+
+## Forbidden
+- No live Firestore **writes**, migrations, collection creation/deletion, remote rules changes, startup schema cutover, or population of `savedWorkouts` / `savedWorkoutPrograms`.
+- No app-wide redesign, Training screens, nav changes, renaming Routines, independent workout CRUD, or generated exercise images in this checkpoint. User approved the visual direction; UI implementation follows after data safety and cutover are independently reviewed.
+- No changing completed workouts, session snapshots, Rob proposal formats, or current program persistence behaviour.
+- No destructive test/account operations, secrets, paid services or broad dependency additions.
+
+## Tests and handoff
+Test new pure report/backup validation logic using synthetic account fixtures including archive/empty accounts, legacy alias fields, collisions, mixed Firestore typed values and ambiguous schedule references. Exercise error/fallback reporting. Run focused existing tests, lint, build. No automated live-account data access; the user will initiate the download themselves and retain it privately. Report exact backup coverage and limitations, what was actually verified, and whether any blockers remain before a future live migration. Keep privacy, UID-scoping and manual safeguards explicit.
+
+Update relevant docs, archive this brief under sequential prefix 067, clear `briefs/nextbrief.md`, commit/push to main and verify deploy status if frontend changed. Stop for independent review and user acceptance. Do not begin storage migration or UI implementation automatically.

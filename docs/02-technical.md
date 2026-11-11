@@ -1048,3 +1048,204 @@ public/sounds/rest-complete.wav
 The rest timer uses this file through a small sound config and plays it twice
 on completion, with mobile vibration where supported. Future timer sounds can
 be added under `public/sounds/`.
+
+## Independent Saved Workout Foundation (066; unactivated)
+
+This section is the future transition contract, not a description of deployed
+storage. No UI, startup, persistence, Rob or backup code imports the foundation.
+`savedWorkoutModel.js` and `savedWorkoutMigration.js` only validate/transform
+plain JSON in memory. They perform no account discovery, reads, writes, deletes
+or automatic migrations. Screen mockups for Training, My Workouts, Program
+Builder, Workout Editor and destructive controls require user approval before
+any UX/UI overhaul. Existing Routines labels remain unchanged.
+
+### Model and offline mapping
+
+The library envelope is `{ version: 1, programs: [], workouts: [] }`:
+
+- Saved workout: `{ id, name, archived, programId: string | null, exercises }`.
+  Exercises remain ordered prescriptions with existing `routineExerciseId`,
+  stable `exerciseId`, sets, repRange, restSeconds, note, displayNameOverride and
+  supersetGroupId. This is a reusable template, never a completed/session record.
+- Program: `{ id, name, archived, workoutIds: [...] }` plus retained metadata
+  (description, timestamps, existing flags and unknown JSON metadata). No embedded
+  `days` or `routines`. Program IDs and workout IDs have separate namespaces.
+- Each workout is standalone (`programId: null`, no membership) or belongs to
+  exactly one existing program, whose ordered workoutIds lists it exactly once.
+  All references resolve; workout, program and per-workout row identities are
+  unique in their respective scopes. Empty programs, standalone-only accounts,
+  and both lists being empty are valid. Archive status does not change ownership.
+
+`planLegacyWorkoutMigration({ accountId, legacyPrograms })` requires an explicit
+account ID; it does not infer one. It returns migrationVersion 1, accountId, ok,
+structured code/path errors, a per-account summary, tuple mappings, adjustments
+and target. Any failure returns `target: null` with no partial mappings or
+adjustments. This is not an executable write plan or authorization to migrate.
+
+Input must be plain JSON (serialize Firestore timestamps explicitly beforehand).
+`days` or `routines` is accepted; if both exist they must agree, ignoring object
+key order but preserving array order. Conflicting aliases, duplicate program IDs
+or duplicate routine IDs within one program fail. Metadata, archived/deleted
+flags, empty items, exercise order, identities and all prescription values are
+copied, without trimming or defaulting existing values. Missing archive flags
+become false; invalid existing flags fail. Program archival never rewrites the
+member workout's own archived flag. Legacy deleted flags are retained metadata,
+not instructions to delete/filter records.
+
+Globally unique legacy routine IDs are retained as workout IDs. Every occurrence
+of a routine ID shared across programs gets
+`legacy-workout:<encodeIdentity(programId)>:<encodeIdentity(routineId)>`.
+Encoding leaves ASCII letters, digits, dots and hyphens unchanged and replaces
+every other Unicode code point (including underscore) with `_lowercaseHex_`.
+This is injective and keeps generated IDs in the current executable Rob proposal
+ID alphabet; unlike percent escapes it does not introduce rejected characters.
+All original IDs are reserved first; a generated collision gets the first unused
+`:2`, `:3`, etc. No distinct routines merge. Each mapping records programId,
+legacyRoutineId and workoutId. Missing exercise row IDs get deterministic
+`legacy-row:<encodeIdentity(workoutId)>:<1-based position>` IDs with the same
+collision protection within that workout. A legacy groupId adds an identical
+supersetGroupId only if the latter is absent; both conflicting aliases fail.
+Additions are individually reported and counted. Existing row IDs, notes, names,
+set counts and rest values are never regenerated or rewritten.
+
+The validator follows current prescription bounds (integer sets 1-12, optional
+null/omitted rest or integer 0-600) and supported Nevfit/legacy WGER exercise IDs.
+Missing/noncanonical prescriptions, such as string set counts, fail with paths
+rather than being silently filtered or repaired by App's legacy normalizers.
+This deliberate limit requires inspection of a future backup and explicit repair
+decisions if such records actually exist. Repeated conversion of identical input
+is deterministic and leaves inputs unchanged. Already-independent programs are
+rejected; rerunning a future writer must compare against the same reviewed plan,
+not feed the target back into this legacy converter.
+
+### Required source-of-truth cutover (future work only)
+
+The proposed future paths are `users/{uid}/savedWorkouts/{workoutId}` and
+`users/{uid}/savedWorkoutPrograms/{programId}`. Original `programs` documents stay
+untouched during initial cutover. A future `appState/trainingModel` version marker
+selects the independent model only after target validation/readback succeeds.
+These paths, marker, rules and writer are not created or deployed by 066.
+
+Before activation, every production reader/writer below must support the new
+model, including legitimate zero-program state. Once activated, independent
+templates and reference-only programs are authoritative; never dual-write both
+models or fall back to stale legacy data on a new-model load error. Use a new
+UID-scoped cache namespace and account-remount/cancelled-result protections.
+An empty new-model library is valid saved state, not a failed/missing load.
+
+Keep weekly `routineDayId` as the compatibility field initially, pointing to the
+mapped saved workout ID; preserve day order, labels, notes and other planning
+fields. A null assignment remains null. Globally unique IDs need no reassignment.
+A colliding or missing routine reference blocks live cutover until explicitly
+resolved in the reviewed account plan. Do not guess from activeProgramId: the
+current week picker offers routines across all programs. That selection alone
+does not prove ownership. An absent selected program becomes null only through
+an explicit reviewed decision; cycle data remains intact.
+
+Quick active sessions are unchanged. A planned active session keeps the exact
+exercise snapshots, order, swaps, notes, weights/reps and completion flags; only
+its routineDayId linkage may follow an unambiguous/explicitly approved mapping.
+Unresolved linkage blocks migration, never discards the session. Future resume
+and finish must use its own snapshots even when a template is archived, detached
+or removed, without writing its performed changes back to the template.
+
+Completed workout documents are immutable to this migration: do not rewrite old
+routineDayId, scheduleDayId, names, exercise identities, sets, units, dates or
+metadata. Readers must tolerate historical associations that no longer resolve.
+Previous performance, workload and counts continue using performed exercise IDs.
+New planned completions can use the saved template ID in the existing linkage
+field; Quick Workout remains independent. Rob may consult the retained mapping
+for legacy history association, but ambiguous history must remain visible without
+inventing an owner or changing historical records.
+
+### Integration work required before enabling the model
+
+| Current touchpoint | Required future change |
+| --- | --- |
+| App normalizeProgramDefinitions/loadStoredPrograms/getInitialPrograms/loadUserPrograms | Distinguish missing data from valid `[]`; remove starter auto-initialisation for new-model accounts. Currently empty cloud/cache data can trigger Starter Program uploads. This is a release blocker for zero-program accounts. |
+| App program drafts, getProgramDay, routine builder and dashboard/planner lookups | Resolve independent templates by ID; keep edits draft-only until explicit save. Do not flatten embedded days as the authoritative store. Initialization/onboarding decisions remain separately gated. |
+| programData/programStore/programPersistence | Existing stores only upsert/merge documents; omitting a program never deletes it remotely. Add genuine scoped deletion APIs later. Coordinated save/move/detach must update template.programId and both affected ordered membership lists atomically, with stale-state checks. No independent partial saves. |
+| planningStore and App planning/cache defaults | Resolve mapped routineDayId, allow null activeProgramId, retain scheduling protections and persist zero-program accounts without default-program fallback. |
+| routineBuilder/workoutSnapshots/activeWorkoutStore | Start from saved-template prescriptions; retain snapshot-based resume/finish and existing account isolation, meaningful-effort and non-destructive save safeguards. |
+| robContext, routineProposal, programProposal, robProposalApproval and robProgramResolution | Add a read adapter that projects a selected reference-only program into the current `{ id, name, days: ordered templates }` contract, retaining template/row IDs. Do not change AI contracts incidentally. Route approved proposals back to independent drafts and coordinated saves, rechecking both prescription and ownership/membership freshness after async generation. Standalone routine review needs a separately approved contract, never a synthetic program. |
+| backupPayload/backupService and App normalizeBackupForImport/applyImportedBackupToLocalState | Version-aware validation/restore for independent records and empty accounts; current collection replacement importer is not a safe cutover writer. |
+
+The future live preflight must also check retained/generated ID lengths against
+Firestore document-path limits and Rob context's current 200-character ID bound.
+The pure model does not truncate IDs. Any actual over-limit identity or legacy ID
+outside the proposal alphabet requires an explicit compatibility decision before
+activation; it must not be silently shortened. No real-account evidence of such
+IDs was collected in this checkpoint.
+
+Future lifecycle semantics: archiving/restoring a template preserves identity,
+ownership, prescriptions and historical records. Archived items are excluded from
+new selection but retained references remain readable. Duplication creates a new
+template and new row IDs; it never shares mutable definition state. Deleting a
+program detaches its templates (including archived ones) to standalone and clears
+the selected program when applicable; it never cascades into templates or history.
+Deleting a saved template requires explicit destructive confirmation, removal of
+its program membership and clearing its future weekly assignments together.
+Existing active and completed snapshots survive. These semantics are a future
+implementation contract, not approved controls or live deletion authorization.
+
+### Backup, controlled migration, verification and rollback gate
+
+The first operational step in any later authorized live migration must be an
+independent full JSON export of the explicitly identified real active account,
+followed by verification of its restoration contract. The user manually retains
+an untouched private copy outside Git. No real-account reads or backup operation
+were performed in 066, and no UID is recorded/inferred here.
+
+Settings v2 export currently serializes hydrated React state, not a fresh raw
+server inventory. It includes programs, planning, active workout, completed
+history, health and exercise notes; v1 lacks exercise notes. It omits the user
+document, Rob coaching preferences, saved weekly check-ins, migration markers and
+potential other account fields. Its normalize/import path can drop unknown data
+and cannot currently restore empty programs. It is useful supplemental backup,
+not proof of a complete rollback source for this structural migration.
+
+The independent export must inventory the account's Firestore user document and
+every existing owned subcollection/document, with exact paths/IDs and a reversible
+typed JSON encoding for timestamps and any other non-JSON Firestore values. It
+must include active session, all historical snapshots, program metadata and every
+appState document (including Rob/weekly-review state). No auth credentials or
+other accounts are needed. Verify parseability, completeness/counts, exact source
+values and a lossless encode/decode/restore dry run before allowing writes. The
+scoped restoration code/field coverage must be independently reviewed; current
+v1/v2 Settings import is not an exact raw-document restoration mechanism.
+
+Retain v1/v2 import support later: validate legacy data and produce the offline
+conversion with an explicit account scope before any write; resolve collisions
+and empty-program fallback first. Preserve the documented v1 note-clearing
+behaviour only under explicit restore confirmation. Define future app backup v3
+with `trainingModelVersion: 1`, reference-only programs and a savedWorkouts list,
+plus the existing planning/session/history/health/notes sections and Rob/weekly
+state. Validate the entire ownership graph before writes. The independent raw
+backup remains the comprehensive recovery source, separate from app backups.
+Do not change BACKUP_VERSION or existing import/export formats in 066.
+
+For one active user's future migration, use a single explicit UID, quiesce edits
+on all devices, and compare fresh server source values against the safeguarded
+backup/reviewed deterministic plan. Fail closed on any source drift, unresolved
+linkage, noncanonical value, unexpected existing target, or wrong account. Create
+targets without replacing originals. A retry accepts only exact matching targets
+from the identical source/plan/version; it never merges unrelated contents. Use a
+small version/source/target digest marker, not a general migration framework.
+Before selecting the new model, read back all target records, validate ownership,
+compare metadata/prescriptions/order and approve the limited planning/active-link
+changes. Verify original program documents and all completed history unchanged.
+Only then coordinate the version switch and linkage changes; keep normal legacy
+startup writes disabled during that window. Later verify cross-device resume,
+history/previous performance, Rob adapter and backup restoration with user review.
+
+On failure before activation, leave legacy authority intact; preserve the backup,
+report and staged targets for inspection. After activation, freeze edits and
+compare current data before a rollback: reverting authority plus the backed-up
+planning/active linkage is safe only if no subsequent data would be lost. If new
+model edits/sessions exist, reconcile them under an explicit reviewed recovery
+plan; never blindly import the old backup and erase newer history. A targeted
+rollback must not replace completedWorkouts. Full-account replacement recovery
+or deleting staged/legacy documents requires separate explicit authorization.
+Keep legacy originals until independent review, user verification and a later
+approved cleanup decision. No migration, restore or subsequent UI checkpoint is
+automatically authorized by this foundation.

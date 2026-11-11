@@ -6,6 +6,9 @@
 
 ## Implemented
 
+- Checkpoint 066 adds an unactivated independent saved-workout model validator and pure legacy-to-independent migration report. Programs reference ordered workout IDs; templates have one nullable program owner. Stable IDs/prescriptions/metadata, archived items and empty accounts are preserved; cross-program routine ID collisions map deterministically. Malformed/ambiguous data fails without a partial target. No production code imports these helpers; no UI, persistence, Rob or backup-format behaviour changed. Independent review remains pending.
+- The exact future transition contract is in `docs/02-technical.md`, under Independent Saved Workout Foundation. Activation remains blocked on legitimate empty-program initialization (current code can recreate/upload Starter Programs), coordinated ownership saves and genuine deletion APIs, planning/active-reference resolution, Rob adaptation, and version-aware backup/restore. Current Settings v1/v2 export is not a complete raw account backup. Before any future live writes, independently export/verify the explicitly identified user's full JSON backup and confirm exact restoration coverage; user safeguards it. Preserve legacy originals and leave completed history untouched. No account reads/backups/migration/deletion were performed for 066. Training/My Workouts/Program Builder/Workout Editor and destructive-control mockups must be approved before UI implementation; subsequent migration/UX work is not authorized here.
+
 - Checkpoint 049 activates field-level Nevfit metadata for 12 of the 28 reviewed historical WGER IDs in browser exercise lookup/search, with a versioned overlay and WGER fallback. All IDs and stored workouts remain unchanged; 16 mappings remain review-only. The review and expansion details are in `evaluation/exercise-metadata-expansion.md`.
 - Dashboard default landing screen
 - Normal authenticated launches default to Dashboard without restoring builder navigation

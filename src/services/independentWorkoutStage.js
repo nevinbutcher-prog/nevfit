@@ -1,7 +1,7 @@
 import { decodeFirestoreValue } from "./firestoreValueCodec.js";
 import { fingerprintTrainingDocuments, verifyTrainingReadinessExport } from "./trainingReadinessBackup.js";
 
-const relevant = (entry) => ["programs", "completedWorkouts"].includes(entry.path.split("/")[2]) ||
+export const isIndependentWorkoutSource = (entry) => ["programs", "completedWorkouts"].includes(entry.path.split("/")[2]) ||
   /^users\/[^/]+\/appState\/(planning|activeWorkout|exerciseNotes|health)$/.test(entry.path);
 const decode = (exported, firestore) => exported.documents.map((entry) => ({ path: entry.path, exists: entry.exists,
   data: entry.exists ? decodeFirestoreValue(entry.value, firestore) : null,
@@ -15,8 +15,8 @@ export async function prepareIndependentWorkoutStage({ uid, projectId, backup, c
   const active = sources.find((entry) => entry.path === `users/${uid}/appState/activeWorkout` && entry.exists)?.data.activeWorkoutSession;
   if (active != null) fail("active_session_present");
   if (!backup.preflight.legacyValidationPassed || !current.preflight.legacyValidationPassed) fail("unresolved_preflight");
-  const sourceFingerprint = await fingerprintTrainingDocuments(sources.filter(relevant));
-  if (sourceFingerprint !== await fingerprintTrainingDocuments(decode(backup, firestore).filter(relevant))) fail("source_drift");
+  const sourceFingerprint = await fingerprintTrainingDocuments(sources.filter(isIndependentWorkoutSource));
+  if (sourceFingerprint !== await fingerprintTrainingDocuments(decode(backup, firestore).filter(isIndependentWorkoutSource))) fail("source_drift");
   const plan = current.preflight.plan;
   if (!plan.ok || !plan.target) fail("invalid_migration_plan");
   const rawPrograms = new Map(sources.filter((entry) => entry.path.split("/")[2] === "programs").map((entry) => [entry.path.split("/").at(-1), entry.data]));
@@ -55,10 +55,7 @@ async function inspectTargets(stage, state, requireComplete = false) {
   return [...seen].sort();
 }
 
-// No production adapter is supplied in 068: current rules deny both target collections.
-// A future reviewed adapter MUST use authenticated server reads (reject pending
-// writes), atomic compare-and-set marker operations, and atomic create-or-identical
-// target writes. It must never merge/replace conflicts or touch legacy/history/Rob.
+// 069 supplies a separately gated Firestore adapter. No startup/UI activation.
 export async function stageIndependentWorkouts({ uid, projectId, backup, firestore, attemptId, adapter, isCurrent, batchSize = 400 }) {
   let stage;
   let phase = "source_validation";
@@ -85,6 +82,7 @@ export async function stageIndependentWorkouts({ uid, projectId, backup, firesto
     if (marker && (marker.sourceFingerprint !== stage.sourceFingerprint || marker.targetFingerprint !== stage.targetFingerprint)) fail("stale_stage_marker");
     if (marker?.status === "verified") {
       const stagedPaths = await inspectTargets(stage, state, true);
+      await refresh();
       guard();
       return { ok: true, reused: true, stagedPaths, sourceCounts: stage.counts, sourceFingerprint: stage.sourceFingerprint, cutoverAllowed: false };
     }

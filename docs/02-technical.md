@@ -1130,7 +1130,8 @@ untouched during initial cutover. A future `appState/trainingModel` version mark
 selects the independent model only after target validation/readback succeeds.
 These paths, marker, rules and writer were not created or deployed by 066.
 Checkpoint 068 adds a tested staging engine and development dry-run fallback;
-current production rules still deny the target paths and no live writer is wired.
+069 supplies a gated concrete adapter and proposed create-only owner rules.
+Production rules remain undeployed and no live writer is wired to the app.
 
 Before activation, every production reader/writer below must support the new
 model, including legitimate zero-program state. Once activated, independent
@@ -1431,13 +1432,13 @@ are never eligibility evidence. No onboarding wizard or Rob format change was ad
 ### Staging engine; activation explicitly blocked
 
 `independentWorkoutStage.js` provides a pure preparation step and an injected
-stage/verify engine. **There is no production Firestore write adapter, rule change,
-activation button or startup invocation in 068.** Existing owner-only rules deny
-reads/writes to workouts and programsV2. The approved fallback is used rather than
-expanding access during this checkpoint. Live manual staging remains blocked on
-independent review, a separately reviewed authenticated adapter and narrowly scoped
-owner-only rules. No staging, test-account migration or live account reads were run
-by the agent, tests, build or CI.
+stage/verify engine. At 068 there was no concrete Firestore adapter or rule change;
+069 adds those, with no activation button or startup invocation. The currently
+deployed rules remain unchanged and deny target collections. The 069 adapter and
+proposed rules require independent review plus a separately authorized rules
+release and live activation. No real-account staging, test-account migration or
+production account reads were run by the agent, tests, build or CI. Synthetic
+local emulator accounts are used only for validation described below.
 
 The development build alone exposes Settings / Training backup and readiness /
 **Developer: staging dry run only**. The operator supplies their retained private
@@ -1446,7 +1447,7 @@ and initiates fresh server-only capture. Files stay local; no attachment is read
 by Codex. A successful dry run downloads a private
 `nevfit-training-stage-dry-run.json` with source/target fingerprints, live source
 counts, stable mappings and typed target content. Target conflict/lock checks are
-marked **not performed** because rules block target access. Both activationAllowed
+marked **not performed** by this source-only action. Both activationAllowed
 and cutoverAllowed remain false. Production Settings still offers the read-only
 067 export; ordinary new users have no live migration control.
 
@@ -1469,7 +1470,7 @@ metadata plus ordered IDs; workouts contains independent definitions. Neither
 legacy programs nor completed snapshots, planning, health, notes or Rob are write
 targets. This is an isolated copy, never a dual-writable runtime source.
 
-The staging engine's future adapter contract is deliberately narrow:
+The staging engine's adapter contract, implemented in 069, is deliberately narrow:
 
 1. Bind every operation to the explicitly authenticated UID/project. Check the
    current account before/after async work. `readSourceFromServer` returns a fresh
@@ -1486,8 +1487,8 @@ The staging engine's future adapter contract is deliberately narrow:
 4. Before every group of at most 400 targets, refresh source validation and reject
    drift/active sessions/pending writes. `createOrVerifyDocuments` must atomically
    create absent entries or accept exact semantic matches, refusing conflicts and
-   never blindly overwriting them. These atomic guarantees are obligations of the
-   missing future adapter, not claims about an implemented Firebase transport.
+   never blindly overwriting them. The concrete 069 adapter enforces this with
+   Firestore transactions, covered by the isolated emulator tests below.
 5. Read targets back from the server and compare canonical typed content, order,
    ownership, counts and mappings to the plan; recheck sources. Only then compare-
    and-set the marker to status verified, schemaVersion 2 and cutoverAllowed false.
@@ -1498,9 +1499,9 @@ The staging engine's future adapter contract is deliberately narrow:
 
 Synthetic adapters test this contract, including an interrupted small batch,
 idempotent retry, conflicting targets, competing attempts, source drift, active
-sessions, pending writes and verification mismatch. No real adapter or emulator
-write was exercised. A future adapter must meet atomicity and rule/UID checks
-before manual activation can be enabled; mocks alone do not prove Firestore safety.
+sessions, pending writes and verification mismatch. Checkpoint 069 additionally
+exercises the concrete transport and proposed rules in a local demo emulator.
+Those checks do not constitute production permission tests or live activation.
 
 ### Later cutover and manual verification
 
@@ -1523,8 +1524,9 @@ Before any future operator activation, retain the private 067 file and optionall
 take a fresh ordinary Settings export. Neither is a tested full-account restore;
 legacy originals are a practical fallback, not a universal recovery guarantee.
 The full-coverage limitations from 067 remain; they must not be presented as solved
-by synthetic staging verification. Rules/adapter/manual activation are currently
-blocked, and no migration action should be attempted in the production console.
+by staging verification. The adapter is implemented in 069, but rules deployment
+and manual activation remain blocked pending separate review and authorization.
+No migration action should be attempted in the production console.
 
 After code review, manual user verification should confirm a genuinely new empty
 account stays empty after refresh/sign-in, has no selected program/cycle/assigned
@@ -1534,3 +1536,150 @@ programs, schedule, history and resume behaviour. Optional developer dry-run
 verification is read-only and user-initiated; fresh source/backup/target review
 and any real writes are separate decisions. Do not upload private reports to Git
 or paste their contents into public issues.
+
+## Concrete Firestore Staging Adapter and Proposed Rules (069)
+
+`independentWorkoutStageFirestore.js` implements the 068 adapter contract.
+Construction performs no network or database operation. Callers explicitly bind
+the current UID, SDK Auth, configured default-database Firestore instance, mounted
+account predicate and retained private 067 backup. Other databases or mismatched
+UIDs are rejected. No app startup, sign-in, export, deploy, refresh or CI path
+constructs/invokes a live adapter. There is no production UI staging action.
+The existing developer source dry run remains available and never writes.
+
+Every write method requires `enabled: true` (default false) and exact typed
+confirmation `STAGE <signed-in UID>`. SDK auth UID and the mounted account are
+checked at entry and after awaited work, including transaction retries. This
+gate does not authorize live use: 069 explicitly excludes production staging.
+No user's private file, account identifier, training data or hashes were used in
+implementation, fixtures, output logs or docs.
+
+### Reads, transactions and verification
+
+`trainingReadinessSource.js` extracts the existing 067 server-only reader without
+changing the export format or Settings behaviour. The adapter uses it to fetch
+fresh source data, reject cache/pending-write snapshots, validate backup identity
+and semantic fingerprints, and reject any active session/preflight error. Target
+reads fetch every direct document in both workouts and programsV2, plus the single
+`appState/independentWorkoutStage` marker, with no limits or cache fallback.
+Missing collections return a confirmed empty inventory; unavailable reads fail.
+
+`claimStage` refreshes sources and uses a Firestore transaction to compare the
+exact expected marker before creating the staging lock. A different attempt,
+fingerprint, unexpected marker fields/status or a racing marker change fails.
+An identical same-attempt staging lock is reused without rewriting it.
+
+`createOrVerifyDocuments` accepts at most 400 unique entries, and only exact
+source-derived entries in this account's planned workouts/programsV2 set. Caller
+payloads and arbitrary allowed-namespace paths cannot become writes. Legacy
+programs, completed history, planning, Rob and other paths are structurally
+excluded. After a fresh source check, the transaction reads the lock and all
+requested targets before any writes. Existing semantic equals need no write;
+differences fail. For absent targets, transaction reads supply existence/version
+preconditions, so a racing create causes a retry, then equality/conflict checking.
+There is no blind set/merge over an existing target and no delete API.
+
+All marker and target write transactions also read/compare every known relevant
+source document from fresh capture, including historical snapshots. Fixed
+planning/activeWorkout/exerciseNotes/health paths are checked even when absent,
+so a newly created active session or changed known source aborts the transaction.
+Native Firestore values are compared through the typed canonical codec. Sources
+remain read-only. Transactions that lose a race retry through the same auth,
+source, marker and target guards; transaction size/request errors fail closed
+and are reported by the existing stage engine, with originals still authoritative.
+
+`completeStage` independently performs a final fresh full source check and exact
+target-inventory comparison. Its transaction compares the claimed staging lock,
+all expected targets and known sources before writing only the verified marker
+with schemaVersion 2, legacyAuthoritative true and cutoverAllowed false. A
+server-only marker readback checks the result. The engine also refreshes sources
+on a verified-marker reuse before returning success. Interrupted runs retain
+matching copies and the lock; same-attempt retries reuse them without repairs.
+
+**Concurrency boundary:** no client holds a global lock across devices. Web SDK
+transactions can read known documents, not transactionally enumerate collections.
+Known-document changes are guarded through commit; newly inserted documents after
+the final collection query cannot be globally excluded. Manual pause on all other
+devices is mandatory. The marker records the observed source/target fingerprints,
+not a promise that no future or concurrent authorised edit exists. Any later
+staging/cutover attempt must compare fresh inventories and fingerprints again.
+A stale verified marker is not runtime authority and never initiates cutover.
+
+### Proposed rules and actual security boundary
+
+`firestore.rules` adds only these target matches:
+
+- `users/{userId}/workouts/{workoutId}`: owner-only reads; owner creates require
+  matching document ID, non-empty text name, boolean archived status, nullable
+  string programId and an exercises list.
+- `users/{userId}/programsV2/{programId}`: owner-only reads; owner creates require
+  matching ID, non-empty name, boolean archived status and workoutIds list, with
+  no embedded days/routines aliases.
+- Updates/deletes are denied for both new collections, including for the owner.
+  Identical existing targets are skipped by the adapter, not rewritten. These
+  staging-only permissions are insufficient for future workout CRUD, which needs
+  a separate reviewed rules change. Existing rules are otherwise unchanged.
+
+The one marker remains under the existing owner-only appState rule; no broad
+new privilege or backend is added. Rules enforce account isolation, create shape
+and immutable target copies, not every nested prescription/membership invariant.
+The authenticated owner can still create other shape-valid target documents or
+write their marker via other authorised app code under existing rules. Such
+inventory conflicts fail adapter verification; a marker alone is not trusted as
+permission to cut over. Do not describe owner-scoped rules as preventing all
+accidental authorised-owner operations or as a complete server migration lock.
+
+**Rules are committed but NOT deployed by 069.** Current production target access
+remains denied. No Firebase rules/functions deployment, live staging, account
+cleanup, source rewrite, Training UI or runtime v2 cutover was performed.
+
+### Reproducible local evidence and release/activation checklist
+
+Run the isolated emulator check from the repository root:
+
+```text
+firebase emulators:exec --only firestore --project demo-nevfit-stage --config firebase.stage-emulator.json "node scripts/independentWorkoutStage.emulator.mjs"
+```
+
+The runner refuses any other project/host, uses synthetic owner JWTs against the
+actual proposed rules, and contains no production credentials or source data.
+It verifies owner-only reads/creates, denied cross-account creates, denied target
+updates/deletes, invalid create shape, server-only offline failures, complete and
+empty inventories, matching/conflicting targets, simultaneous marker claims and
+target creates, exact marker CAS, interrupted resume, final-window source drift,
+active-session rejection, account changes, verified idempotency and zero-program
+staging. Legacy program/history values are compared before/after. This is actual
+local Firestore transport/rules evidence, not production permission verification.
+The existing focused synthetic tests continue to cover codec/plan/guard cases.
+
+Required manual release and activation sequence, **not executed here**:
+
+1. Independently review the adapter, engine, exact rules diff and emulator evidence.
+   068's empty-account/user acceptance is recorded in the approved 069 brief;
+   do not repeat account creation automatically or alter those flows.
+2. Obtain a separate explicit Firebase rules release decision. Verify the intended
+   Firebase project/configuration and deploy only the reviewed Firestore rules;
+   frontend/Vercel deployment does not deploy those rules. Until that release,
+   live target reads/writes remain blocked. No deploy command was run for 069.
+3. Obtain explicit user authorization for the particular staging attempt. Pause
+   edits on all devices, finish/discard any active session deliberately, let sync
+   settle, and retain a fresh private 067 export (optionally an ordinary Settings
+   export too). Neither is a tested comprehensive restore. Never upload private
+   files or paste their contents/hashes into source, tests or console logs.
+4. Use a separately reviewed developer/operator invocation in the signed-in,
+   mounted UID/project context, with the chosen private backup, explicit enabled
+   flag, typed UID confirmation, and a retained attemptId for interrupted retries.
+   No such live invocation is wired into the UI by 069. First read and review
+   current counts, source/backup checks, target inventory and marker. Conflicts,
+   stale sources, pending writes or unknown state require review, never reset.
+5. Only after that authorization, invoke the existing stage engine with the
+   concrete adapter. Preserve its private outcome report and verify matching
+   inventories/fingerprints and unchanged legacy programs/history. A verified
+   marker is a staged-copy report only. Stop for user verification and a separate
+   cutover decision; do not enable v2 readers/writers or workout CRUD automatically.
+
+Remaining blockers are independent review, a separately authorized rules release,
+and an explicitly authorized manual staging invocation with fresh private inputs.
+Full-account recovery limits and future cutover/CRUD/UI decisions remain as
+documented earlier. There is no production permission or real-account staging
+acceptance claim in this checkpoint.

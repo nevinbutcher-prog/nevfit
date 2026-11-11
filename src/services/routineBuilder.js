@@ -203,6 +203,7 @@ export function createWorkoutSessionSnapshot(
   return {
     scheduleDayId: scheduleDay.id,
     routineDayId: routineDay.id,
+    routineDayName: routineDay.name,
     exercises: routineDay.exercises.map((exercise) => ({
       exerciseId: exercise.exerciseId,
       exerciseName: getExerciseName(exercise),
@@ -219,4 +220,8 @@ export function createWorkoutSessionSnapshot(
       })),
     })),
   };
+}
+
+export function createSavedWorkoutSession(workout, scheduleDay = null, getExerciseName = (exercise) => exercise.displayNameOverride || exercise.exerciseName || exercise.exerciseId) {
+  return { ...createWorkoutSessionSnapshot(scheduleDay ?? { id: null }, workout, getExerciseName), sessionKind: "saved", trainingModelVersion: 2 };
 }

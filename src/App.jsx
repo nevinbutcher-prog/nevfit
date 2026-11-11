@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createEmptySchedule, createEmptyPlanningState, hasWeeklyCheckInEvidence } from "./services/accountInitialization";
+import TrainingTransition from "./components/TrainingTransition";
+import { auth as firebaseAuth, db as firestoreDb, firebaseApp } from "./services/firebase";
+import { createTrainingRuntimeStore } from "./services/trainingRuntimeStore";
+import { projectTrainingPrograms } from "./services/trainingLibrary";
+import { encodeFirestoreValue } from "./services/firestoreValueCodec";
+import { createIndependentBackup } from "./services/independentBackup";
 import SignInScreen from "./components/SignInScreen";
 import TrainingStageDryRun from "./components/TrainingStageDryRun";
 import { exportTrainingReadiness, downloadTrainingReadiness } from "./services/trainingReadinessStore";
@@ -94,7 +100,7 @@ import { starterProgram } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
 import { getExerciseById, getVerifiedRobExerciseCatalogue, searchExercises } from "./services/exerciseProvider";
 import { runExerciseMigrationPreflight, downloadExerciseMigrationPlan } from "./services/exerciseMigrationPreflight";
-import { isSupportedExerciseId } from "./services/nevfitCatalogue";
+import { isSupportedExerciseId, getNevfitExerciseById } from "./services/nevfitCatalogue";
 import {
   getInitialViewMode,
   getViewModeForLoadedActiveWorkout,
@@ -190,7 +196,7 @@ const getProgramDay = (dayId, programDefinitions) =>
     .find((day) => day.id === dayId && !day.archived);
 
 const getExerciseFromLibrary = (exerciseId, exerciseLibrary) =>
-  exerciseLibrary.find((exercise) => exercise.id === exerciseId);
+  exerciseLibrary.find((exercise) => exercise.id === exerciseId) ?? getNevfitExerciseById(exerciseId);
 
 const defaultProgramId = starterProgram.id;
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -916,12 +922,12 @@ async function loadUserPlanningState(uid) {
   return defaultPlanningState;
 }
 
-async function persistPlanningStateForUser(uid, planningState, actionName) {
+async function persistPlanningStateForUser(uid, planningState, actionName, modelVersion = 1) {
   if (activeCacheUid === uid) persistPlanningCache(planningState);
   logPlanningSync(actionName, uid, planningState, "local");
 
   try {
-    await savePlanningState(uid, planningState);
+    await savePlanningState(uid, planningState, modelVersion);
     logPlanningSync(actionName, uid, planningState, "success");
     return true;
   } catch (error) {
@@ -1757,6 +1763,9 @@ function playTimerCompleteSound() {
 
 function AccountApp({ currentUser }) {
   const accountStorage = useMemo(() => createAccountCache(window.localStorage, currentUser.uid), [currentUser.uid]);
+  const [trainingRuntime, setTrainingRuntime] = useState({ mode: "loading" });
+  const trainingRuntimeRef = useRef(trainingRuntime);
+  trainingRuntimeRef.current = trainingRuntime;
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [schedule, setSchedule] = useState(loadStoredSchedule);
@@ -1939,6 +1948,20 @@ function AccountApp({ currentUser }) {
   const planningHydratedRef = useRef(false);
   const programsHydratedRef = useRef(false);
   const planningBaselineRef = useRef(null);
+  const trainingStore = useMemo(() => createTrainingRuntimeStore({ uid: currentUser.uid, firestore: firestoreDb, auth: firebaseAuth,
+    isMounted: () => currentUserUidRef.current === currentUser.uid,
+  }), [currentUser.uid]);
+  const getRuntimeWorkout = (id, definitions) => trainingRuntime.mode === "v2"
+    ? trainingRuntime.library.workouts.find((workout) => workout.id === id && !workout.archived)
+    : getProgramDay(id, definitions);
+  useEffect(() => trainingStore.watchActivation(() => {
+    if (trainingRuntimeRef.current.mode === "legacy") setTrainingRuntime({ mode: "unavailable" });
+  }), [trainingStore]);
+  function createRuntimeWorkoutSession(day, routine, library) {
+    return { ...createWorkoutSession(day, routine, library),
+      ...(trainingRuntimeRef.current.mode === "v2" ? { sessionKind: "saved", trainingModelVersion: 2 } : { trainingModelVersion: 1 }),
+    };
+  }
   const activeWorkoutLoadedRef = useRef(false);
   const workoutSetInputRefs = useRef(new Map());
   const backupFileInputRef = useRef(null);
@@ -2036,7 +2059,16 @@ function AccountApp({ currentUser }) {
     setProgramSyncError("");
 
     programsHydratedRef.current = false;
-    loadUserPrograms(loadUid)
+    trainingStore.load().then(async (runtime) => {
+      if (!shouldApplyResults || currentUserUidRef.current !== loadUid) throw new Error("account_changed");
+      trainingRuntimeRef.current = runtime;
+      setTrainingRuntime(runtime);
+      if (runtime.mode === "v2") {
+        accountStorage.setItem("nevfit_independent_runtime", JSON.stringify(encodeFirestoreValue(runtime)));
+        return projectTrainingPrograms(runtime.library);
+      }
+      return loadUserPrograms(loadUid);
+    })
       .then((loadedPrograms) => {
         if (!shouldApplyResults) {
           return;
@@ -2047,12 +2079,12 @@ function AccountApp({ currentUser }) {
         setProgramDrafts(loadedPrograms);
         setSelectedProgramDayId(loadedPrograms[0]?.days[0]?.id ?? null);
       })
-      .catch((error) => {
+      .catch(() => {
         if (!shouldApplyResults) {
           return;
         }
 
-        console.error("Program sync failed:", error);
+        if (trainingRuntimeRef.current.mode !== "legacy") setTrainingRuntime({ mode: "unavailable" });
         lastProgramLoadUidRef.current = null;
         setProgramSyncError(
           "Programs are using this device cache. Cloud sync is unavailable.",
@@ -2067,7 +2099,7 @@ function AccountApp({ currentUser }) {
     return () => {
       shouldApplyResults = false;
     };
-  }, [currentUser]);
+  }, [currentUser, trainingStore, accountStorage]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -2447,6 +2479,7 @@ function AccountApp({ currentUser }) {
         ),
       ),
     );
+    if (trainingRuntime.mode === "v2") trainingRuntime.library.workouts.forEach((workout) => workout.exercises.forEach((entry) => referencedExerciseIds.add(entry.exerciseId)));
     const missingExerciseIds = Array.from(referencedExerciseIds).filter(
       (exerciseId) => !getExerciseFromLibrary(exerciseId, exerciseLibrary),
     );
@@ -2488,7 +2521,7 @@ function AccountApp({ currentUser }) {
     return () => {
       shouldApplyResults = false;
     };
-  }, [exerciseLibrary, programDrafts]);
+  }, [exerciseLibrary, programDrafts, trainingRuntime]);
 
   useEffect(() => {
     if (!currentUser || activeWorkoutLoading || !activeWorkoutLoadedRef.current) {
@@ -2609,18 +2642,21 @@ function AccountApp({ currentUser }) {
     const signature = JSON.stringify(planningState);
     if (planningBaselineRef.current === signature) return;
     planningBaselineRef.current = signature;
+    const modelVersion = trainingRuntimeRef.current.mode === "v2" ? 2 : 1;
     const queuedPersist = planningPersistQueueRef.current.then(
       () =>
         persistPlanningStateForUser(
           currentUser.uid,
           planningState,
           "planning-save",
+          modelVersion,
         ),
       () =>
         persistPlanningStateForUser(
           currentUser.uid,
           planningState,
           "planning-save",
+          modelVersion,
         ),
     );
 
@@ -2946,8 +2982,16 @@ function AccountApp({ currentUser }) {
     setViewMode(backup.activeWorkout ? "workout" : "dashboard");
   }
 
-  function handleExportBackup() {
+  async function handleExportBackup() {
     try {
+      if (trainingRuntimeRef.current.mode === "v2") {
+        const runtime = await trainingStore.load();
+        if (currentUserUidRef.current !== currentUser.uid || runtime.mode !== "v2") throw new Error("account_changed");
+        const sections = buildCurrentBackup();
+        exportBackupFile(createIndependentBackup({ ...sections, uid: currentUser.uid, projectId: firebaseApp.options.projectId, runtime }));
+        setBackupMessage("Independent-mode v3 export prepared, including standalone workouts. Import/restore is not supported by the legacy importer.");
+        return;
+      }
       exportBackupFile(buildCurrentBackup());
       setBackupMessage("Backup exported.");
     } catch (error) {
@@ -2989,6 +3033,7 @@ function AccountApp({ currentUser }) {
   }
 
   async function handleImportBackupFile(event) {
+    if (trainingRuntimeRef.current.mode !== "legacy") { setBackupMessage("Legacy import is blocked in independent-workout mode. Retain your files for a reviewed restore."); event.target.value = ""; return; }
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -3144,6 +3189,20 @@ function AccountApp({ currentUser }) {
     }
   }
 
+  async function persistRuntimePrograms(programs, user, actionName) {
+    const runtime = trainingRuntimeRef.current;
+    if (runtime.mode === "legacy") return persistProgramDefinitions(programs, user, actionName);
+    if (runtime.mode !== "v2") throw new Error("training_authority_unavailable");
+    if (currentUserUidRef.current !== user.uid) throw new Error("account_changed");
+    accountStorage.setItem("nevfit_independent_program_drafts", JSON.stringify(programs));
+    const saved = await trainingStore.saveProjectedPrograms(runtime, programs);
+    if (currentUserUidRef.current !== user.uid) throw new Error("account_changed");
+    trainingRuntimeRef.current = saved;
+    setTrainingRuntime(saved);
+    accountStorage.setItem("nevfit_independent_runtime", JSON.stringify(encodeFirestoreValue(saved)));
+    return true;
+  }
+
   function setProgramsAndPersist(
     actionName,
     nextProgramDrafts,
@@ -3171,8 +3230,8 @@ function AccountApp({ currentUser }) {
     setProgramDefinitions(normalizedPrograms);
 
     const queuedPersist = programPersistQueueRef.current.then(
-      () => persistProgramDefinitions(normalizedPrograms, currentUser, actionName),
-      () => persistProgramDefinitions(normalizedPrograms, currentUser, actionName),
+      () => persistRuntimePrograms(normalizedPrograms, currentUser, actionName),
+      () => persistRuntimePrograms(normalizedPrograms, currentUser, actionName),
     );
 
     programPersistQueueRef.current = queuedPersist.catch(() => {});
@@ -3190,12 +3249,12 @@ function AccountApp({ currentUser }) {
           message: programsSynced ? successMessage : localOnlyMessage,
         });
       })
-      .catch((error) => {
-        console.error("Program local persistence failed:", error);
+      .catch(() => {
+        if (trainingRuntimeRef.current.mode === "v2") setProgramSyncError("Independent training save was rejected. Keep your edits and refresh/reconcile before retrying.");
         setProgramSaveStatus({
           programId,
           type: "error",
-          message: "Program could not be saved on this device.",
+          message: trainingRuntimeRef.current.mode === "v2" ? "Independent training save rejected. Keep your edits and refresh/reconcile before retrying." : "Program could not be saved on this device.",
         });
       });
 
@@ -3626,7 +3685,7 @@ function AccountApp({ currentUser }) {
         return currentSession;
       }
 
-      return createWorkoutSession(scheduleDay, routineDay, exerciseLibrary);
+      return createRuntimeWorkoutSession(scheduleDay, routineDay, exerciseLibrary);
     });
     setRestTimer(null);
     setViewMode("workout");
@@ -3793,7 +3852,7 @@ function AccountApp({ currentUser }) {
 
     if (action.type === "open-workout") {
       setActiveWorkoutSession(
-        createWorkoutSession(action.scheduleDay, action.routineDay, exerciseLibrary),
+        createRuntimeWorkoutSession(action.scheduleDay, action.routineDay, exerciseLibrary),
       );
       setRestTimer(null);
     }
@@ -3945,7 +4004,9 @@ function AccountApp({ currentUser }) {
     }
   }
 
+  if (trainingRuntime.mode === "unavailable") return <main className="min-h-screen bg-slate-950 p-6 text-white"><h1 className="text-xl font-bold">Training data unavailable</h1><p className="mt-3">Connect and reload to verify which training model is authoritative. No fallback writes have been made.</p><button type="button" onClick={() => window.location.reload()} className="mt-4 rounded border border-slate-600 px-4 py-2">Reload</button></main>;
   if (
+    trainingRuntime.mode === "loading" ||
     programsLoading ||
     planningLoading ||
     healthLoading ||
@@ -3961,10 +4022,9 @@ function AccountApp({ currentUser }) {
   const activeWorkoutDay = schedule.find(
     (day) => day.id === activeWorkoutSession?.scheduleDayId,
   );
-  const activeRoutineDay = getProgramDay(
-    activeWorkoutSession?.routineDayId,
-    programDefinitions,
-  );
+  const activeRoutineDay = trainingRuntime.mode === "v2" && activeWorkoutSession?.routineDayId
+    ? { name: activeWorkoutSession.routineDayName ?? trainingRuntime.library.workouts.find((workout) => workout.id === activeWorkoutSession.routineDayId)?.name ?? "Saved Workout" }
+    : getRuntimeWorkout(activeWorkoutSession?.routineDayId, programDefinitions);
   const isQuickWorkout = activeWorkoutSession?.sessionKind === "quick";
   const WorkoutFooterContainer = isQuickWorkout ? QuickWorkoutFooter : "div";
   const activeWorkoutName = isQuickWorkout ? "Quick Workout" : activeRoutineDay?.name;
@@ -4406,7 +4466,7 @@ function AccountApp({ currentUser }) {
     (day) => day.id === todayScheduleDayId,
   );
   const todayDateInputValue = getTodayDateInputValue();
-  const todayRoutineDay = getProgramDay(
+  const todayRoutineDay = getRuntimeWorkout(
     todayScheduleDay?.routineDayId,
     programDefinitions,
   );
@@ -4444,7 +4504,7 @@ function AccountApp({ currentUser }) {
     programDefinitions.find((program) => !program.archived) ??
     null;
   const plannedWorkoutsThisWeek = schedule.filter((day) =>
-    Boolean(getProgramDay(day.routineDayId, programDefinitions)),
+    Boolean(getRuntimeWorkout(day.routineDayId, programDefinitions)),
   ).length;
   const completedWorkoutsThisWeek =
     getCompletedWorkoutsThisWeek(completedWorkouts);
@@ -5030,10 +5090,10 @@ function AccountApp({ currentUser }) {
                 ) : plannedWorkoutsThisWeek === 0 ? (
                   <button
                     type="button"
-                    onClick={() => setViewMode(programDefinitions.length ? "planner" : "routines")}
+                    onClick={() => setViewMode((programDefinitions.length || (trainingRuntime.mode === "v2" && trainingRuntime.library.workouts.length)) ? "planner" : "routines")}
                     className="w-full rounded-xl border border-slate-700 px-5 py-4 font-semibold text-slate-200 transition hover:border-slate-500 md:w-auto"
                   >
-                    {programDefinitions.length ? "Assign in Week View" : "Create a Program"}
+                    {programDefinitions.length || (trainingRuntime.mode === "v2" && trainingRuntime.library.workouts.length) ? "Assign in Week View" : "Create a Program"}
                   </button>
                 ) : null}
               </div>
@@ -5488,7 +5548,7 @@ function AccountApp({ currentUser }) {
 
             <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
               {schedule.map((day) => {
-                const routineDay = getProgramDay(
+                const routineDay = getRuntimeWorkout(
                   day.routineDayId,
                   programDefinitions,
                 );
@@ -5533,6 +5593,7 @@ function AccountApp({ currentUser }) {
                         <div className="flex flex-wrap gap-2">
                           {[
                             ...activeProgramDefinitions.flatMap(getActiveRoutineDays),
+                            ...(trainingRuntime.mode === "v2" ? trainingRuntime.library.workouts.filter((workout) => workout.programId === null && !workout.archived) : []),
                             { id: null, name: "Rest" },
                           ].map((option) => {
                             const isAssigned = day.routineDayId === option.id;
@@ -5607,7 +5668,7 @@ function AccountApp({ currentUser }) {
                 <button
                   type="button"
                   onClick={() => backupFileInputRef.current?.click()}
-                  disabled={isImportingBackup || trainingReadiness.status === "loading"}
+                  disabled={trainingRuntime.mode !== "legacy" || isImportingBackup || trainingReadiness.status === "loading"}
                   className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isImportingBackup ? "Importing..." : "Import Backup"}
@@ -5620,6 +5681,7 @@ function AccountApp({ currentUser }) {
                   className="hidden"
                 />
               </div>
+              {trainingRuntime.mode === "v2" ? <p className="mt-3 text-sm text-amber-200">Independent mode: Export Backup includes saved standalone workouts in typed v3 format. Legacy import is blocked; this export has no tested restore path yet. Training readiness exports inspect retained legacy sources.</p> : null}
               {backupMessage ? (
                 <p className="mt-3 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-200">
                   {backupMessage}
@@ -5638,7 +5700,10 @@ function AccountApp({ currentUser }) {
                 {trainingReadiness.status === "ready" ? <p role="status" className="mt-2 text-sm text-slate-300">
                   Download prepared: {trainingReadiness.counts.programs} programs, {trainingReadiness.counts.completedWorkouts} completed workouts, {trainingReadiness.counts.appState} app-state documents. SHA-256, fetched-source and typed round-trip checks passed. {trainingReadiness.errors} preflight issues recorded. Full-account coverage and restore testing are still required before cutover.
                 </p> : null}
-                {import.meta.env.DEV ? <TrainingStageDryRun uid={currentUser.uid} ownerUidRef={currentUserUidRef} /> : null}
+                {trainingRuntime.mode === "legacy" && (import.meta.env.DEV || import.meta.env.VITE_TRAINING_TRANSITION_ENABLED === "true") ? <TrainingTransition uid={currentUser.uid} ownerUidRef={currentUserUidRef} activeSession={activeWorkoutSession}
+                  hasUnsavedChanges={JSON.stringify(normalizeProgramDefinitions(programDrafts)) !== JSON.stringify(normalizeProgramDefinitions(programDefinitions))}
+                  importing={isImportingBackup} onActivated={() => window.location.reload()} onUncertain={() => setTrainingRuntime({ mode: "unavailable" })} /> : null}
+                {trainingRuntime.mode === "legacy" && import.meta.env.DEV ? <TrainingStageDryRun uid={currentUser.uid} ownerUidRef={currentUserUidRef} /> : null}
               </div>
               <div className="mt-5 border-t border-slate-800 pt-4">
                 <h3 className="font-semibold text-white">Historical exercise ID preflight</h3>
@@ -6701,7 +6766,7 @@ function AccountApp({ currentUser }) {
 
         {viewMode === "workout" &&
         activeWorkoutSession &&
-        (isQuickWorkout || (activeWorkoutDay && activeRoutineDay)) ? (
+        (isQuickWorkout || (activeRoutineDay && (activeWorkoutDay || trainingRuntime.mode === "v2"))) ? (
           <section className="mt-3 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-2.5 sm:p-3">
             <button
               type="button"
@@ -6714,7 +6779,7 @@ function AccountApp({ currentUser }) {
             <div className="flex min-w-0 flex-col gap-4 border-b border-slate-800 pb-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold">
-                  {isQuickWorkout ? activeWorkoutName : `${activeWorkoutDay.label} - ${activeWorkoutName}`}
+                  {isQuickWorkout ? activeWorkoutName : `${activeWorkoutDay?.label ?? "Workout"} - ${activeWorkoutName}`}
                 </h2>
                 <div className="mt-1 flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400">
                   <span>{activeWorkoutName}</span>

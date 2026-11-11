@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 
 const ACTIVE_WORKOUT_DOC_ID = "activeWorkout";
@@ -44,14 +44,14 @@ export async function saveActiveWorkout(uid, session) {
     ? removeUndefinedValues(session)
     : null;
 
-  await setDoc(
-    activeWorkoutDocument(uid),
-    {
+  await runTransaction(db, async (transaction) => {
+    const marker = await transaction.get(doc(db, "users", uid, "appState", "trainingModel"));
+    if (session && session.sessionKind !== "quick" && (session.trainingModelVersion ?? 1) !== (marker.exists() ? 2 : 1)) throw new Error("training_mode_changed_refresh_required");
+    transaction.set(activeWorkoutDocument(uid), {
       activeWorkoutSession,
       updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+    }, { merge: true });
+  });
 }
 
 export async function clearActiveWorkout(uid) {

@@ -2,14 +2,37 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function modelPath(uid) { return /databases/$(database)/documents/users/$(uid)/appState/trainingModel; }
+    function stagePath(uid) { return /databases/$(database)/documents/users/$(uid)/appState/independentWorkoutStage; }
+    function legacyRevisionPath(uid) { return /databases/$(database)/documents/users/$(uid)/appState/trainingLegacyRevision; }
+    function activated(uid) {
+      return exists(modelPath(uid)) && get(modelPath(uid)).data.version == 2
+        && get(modelPath(uid)).data.status == 'activated' && get(modelPath(uid)).data.verified == true;
+    }
+    function advanced(uid) {
+      return activated(uid) && getAfter(modelPath(uid)).data.revision == get(modelPath(uid)).data.revision + 1;
+    }
+    function legacyWrite(uid) {
+      return !exists(modelPath(uid)) && getAfter(legacyRevisionPath(uid)).data.revision ==
+        (exists(legacyRevisionPath(uid)) ? get(legacyRevisionPath(uid)).data.revision : 0) + 1;
+    }
+    function validActivation(uid) {
+      let data = request.resource.data;
+      let stage = get(stagePath(uid)).data;
+      return data.version == 2 && data.status == 'activated' && data.verified == true && data.revision == 0
+        && data.activatedAt is timestamp && stage.status == 'verified' && stage.schemaVersion == 2
+        && stage.cutoverAllowed == false && stage.legacyAuthoritative == true && data.stageAttemptId == stage.attemptId
+        && data.sourceFingerprint == stage.sourceFingerprint && data.targetFingerprint == stage.targetFingerprint;
+    }
     match /users/{userId} {
       allow read, write: if request.auth != null
         && request.auth.uid == userId;
     }
 
     match /users/{userId}/programs/{programId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId;
+      allow read: if owner(userId);
+      allow write: if owner(userId) && legacyWrite(userId);
     }
 
     match /users/{userId}/completedWorkouts/{workoutId} {
@@ -18,31 +41,38 @@ service cloud.firestore {
     }
 
     match /users/{userId}/appState/{docId} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == userId;
+      allow read: if owner(userId);
+      allow write: if owner(userId) && docId != 'trainingModel'
+        && (docId != 'activeWorkout' || !activated(userId) || request.resource.data.activeWorkoutSession == null
+          || request.resource.data.activeWorkoutSession.get('sessionKind', '') == 'quick'
+          || request.resource.data.activeWorkoutSession.get('trainingModelVersion', 1) == 2);
+      allow create: if owner(userId) && docId == 'trainingModel' && validActivation(userId);
+      allow update: if owner(userId) && docId == 'trainingModel' && activated(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revision'])
+        && request.resource.data.revision == resource.data.revision + 1;
     }
 
-    // Staging copies only. Future CRUD needs a separate reviewed rules change.
+    // Before activation: staging creates only. After activation: coordinated CRUD.
     match /users/{userId}/workouts/{workoutId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId
+      allow create, update: if owner(userId) && (!exists(modelPath(userId)) ? request.method == 'create' : advanced(userId))
         && request.resource.data.id == workoutId
         && request.resource.data.name is string && request.resource.data.name.size() > 0
         && request.resource.data.archived is bool
         && (request.resource.data.programId == null || request.resource.data.programId is string)
         && request.resource.data.exercises is list;
-      allow update, delete: if false;
+      allow delete: if owner(userId) && advanced(userId);
     }
 
     match /users/{userId}/programsV2/{programId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId
+      allow create, update: if owner(userId) && (!exists(modelPath(userId)) ? request.method == 'create' : advanced(userId))
         && request.resource.data.id == programId
         && request.resource.data.name is string && request.resource.data.name.size() > 0
         && request.resource.data.archived is bool
         && request.resource.data.workoutIds is list
         && !request.resource.data.keys().hasAny(['days', 'routines']);
-      allow update, delete: if false;
+      allow delete: if owner(userId) && advanced(userId);
     }
   }
 }

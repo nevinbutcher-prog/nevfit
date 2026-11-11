@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { initializeApp, deleteApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator, doc, collection, getDocFromServer, getDocsFromServer, setDoc, updateDoc, deleteDoc, disableNetwork, enableNetwork, Timestamp, setLogLevel } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, doc, collection, getDocFromServer, getDocsFromServer, setDoc, runTransaction, updateDoc, deleteDoc, disableNetwork, enableNetwork, Timestamp, setLogLevel } from "firebase/firestore";
 import { captureTrainingReadinessFromFirestore } from "../src/services/trainingReadinessSource.js";
 import { createIndependentWorkoutStageFirestore, INDEPENDENT_WORKOUT_STAGE_MARKER } from "../src/services/independentWorkoutStageFirestore.js";
 import { prepareIndependentWorkoutStage, stageIndependentWorkouts } from "../src/services/independentWorkoutStage.js";
@@ -29,7 +29,12 @@ async function fixture(uid, empty = false) {
     ] }];
     await Promise.all([
       setDoc(doc(db, "users", uid), { uid }),
-      setDoc(doc(db, "users", uid, "programs", "p"), { id: "p", name: "Synthetic program", archived: true, days, routines: days, createdAt: new Timestamp(1, 987654321) }),
+      runTransaction(db, async (transaction) => {
+        const revision = doc(db, "users", uid, "appState", "trainingLegacyRevision");
+        const previous = await transaction.get(revision);
+        transaction.set(doc(db, "users", uid, "programs", "p"), { id: "p", name: "Synthetic program", archived: true, days, routines: days, createdAt: new Timestamp(1, 987654321) });
+        transaction.set(revision, { revision: (previous.exists() ? previous.data().revision : 0) + 1 });
+      }),
       setDoc(doc(db, "users", uid, "completedWorkouts", "history"), { id: "history", exercises: [], unchanged: "Synthetic historical data" }),
       setDoc(doc(db, "users", uid, "appState", "planning"), { activeProgramId: "p", schedule: [{ id: "mon", routineDayId: "r" }] }),
     ]);
@@ -119,7 +124,12 @@ try {
   const drift = await fixture("fixture-drift");
   const originalComplete = drift.adapter.completeStage;
   drift.adapter.completeStage = async (...args) => {
-    await updateDoc(doc(drift.db, "users", drift.uid, "programs", "p"), { name: "Edit in verification window" });
+    await runTransaction(drift.db, async (transaction) => {
+      const ref = doc(drift.db, "users", drift.uid, "appState", "trainingLegacyRevision");
+      const revision = await transaction.get(ref);
+      transaction.update(doc(drift.db, "users", drift.uid, "programs", "p"), { name: "Edit in verification window" });
+      transaction.set(ref, { revision: revision.data().revision + 1 });
+    });
     return originalComplete(...args);
   };
   assert.equal((await stageIndependentWorkouts(drift.engine)).error, "source_drift");

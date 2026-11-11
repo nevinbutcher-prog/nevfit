@@ -1,4 +1,4 @@
-import { doc, getDocFromServer, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDocFromServer, serverTimestamp, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 
 const PLANNING_DOC_ID = "planning";
@@ -14,13 +14,13 @@ export async function loadPlanningState(uid) {
   return snapshot.exists() ? snapshot.data() : null;
 }
 
-export async function savePlanningState(uid, planningState) {
-  await setDoc(
-    planningDocument(uid),
-    {
+export async function savePlanningState(uid, planningState, modelVersion = 1) {
+  await runTransaction(db, async (transaction) => {
+    const marker = await transaction.get(doc(db, "users", uid, "appState", "trainingModel"));
+    if ((marker.exists() ? 2 : 1) !== modelVersion) throw new Error("training_mode_changed_refresh_required");
+    transaction.set(planningDocument(uid), {
       ...planningState,
       updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+    }, { merge: true });
+  });
 }

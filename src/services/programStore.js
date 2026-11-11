@@ -3,8 +3,7 @@ import {
   doc,
   getDocsFromServer,
   serverTimestamp,
-  setDoc,
-  writeBatch,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import {
@@ -38,25 +37,20 @@ export async function loadCloudPrograms(uid) {
 }
 
 export async function saveProgram(uid, program) {
-  await setDoc(
-    programDocument(uid, program.id),
-    toProgramDocument(program, serverTimestamp),
-    { merge: true },
-  );
+  await savePrograms(uid, [program]);
 }
 
 export async function savePrograms(uid, programs) {
-  const batch = writeBatch(db);
-
-  programs.forEach((program) => {
-    batch.set(
-      programDocument(uid, program.id),
-      toProgramDocument(program, serverTimestamp),
-      { merge: true },
-    );
+  await runTransaction(db, async (transaction) => {
+    const model = await transaction.get(doc(db, "users", uid, "appState", "trainingModel"));
+    const revisionRef = doc(db, "users", uid, "appState", "trainingLegacyRevision");
+    const revision = await transaction.get(revisionRef);
+    if (model.exists()) throw new Error("training_mode_changed_refresh_required");
+    const previous = revision.exists() ? revision.data().revision : 0;
+    if (!Number.isSafeInteger(previous) || previous < 0) throw new Error("invalid_legacy_training_revision");
+    programs.forEach((program) => transaction.set(programDocument(uid, program.id), toProgramDocument(program, serverTimestamp), { merge: true }));
+    transaction.set(revisionRef, { revision: previous + 1 });
   });
-
-  await batch.commit();
 }
 
 export async function migrateLocalProgramsToCloud(uid, localPrograms) {

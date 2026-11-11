@@ -17,9 +17,7 @@ export function createCompletedWorkoutSnapshot(
     id: workoutId,
     completedAt: completedAt.toISOString(),
     weightUnit: "kg",
-    ...(workoutSession.sessionKind === "quick"
-      ? { sessionKind: "quick" }
-      : { scheduleDayId: workoutSession.scheduleDayId, routineDayId: workoutSession.routineDayId }),
+    ...workoutAssociations(workoutSession),
     routineDayName,
     exercises: workoutSession.exercises.map((sessionExercise) => ({
       exerciseId: sessionExercise.exerciseId,
@@ -78,7 +76,15 @@ export function getPreviousExercisePerformance(
 function hasValidWorkoutAssociations(value) {
   return value.sessionKind === "quick"
     ? value.scheduleDayId == null && value.routineDayId == null
+    : value.sessionKind === "saved"
+      ? typeof value.routineDayId === "string" && (value.scheduleDayId == null || typeof value.scheduleDayId === "string")
     : typeof value.scheduleDayId === "string" && typeof value.routineDayId === "string";
+}
+function workoutAssociations(value) {
+  if (value.sessionKind === "quick") return { sessionKind: "quick" };
+  if (value.sessionKind === "saved") return { sessionKind: "saved", routineDayId: value.routineDayId,
+    ...(typeof value.scheduleDayId === "string" ? { scheduleDayId: value.scheduleDayId } : {}) };
+  return { scheduleDayId: value.scheduleDayId, routineDayId: value.routineDayId };
 }
 
 export function createQuickWorkoutSession() {
@@ -205,9 +211,7 @@ export function normalizeCompletedWorkout(value) {
     id: value.id,
     completedAt: value.completedAt,
     ...(typeof value.weightUnit === "string" ? { weightUnit: value.weightUnit } : {}),
-    ...(value.sessionKind === "quick"
-      ? { sessionKind: "quick" }
-      : { scheduleDayId: value.scheduleDayId, routineDayId: value.routineDayId }),
+    ...workoutAssociations(value),
     routineDayName: value.routineDayName,
     exercises,
   };
@@ -230,6 +234,7 @@ export function isValidWorkoutSession(value, isSupportedExerciseId) {
         (typeof exercise.note === "string" ||
           typeof exercise.note === "undefined") &&
         (typeof exercise.restSeconds === "number" ||
+          exercise.restSeconds === null ||
           typeof exercise.restSeconds === "undefined") &&
         (typeof exercise.supersetGroupId === "string" ||
           exercise.supersetGroupId === null ||

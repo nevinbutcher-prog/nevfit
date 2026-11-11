@@ -1,7 +1,8 @@
-import { collection, doc, getDocFromServer, getDocsFromServer, runTransaction } from "firebase/firestore";
+import { collection, doc, getDocFromServer, getDocsFromServer, runTransaction, serverTimestamp } from "firebase/firestore";
 import { captureTrainingReadinessFromFirestore } from "./trainingReadinessSource.js";
 import { isIndependentWorkoutSource, prepareIndependentWorkoutStage } from "./independentWorkoutStage.js";
 import { decodeFirestoreValue, encodeFirestoreValue } from "./firestoreValueCodec.js";
+import { isActivatedTrainingMarker } from "./trainingRuntimeStore.js";
 
 export const INDEPENDENT_WORKOUT_STAGE_MARKER = "independentWorkoutStage";
 const same = (a, b) => JSON.stringify(encodeFirestoreValue(a)) === JSON.stringify(encodeFirestoreValue(b));
@@ -18,6 +19,7 @@ export function createIndependentWorkoutStageFirestore({ uid, firestore, auth, i
   const database = firestore.toJSON().databaseId;
   if (database.projectId !== projectId || database.database !== "(default)") fail("invalid_database_scope");
   const markerRef = doc(firestore, "users", uid, "appState", INDEPENDENT_WORKOUT_STAGE_MARKER);
+  const modelRef = doc(firestore, "users", uid, "appState", "trainingModel");
   let claimedLock = null;
   const guard = () => {
     if (auth.currentUser?.uid !== uid || !isMounted()) fail("account_changed");
@@ -30,13 +32,14 @@ export function createIndependentWorkoutStageFirestore({ uid, firestore, auth, i
     guard();
     const exported = await captureTrainingReadinessFromFirestore({ uid, firestore, isCurrent: () => auth.currentUser?.uid === uid && isMounted() });
     guard();
+    if (exported.documents.some((entry) => entry.path === modelRef.path && entry.exists)) fail("independent_mode_already_activated");
     const stage = await prepareIndependentWorkoutStage({ uid, projectId, backup, current: exported, firestore });
     guard();
     const sources = new Map(exported.documents.filter(isIndependentWorkoutSource).map((entry) => [entry.path, {
       path: entry.path, exists: entry.exists, data: entry.exists ? decodeFirestoreValue(entry.value, firestore) : null,
     }]));
     // Guard creation of a previously absent active/planning/note/health document too.
-    for (const id of ["planning", "activeWorkout", "exerciseNotes", "health"]) {
+    for (const id of ["planning", "activeWorkout", "exerciseNotes", "health", "trainingLegacyRevision"]) {
       const path = `users/${uid}/appState/${id}`;
       if (!sources.has(path)) sources.set(path, { path, exists: false, data: null });
     }
@@ -79,6 +82,54 @@ export function createIndependentWorkoutStageFirestore({ uid, firestore, auth, i
   return {
     readSourceFromServer: async () => ({ exported: (await refresh()).exported, pendingWrites: false }),
     readTargetsFromServer,
+    async activateStage({ confirmation: activationConfirmation, attemptId }) {
+      guard();
+      if (enabled !== true || activationConfirmation !== `ACTIVATE ${uid}`) fail("activation_confirmation_required");
+      const [model, verifiedStage] = await Promise.all([getDocFromServer(modelRef), getDocFromServer(markerRef)]);
+      guard(); [model, verifiedStage].forEach(confirmed);
+      if (model.exists()) {
+        if (!isActivatedTrainingMarker(model.data(), verifiedStage.data()) || model.data().stageAttemptId !== attemptId) fail("invalid_existing_activation");
+        return { activated: true, reused: true, marker: model.data() };
+      }
+      const { stage, sources } = await refresh();
+      const inventory = await readTargetsFromServer();
+      const verified = inventory.marker;
+      if (verified?.status !== "verified" || verified.schemaVersion !== 2 || verified.cutoverAllowed !== false ||
+          verified.attemptId !== attemptId || verified.sourceFingerprint !== stage.sourceFingerprint || verified.targetFingerprint !== stage.targetFingerprint) fail("verified_stage_required");
+      const planned = new Map(stage.documents.map((entry) => [entry.path, entry]));
+      if (inventory.documents.length !== planned.size || inventory.documents.some((entry) => !planned.has(entry.path) || !same(entry, planned.get(entry.path)))) fail("activation_target_mismatch");
+      const planning = sources.find((entry) => entry.path === `users/${uid}/appState/planning`);
+      const mappedPlanning = planning.exists ? { ...planning.data, schedule: planning.data.schedule.map((day) => {
+        if (day.routineDayId === null) return day;
+        const mappings = stage.mappings.filter((entry) => entry.legacyRoutineId === day.routineDayId);
+        if (mappings.length !== 1) fail("ambiguous_activation_schedule");
+        return { ...day, routineDayId: mappings[0].workoutId };
+      }) } : null;
+      let acknowledged = false;
+      try {
+        await runTransaction(firestore, async (transaction) => {
+          guard();
+          const [currentModel, currentStage, ...targets] = await transactionRead(transaction, [modelRef, markerRef, ...stage.documents.map((entry) => doc(firestore, entry.path))]);
+          await verifySourcesInTransaction(transaction, sources);
+          if (currentModel.exists()) fail("activation_already_completed");
+          if (!currentStage.exists() || !same(currentStage.data(), verified)) fail("activation_stage_changed");
+          targets.forEach((snapshot, index) => { if (!snapshot.exists() || !same(snapshot.data(), stage.documents[index].data)) fail("activation_target_mismatch"); });
+          guard();
+          if (planning.exists && !same(planning.data, mappedPlanning)) transaction.set(doc(firestore, planning.path), mappedPlanning);
+          transaction.set(modelRef, { version: 2, status: "activated", verified: true, revision: 0, stageAttemptId: attemptId,
+            sourceFingerprint: stage.sourceFingerprint, targetFingerprint: stage.targetFingerprint, activatedAt: serverTimestamp() });
+        });
+        acknowledged = true;
+        guard();
+        const saved = await getDocFromServer(modelRef);
+        guard(); confirmed(saved);
+        if (!isActivatedTrainingMarker(saved.data(), verified)) fail("activation_readback_mismatch");
+        return { activated: true, reused: false, marker: saved.data() };
+      } catch (error) {
+        if (acknowledged || ["unavailable", "deadline-exceeded", "unknown"].includes(error.code)) fail("activation_outcome_unknown_refresh");
+        throw error;
+      }
+    },
     async claimStage(expected, lock) {
       writeGuard();
       const { stage, sources } = await refresh();

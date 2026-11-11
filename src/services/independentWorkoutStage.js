@@ -2,7 +2,7 @@ import { decodeFirestoreValue } from "./firestoreValueCodec.js";
 import { fingerprintTrainingDocuments, verifyTrainingReadinessExport } from "./trainingReadinessBackup.js";
 
 export const isIndependentWorkoutSource = (entry) => ["programs", "completedWorkouts"].includes(entry.path.split("/")[2]) ||
-  /^users\/[^/]+\/appState\/(planning|activeWorkout|exerciseNotes|health)$/.test(entry.path);
+  /^users\/[^/]+\/appState\/(planning|activeWorkout|exerciseNotes|health|trainingLegacyRevision)$/.test(entry.path);
 const decode = (exported, firestore) => exported.documents.map((entry) => ({ path: entry.path, exists: entry.exists,
   data: entry.exists ? decodeFirestoreValue(entry.value, firestore) : null,
 }));

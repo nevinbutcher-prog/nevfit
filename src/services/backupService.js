@@ -2,11 +2,12 @@ import {
   collection,
   doc,
   getDocs,
+  getDocFromServer,
   serverTimestamp,
-  setDoc,
-  writeBatch,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { validateBackup as validateBackupPayload } from "./backupPayload.js";
 export { createBackup, validateBackup } from "./backupPayload.js";
 
 const COLLECTION_BATCH_LIMIT = 450;
@@ -39,22 +40,25 @@ function completedWorkoutDocument(uid, workoutId) {
 async function replaceCollection(uid, collectionName, items, getItemId, toDocument) {
   const collectionRef = collection(db, "users", uid, collectionName);
   const existingSnapshot = await getDocs(collectionRef);
-  let batch = writeBatch(db);
-  let operations = 0;
-
+  let pending = [];
   async function commitIfNeeded(force = false) {
-    if (!operations || (!force && operations < COLLECTION_BATCH_LIMIT)) {
-      return;
-    }
-
-    await batch.commit();
-    batch = writeBatch(db);
-    operations = 0;
+    if (!pending.length || (!force && pending.length < COLLECTION_BATCH_LIMIT)) return;
+    const operations = pending;
+    await runTransaction(db, async (transaction) => {
+      const model = await transaction.get(doc(db, "users", uid, "appState", "trainingModel"));
+      if (model.exists()) throw new Error("Legacy import is blocked after independent-workout activation.");
+      const revisionRef = doc(db, "users", uid, "appState", "trainingLegacyRevision");
+      const revision = collectionName === "programs" ? await transaction.get(revisionRef) : null;
+      for (const operation of operations) {
+        if (operation.remove) transaction.delete(operation.ref); else transaction.set(operation.ref, operation.data);
+      }
+      if (revision) transaction.set(revisionRef, { revision: (revision.exists() ? revision.data().revision : 0) + 1 });
+    });
+    pending = [];
   }
 
   for (const existingDoc of existingSnapshot.docs) {
-    batch.delete(existingDoc.ref);
-    operations += 1;
+    pending.push({ ref: existingDoc.ref, remove: true });
     await commitIfNeeded();
   }
 
@@ -65,8 +69,7 @@ async function replaceCollection(uid, collectionName, items, getItemId, toDocume
         ? programDocument(uid, itemId)
         : completedWorkoutDocument(uid, itemId);
 
-    batch.set(itemRef, toDocument(item));
-    operations += 1;
+    pending.push({ ref: itemRef, data: toDocument(item) });
     await commitIfNeeded();
   }
 
@@ -77,7 +80,17 @@ export function exportBackupFile(backup) {
   downloadJson(`nevfit-backup-${getDateStamp()}.json`, backup);
 }
 
+async function writeLegacyState(uid, id, value) {
+  await runTransaction(db, async (transaction) => {
+    const model = await transaction.get(doc(db, "users", uid, "appState", "trainingModel"));
+    if (model.exists()) throw new Error("Legacy import is blocked after independent-workout activation.");
+    transaction.set(doc(db, "users", uid, "appState", id), value);
+  });
+}
+
 export async function importBackup(uid, backup) {
+  if (!validateBackupPayload(backup).valid) throw new Error("Unsupported or invalid legacy backup.");
+  if ((await getDocFromServer(doc(db, "users", uid, "appState", "trainingModel"))).exists()) throw new Error("Legacy import is blocked after independent-workout activation.");
   await replaceCollection(
     uid,
     "programs",
@@ -85,11 +98,11 @@ export async function importBackup(uid, backup) {
     (program) => program.id,
     (program) => ({ ...program, updatedAt: serverTimestamp() }),
   );
-  await setDoc(doc(db, "users", uid, "appState", "planning"), {
+  await writeLegacyState(uid, "planning", {
     ...backup.planning,
     updatedAt: serverTimestamp(),
   });
-  await setDoc(doc(db, "users", uid, "appState", "activeWorkout"), {
+  await writeLegacyState(uid, "activeWorkout", {
     activeWorkoutSession: backup.activeWorkout ?? null,
     updatedAt: serverTimestamp(),
   });
@@ -100,11 +113,11 @@ export async function importBackup(uid, backup) {
     (workout) => workout.id,
     (workout) => ({ ...workout }),
   );
-  await setDoc(doc(db, "users", uid, "appState", "health"), {
+  await writeLegacyState(uid, "health", {
     ...backup.health,
     updatedAt: serverTimestamp(),
   });
-  await setDoc(doc(db, "users", uid, "appState", "exerciseNotes"), {
+  await writeLegacyState(uid, "exerciseNotes", {
     notes: backup.exerciseNotes ?? {},
     updatedAt: serverTimestamp(),
   });

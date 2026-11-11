@@ -1,5 +1,11 @@
 # Technical Notes
 
+**Current release state (070):** reviewed 069 rules from `b54cdd7` were separately
+deployed successfully, rules only, to `nevfit-fa139`. The expanded 070 rules below
+are not deployed. Earlier numbered sections record their checkpoint's state;
+the 070 section supersedes their future-runtime/release instructions. No live
+staging or activation has been performed during implementation.
+
 ## Stack
 
 - Vite
@@ -1683,3 +1689,139 @@ and an explicitly authorized manual staging invocation with fresh private inputs
 Full-account recovery limits and future cutover/CRUD/UI decisions remain as
 documented earlier. There is no production permission or real-account staging
 acceptance claim in this checkpoint.
+
+## Independent Workout Activation and Interim Runtime (070)
+
+`TrainingTransition.jsx` adds a Settings operator flow, visible in development or
+when `VITE_TRAINING_TRANSITION_ENABLED=true`. Writes require that exact flag even
+in development; it defaults off. Nothing stages or activates on login, startup,
+CI or deployment. The operator sees the configured project and signed-in UID,
+types the project ID and confirms that the reviewed 070 rules have separately
+been released, all edits have synced and every device is paused. The rules
+checkbox is an operator attestation, not automatic rules-version discovery.
+
+Preparing performs fresh server-only 067 source/preflight and target-inventory
+reads and downloads a fresh private file. Existing conflicting targets or stale
+stage fingerprints stop the flow without repairs. Retention confirmation is
+required; the in-memory backup expires after 15 minutes, and any source change
+invalidates it. Exact `STAGE <UID>` copies and verifies the source-derived targets,
+downloads the private outcome report and checks server readback. A separate
+`ACTIVATE <UID>` action rechecks source, full inventory, verified stage and absence
+of active sessions before its transaction. Retry uses the same attempt identity;
+conflicts require review, never reset/delete/overwrite. Keep both downloaded files
+private; neither is a tested comprehensive account restore.
+
+### Authority and concurrency
+
+`appState/independentWorkoutStage` remains a staged-copy report, including
+`legacyAuthoritative:true` and `cutoverAllowed:false`. It never selects runtime
+storage. Activation creates a separate `appState/trainingModel` with version 2,
+status activated, verified true, revision 0, server activatedAt, stageAttemptId
+and matching source/target fingerprints. Runtime requires a valid marker plus
+the matching verified stage, server-confirmed reads and a valid ownership graph.
+No marker means legacy; invalid/unavailable authority blocks editing and asks for
+reload rather than using a legacy cache as a v2 writer. Another device's
+activation invalidates the currently open legacy UI. If activation commits but
+readback/acknowledgement is uncertain, editing blocks until a fresh server check;
+the UI does not promise that legacy is still authoritative in that case.
+
+Activation transactions compare the model's absence, verified stage, all planned
+targets and known source snapshots. Schedule legacy routine IDs map only through
+unique migration mappings; otherwise activation rejects. Selected programs,
+names, schedule notes and history are retained. Legacy program documents are
+never changed by activation or activated runtime. Rob preferences/reviews and
+experimental artifacts are not migrated or removed.
+
+Legacy program saves/import chunks now transactionally increment
+`appState/trainingLegacyRevision`; the proposed rules require this increment and
+absence of the activation marker. Stage/activation source guards include this
+revision even if initially absent, closing the new-program insertion window for
+rules-compliant clients. Planning writes check the authority version captured
+when queued; active planned-session saves check their snapshot's version. A
+legacy import checks the model before starting and inside every write
+transaction, so it cannot continue overwriting activated state after a race.
+
+There is still no global lock over every document or arbitrary authorized-owner
+code. Collection enumeration is outside Web SDK transactions. Pause every device;
+full inventory/fingerprint checks and known-source guards fail closed on observed
+drift. Authorized owners can deliberately craft shape-valid but inconsistent
+records. Rules enforce account isolation, basic shapes and coordinated revision
+writes, while the client validates the complete graph. These are not exhaustive
+server-side membership constraints or full-account recovery guarantees.
+
+### Existing UI, CRUD and backups
+
+`trainingLibrary.js` validates the 066 model and projects reference-only programs
+into the existing editor/Rob `{days: ordered templates}` contract. Saving that
+projection preserves raw metadata and standalone workouts and rejects implicit
+ownership transfers. `trainingRuntimeStore.js` provides server-only loading,
+optimistic revision checks and atomic domain operations for program/workout
+create, edit, move/reorder, archive/restore, duplicate and delete. Deleting a
+program detaches its templates; deleting a template clears its schedule links
+but retains completed history and self-contained active snapshots. Library
+transactions increment the immutable-identity model marker's revision. Excessive
+transaction size fails rather than partially saving.
+
+After activation current Save Program writes only workouts/programsV2. Drafts
+and confirmed runtime cache use separate UID-scoped keys; legacy program caches
+cannot overwrite v2. Rejected saves preserve a draft and require reconciliation.
+Zero programs/workouts is valid; standalone templates appear in the existing
+planner without a fabricated program. Saved sessions retain snapped names and
+IDs, can resume after archive/deletion and need no schedule assignment. Quick
+Workout and previous-performance/history readers keep their existing contracts.
+Basic Rob program selection uses the same compatibility projection and guarded
+save queue. No new Training layout or standalone-workout management UI is added.
+
+Legacy accounts retain existing Settings v1/v2 backup/import behavior. Activated
+accounts export `nevfit-independent-training-backup` version 3: typed full v2
+library (including standalone templates), authority marker and current planning,
+active session, history, health and exercise notes. Undefined optional UI map
+fields are omitted; native Firestore values use the typed codec. The file declares
+`restoreSupported:false`. UI and service block legacy import for activated
+accounts; neither this export nor 067 is advertised as a tested v3/full-account
+restore. Recovery requiring writes remains a separate reviewed operation.
+
+### Evidence and production release checklist
+
+The focused regression command passed 58 tests covering domain projection/CRUD,
+backup guards, staging, empty accounts, cache scoping, sessions/Quick Workout,
+history, builder and Rob context. Lint and production build passed. The isolated
+combined emulator command uses synthetic owners and refuses production project
+or host configuration:
+
+```text
+firebase emulators:exec --only firestore --project demo-nevfit-stage --config firebase.stage-emulator.json "node scripts/trainingTransition.emulator.mjs"
+```
+
+It runs the concrete stage adapter/rules checks and transition tests: verified
+stage remains legacy, distinct confirmation, competing/repeated activation,
+source drift/active-session rejection, current editor persistence, revision
+conflicts, ownership/order/archive/delete, cross-account protection, native
+metadata, immutable legacy/history and empty/standalone activated accounts. This
+is local transport/rules evidence; browser/phone acceptance and live transition
+have not been exercised.
+
+1. Independently review 070 code and exact rules. Keep transition writes disabled.
+   Refresh every device to the new frontend and let current writes settle before
+   releasing 070 rules: older legacy clients without revision increments will
+   have program saves denied by these rules.
+2. Obtain the separate 070 rules release approval, confirm `nevfit-fa139`, deploy
+   only the reviewed Firestore rules and verify success. Deployed 069 rules are
+   insufficient for activated CRUD; a Vercel deployment does not release rules.
+   No 070 rules/functions deployment was run during implementation.
+3. Obtain authorization for the particular manual account transition. Intentionally
+   enable the operator flag in the chosen build. Pause editing/training on every
+   device, finish/discard any active session, save edits and let sync settle.
+4. In Settings confirm the displayed project/UID, rules release and pause state.
+   Download the fresh private backup, inspect actual current counts and save it
+   privately. Do not give its contents or hashes to Codex/Git/public logs. Type
+   STAGE with the displayed UID, retain the report and require verified readback.
+   On drift/conflict/unknown state stop for review; do not repair by overwriting.
+5. Deliberately type ACTIVATE separately, then reload. Verify actual programs,
+   workout order, prescriptions, notes/supersets, schedule links, saved edits
+   after refresh, active-session resume/finish, Quick Workout and unchanged
+   history. In a disposable synthetic account also check empty and standalone
+   behavior. Keep legacy originals/private files; no cleanup is authorized.
+6. Disable the operator flag after the approved attempt. Record live release and
+   user-verification evidence separately. Independent review and user acceptance
+   precede the next visual redesign brief; do not generate another card here.

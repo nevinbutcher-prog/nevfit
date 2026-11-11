@@ -3,6 +3,7 @@ import { createEmptySchedule, createEmptyPlanningState, hasWeeklyCheckInEvidence
 import TrainingTransition from "./components/TrainingTransition";
 import { auth as firebaseAuth, db as firestoreDb, firebaseApp } from "./services/firebase";
 import { createTrainingRuntimeStore } from "./services/trainingRuntimeStore";
+import { getPendingStartupOperations, reportStartupDiagnostic, runStartupOperation, STARTUP_TIMEOUT_MS, startupFailureDetails } from "./services/startupDiagnostics";
 import { projectTrainingPrograms } from "./services/trainingLibrary";
 import { encodeFirestoreValue } from "./services/firestoreValueCodec";
 import { createIndependentBackup } from "./services/independentBackup";
@@ -33,7 +34,6 @@ import {
   importBackup,
   validateBackup,
 } from "./services/backupService";
-import { runFirebaseSmokeTest } from "./services/firebaseSmokeTest";
 import {
   MAX_EXERCISE_NOTE_LENGTH,
   normalizeExerciseNotes,
@@ -200,7 +200,6 @@ const getExerciseFromLibrary = (exerciseId, exerciseLibrary) =>
 
 const defaultProgramId = starterProgram.id;
 const dayIdsByDateIndex = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-let hasRunFirebaseSmokeTest = false;
 
 const setFeedbackStyles = {
   below: "border-red-500/70 bg-red-500/10 text-red-200 focus:border-red-400",
@@ -1236,12 +1235,13 @@ function groupWorkoutExercises(exercises) {
     .filter(Boolean);
 }
 
-function LoadingScreen() {
+function LoadingScreen({ pending = [] }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
-      <p className="text-base font-semibold text-slate-300">
-        Loading NevFit...
-      </p>
+      <div role="status">
+        <p className="text-base font-semibold text-slate-300">Loading NevFit...</p>
+        {pending.length ? <p className="mt-2 text-sm text-slate-400">Waiting for {pending.join(", ")}.</p> : null}
+      </div>
     </main>
   );
 }
@@ -1906,6 +1906,25 @@ function AccountApp({ currentUser }) {
   const [activeWorkoutLoading, setActiveWorkoutLoading] = useState(true);
   const [exerciseNotesLoading, setExerciseNotesLoading] = useState(true);
   const [workoutHistoryLoading, setWorkoutHistoryLoading] = useState(true);
+  const [startupFailure, setStartupFailure] = useState(null);
+  const pendingStartup = getPendingStartupOperations({
+    trainingMode: trainingRuntime.mode, programsLoading, planningLoading, healthLoading,
+    robCoachingProfileLoading, activeWorkoutLoading, exerciseNotesLoading,
+    exerciseNotesReady: exerciseNotesOwnerUid === currentUser.uid, workoutHistoryLoading,
+  });
+  const pendingStartupRef = useRef(pendingStartup);
+  pendingStartupRef.current = pendingStartup;
+  const startupLoading = pendingStartup.length > 0;
+  useEffect(() => {
+    if (!startupLoading || startupFailure) return;
+    const timer = window.setTimeout(() => {
+      if (!pendingStartupRef.current.length) return;
+      const failure = { operation: pendingStartupRef.current.join(", "), code: "startup-timeout" };
+      reportStartupDiagnostic({ ...failure, status: "failed", elapsedMs: STARTUP_TIMEOUT_MS });
+      setStartupFailure(failure);
+    }, STARTUP_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [startupLoading, startupFailure]);
   const [programSyncError, setProgramSyncError] = useState("");
   const [appStateSyncError, setAppStateSyncError] = useState("");
   const [workoutSyncError, setWorkoutSyncError] = useState("");
@@ -1927,7 +1946,6 @@ function AccountApp({ currentUser }) {
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
   const lastProfileSyncUidRef = useRef(null);
-  const lastProgramLoadUidRef = useRef(null);
   const lastPlanningLoadUidRef = useRef(null);
   const lastHealthLoadUidRef = useRef(null);
   const lastActiveWorkoutLoadUidRef = useRef(null);
@@ -1970,18 +1988,6 @@ function AccountApp({ currentUser }) {
     viewMode === "workout" && Boolean(activeWorkoutSession);
   const getExercise = (exerciseId) =>
     getExerciseFromLibrary(exerciseId, exerciseLibrary);
-
-  useEffect(() => {
-    if (!import.meta.env.DEV || hasRunFirebaseSmokeTest) {
-      return;
-    }
-
-    hasRunFirebaseSmokeTest = true;
-
-    runFirebaseSmokeTest().catch((error) => {
-      console.error("Firebase smoke test failed:", error);
-    });
-  }, []);
 
   useEffect(() => {
     const uid = currentUser?.uid;
@@ -2041,25 +2047,20 @@ function AccountApp({ currentUser }) {
 
   useEffect(() => {
     if (!currentUser) {
-      lastProgramLoadUidRef.current = null;
       setProgramsLoading(false);
       return undefined;
     }
 
     const loadUid = currentUser.uid;
 
-    if (lastProgramLoadUidRef.current === loadUid) {
-      setProgramsLoading(false);
-      return undefined;
-    }
-
     let shouldApplyResults = true;
-    lastProgramLoadUidRef.current = loadUid;
     setProgramsLoading(true);
     setProgramSyncError("");
 
     programsHydratedRef.current = false;
-    trainingStore.load().then(async (runtime) => {
+    // Each effect owns its read. Strict Mode cleanup must not make its replay
+    // skip hydration while the discarded read still owns the only result.
+    trainingStore.load({ read: runStartupOperation }).then(async (runtime) => {
       if (!shouldApplyResults || currentUserUidRef.current !== loadUid) throw new Error("account_changed");
       trainingRuntimeRef.current = runtime;
       setTrainingRuntime(runtime);
@@ -2067,7 +2068,7 @@ function AccountApp({ currentUser }) {
         accountStorage.setItem("nevfit_independent_runtime", JSON.stringify(encodeFirestoreValue(runtime)));
         return projectTrainingPrograms(runtime.library);
       }
-      return loadUserPrograms(loadUid);
+      return runStartupOperation("legacy programs", () => loadUserPrograms(loadUid));
     })
       .then((loadedPrograms) => {
         if (!shouldApplyResults) {
@@ -2079,13 +2080,15 @@ function AccountApp({ currentUser }) {
         setProgramDrafts(loadedPrograms);
         setSelectedProgramDayId(loadedPrograms[0]?.days[0]?.id ?? null);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!shouldApplyResults) {
           return;
         }
 
         if (trainingRuntimeRef.current.mode !== "legacy") setTrainingRuntime({ mode: "unavailable" });
-        lastProgramLoadUidRef.current = null;
+        const failure = startupFailureDetails(error, "training authority");
+        reportStartupDiagnostic({ ...failure, status: "failed" });
+        setStartupFailure(failure);
         setProgramSyncError(
           "Programs are using this device cache. Cloud sync is unavailable.",
         );
@@ -4004,19 +4007,19 @@ function AccountApp({ currentUser }) {
     }
   }
 
+  if (startupFailure) return <main className="min-h-screen bg-slate-950 p-6 text-white" role="alert">
+    <h1 className="text-xl font-bold">NevFit couldn't finish loading</h1>
+    <p className="mt-3">Check your connection and reload to try again, or sign out and sign in again.</p>
+    <p className="mt-2 text-sm text-slate-400">{startupFailure.operation}: {startupFailure.code}</p>
+    <div className="mt-4 flex gap-3">
+      <button type="button" onClick={() => window.location.reload()} className="rounded border border-slate-600 px-4 py-2">Reload</button>
+      <button type="button" onClick={handleSignOut} disabled={signingOut} className="rounded border border-slate-600 px-4 py-2">{signingOut ? "Signing out..." : "Sign out"}</button>
+    </div>
+    {signOutError ? <p className="mt-3">{signOutError}</p> : null}
+  </main>;
   if (trainingRuntime.mode === "unavailable") return <main className="min-h-screen bg-slate-950 p-6 text-white"><h1 className="text-xl font-bold">Training data unavailable</h1><p className="mt-3">Connect and reload to verify which training model is authoritative. No fallback writes have been made.</p><button type="button" onClick={() => window.location.reload()} className="mt-4 rounded border border-slate-600 px-4 py-2">Reload</button></main>;
-  if (
-    trainingRuntime.mode === "loading" ||
-    programsLoading ||
-    planningLoading ||
-    healthLoading ||
-    robCoachingProfileLoading ||
-    activeWorkoutLoading ||
-    exerciseNotesLoading ||
-    exerciseNotesOwnerUid !== currentUser.uid ||
-    workoutHistoryLoading
-  ) {
-    return <LoadingScreen />;
+  if (startupLoading) {
+    return <LoadingScreen pending={pendingStartup} />;
   }
 
   const activeWorkoutDay = schedule.find(

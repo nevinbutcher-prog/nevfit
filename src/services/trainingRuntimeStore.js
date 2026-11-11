@@ -25,15 +25,16 @@ export function createTrainingRuntimeStore({ uid, firestore, auth, isMounted }) 
     ...library.programs.map((data) => ({ path: `users/${uid}/programsV2/${data.id}`, data })),
     ...library.workouts.map((data) => ({ path: `users/${uid}/workouts/${data.id}`, data })),
   ];
-  async function load() {
+  async function load({ read = (_operation, run) => run() } = {}) {
     guard();
-    const marker = await getDocFromServer(markerRef);
+    const marker = await read("training model marker", () => getDocFromServer(markerRef));
     guard(); confirmed(marker);
     if (!marker.exists()) return { mode: "legacy" };
     const [programs, workouts, stage, latest] = await Promise.all([
-      getDocsFromServer(collection(firestore, "users", uid, "programsV2")),
-      getDocsFromServer(collection(firestore, "users", uid, "workouts")),
-      getDocFromServer(stageRef), getDocFromServer(markerRef),
+      read("independent programs", () => getDocsFromServer(collection(firestore, "users", uid, "programsV2"))),
+      read("independent workouts", () => getDocsFromServer(collection(firestore, "users", uid, "workouts"))),
+      read("verified stage marker", () => getDocFromServer(stageRef)),
+      read("training model recheck", () => getDocFromServer(markerRef)),
     ]);
     guard();
     [programs, workouts, stage, latest, ...programs.docs, ...workouts.docs].forEach(confirmed);

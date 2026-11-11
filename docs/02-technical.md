@@ -6,6 +6,24 @@ are not deployed. Earlier numbered sections record their checkpoint's state;
 the 070 section supersedes their future-runtime/release instructions. No live
 staging or activation has been performed during implementation.
 
+## Startup recovery
+
+The authenticated program-hydration effect must start a fresh authority read on
+each setup and ignore results after its own cleanup. An in-flight UID ref is not
+evidence that hydration completed: Strict Mode's setup/cleanup/setup sequence
+discarded the original read and skipped its replacement in 070, leaving
+`trainingRuntime.mode` permanently loading even after the server responded.
+
+`startupDiagnostics.js` names the authority marker, v2 inventories/stage/recheck
+and legacy-program reads, logs start/completion/failure with duration and code
+(no account IDs, snapshots or raw SDK messages), and bounds startup reads to 20
+seconds. A separate deadline covers all App loading gates, including exercise
+notes ownership. Failures render the unresolved operation/code with Reload and
+Sign out actions; no fallback selects an unverified training authority. The
+obsolete `_smokeTest` query and its caller are removed, since that top-level
+collection is denied by the rules and was unrelated to startup hydration.
+Normal runtime reads/writes and data-transition confirmation gates are unchanged.
+
 ## Stack
 
 - Vite
@@ -30,7 +48,7 @@ src/
     backupService.js
     exerciseProvider.js
     firebase.js
-    firebaseSmokeTest.js
+    startupDiagnostics.js
     healthStore.js
     planningStore.js
     programStore.js

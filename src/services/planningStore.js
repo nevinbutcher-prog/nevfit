@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDocFromServer, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 const PLANNING_DOC_ID = "planning";
@@ -8,7 +8,8 @@ function planningDocument(uid) {
 }
 
 export async function loadPlanningState(uid) {
-  const snapshot = await getDoc(planningDocument(uid));
+  const snapshot = await getDocFromServer(planningDocument(uid));
+  if (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) throw new Error("unconfirmed_planning_state");
 
   return snapshot.exists() ? snapshot.data() : null;
 }

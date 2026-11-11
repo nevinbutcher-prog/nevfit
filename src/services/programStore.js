@@ -1,7 +1,7 @@
 import {
   collection,
   doc,
-  getDocs,
+  getDocsFromServer,
   serverTimestamp,
   setDoc,
   writeBatch,
@@ -23,16 +23,18 @@ function programDocument(uid, programId) {
 }
 
 export async function loadCloudPrograms(uid) {
-  const snapshot = await getDocs(programsCollection(uid));
+  const snapshot = await getDocsFromServer(programsCollection(uid));
+  if (snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) throw new Error("unconfirmed_cloud_programs");
 
-  return snapshot.docs
+  const programs = snapshot.docs
     .map((programSnapshot) =>
       maybeNormalizeCloudProgram({
         id: programSnapshot.id,
         ...programSnapshot.data(),
       }),
-    )
-    .filter(Boolean);
+    );
+  if (programs.some((program) => !program)) throw new Error("invalid_cloud_programs");
+  return programs;
 }
 
 export async function saveProgram(uid, program) {

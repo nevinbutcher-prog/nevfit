@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createAccountCache } from "../src/services/accountCache.js";
+import { createEmptyPlanningState } from "../src/services/accountInitialization.js";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 
@@ -46,6 +47,7 @@ test("late hydration for a previous UID stops before it can populate the next ac
     loadStoredProgramCache: () => null,
     normalizeProgramDefinitions: (value) => value,
     normalizePlanningState: () => ({}), normalizeHealthState: () => ({}),
+    createEmptyPlanningState,
     normalizeCompletedWorkout: (value) => value,
     loadCloudPrograms: () => cloud, loadPlanningState: () => cloud, loadHealthState: () => cloud,
     loadActiveWorkout: () => cloud, loadCloudCompletedWorkouts: () => cloud,

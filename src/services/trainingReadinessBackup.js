@@ -42,6 +42,9 @@ function encodeDocuments(documents) {
     value: entry.exists ? encodeFirestoreValue(entry.data) : null,
   })).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 }
+export function fingerprintTrainingDocuments(documents) {
+  return digest(encodeDocuments(documents));
+}
 function countsFor(documents) {
   return Object.fromEntries(["user", ...TRAINING_BACKUP_COLLECTIONS].map((kind) => [kind,
     documents.filter((entry) => entry.exists && (kind === "user" ? entry.path.split("/").length === 2 : entry.path.split("/")[2] === kind)).length,

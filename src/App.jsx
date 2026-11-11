@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createEmptySchedule, createEmptyPlanningState, hasWeeklyCheckInEvidence } from "./services/accountInitialization";
 import SignInScreen from "./components/SignInScreen";
+import TrainingStageDryRun from "./components/TrainingStageDryRun";
 import { exportTrainingReadiness, downloadTrainingReadiness } from "./services/trainingReadinessStore";
 import QuickWorkoutFooter from "./components/QuickWorkoutFooter";
 import { getRecentWorkoutExercises, groupRecentWorkoutExercises } from "./services/recentWorkoutExercises";
@@ -47,7 +49,6 @@ import {
 } from "./services/planningStore";
 import {
   loadCloudPrograms,
-  migrateLocalProgramsToCloud,
   savePrograms,
 } from "./services/programStore";
 import {
@@ -89,7 +90,7 @@ import {
   loadCompletedWorkouts as loadCloudCompletedWorkouts,
   saveCompletedWorkout,
 } from "./services/workoutHistoryStore";
-import { starterProgram, starterPrograms } from "./data/programs";
+import { starterProgram } from "./data/programs";
 import { weekSchedule } from "./data/weekSchedule";
 import { getExerciseById, getVerifiedRobExerciseCatalogue, searchExercises } from "./services/exerciseProvider";
 import { runExerciseMigrationPreflight, downloadExerciseMigrationPlan } from "./services/exerciseMigrationPreflight";
@@ -238,14 +239,14 @@ function loadStoredSchedule() {
     const storedSchedule = accountStorage.getItem(SCHEDULE_STORAGE_KEY);
 
     if (!storedSchedule) {
-      return weekSchedule;
+      return createEmptySchedule();
     }
 
     const parsedSchedule = JSON.parse(storedSchedule);
 
-    return isValidSchedule(parsedSchedule) ? parsedSchedule : weekSchedule;
+    return isValidSchedule(parsedSchedule) ? parsedSchedule : createEmptySchedule();
   } catch {
-    return weekSchedule;
+    return createEmptySchedule();
   }
 }
 
@@ -305,13 +306,14 @@ function normalizeProgramDefinitions(value) {
   if (!Array.isArray(value)) {
     return null;
   }
+  if (value.length === 0) return [];
 
   if (value.every((item) => item && Array.isArray(item.days))) {
     const normalizedPrograms = value
       .map((program) => normalizeProgram(program))
       .filter(Boolean);
 
-    return normalizedPrograms.length ? normalizedPrograms : null;
+    return normalizedPrograms.length === value.length ? normalizedPrograms : null;
   }
 
   if (value.every((item) => item && Array.isArray(item.exercises))) {
@@ -347,21 +349,7 @@ function loadStoredProgramCache() {
 }
 
 function loadStoredPrograms() {
-  const storedPrograms = loadStoredProgramCache();
-
-  if (storedPrograms) {
-    return storedPrograms;
-  }
-
-  return starterPrograms;
-}
-
-function getInitialPrograms(localPrograms = loadStoredProgramCache()) {
-  if (localPrograms?.length) {
-    return localPrograms;
-  }
-
-  return normalizeProgramDefinitions(starterPrograms) ?? starterPrograms;
+  return loadStoredProgramCache() ?? [];
 }
 
 function persistPrograms(programDefinitions) {
@@ -393,30 +381,13 @@ function logProgramSync(actionName, uid, programs, result, error = null) {
 }
 
 async function loadUserPrograms(uid) {
-  const localPrograms = loadStoredProgramCache();
-  const cloudPrograms = normalizeProgramDefinitions(
-    await loadCloudPrograms(uid),
-  );
+  const cloudPrograms = normalizeProgramDefinitions(await loadCloudPrograms(uid));
   assertCurrentCache(uid);
-
-  if (cloudPrograms?.length) {
-    persistPrograms(cloudPrograms);
-    logProgramSync("load-cloud-programs", uid, cloudPrograms, "success");
-    return cloudPrograms;
-  }
-
-  if (localPrograms?.length) {
-    await migrateLocalProgramsToCloud(uid, localPrograms);
-    logProgramSync("migrate-local-programs", uid, localPrograms, "success");
-    return localPrograms;
-  }
-
-  const initialPrograms = getInitialPrograms(localPrograms);
-  persistPrograms(initialPrograms);
-  await migrateLocalProgramsToCloud(uid, initialPrograms);
-  logProgramSync("initialize-starter-programs", uid, initialPrograms, "success");
-
-  return initialPrograms;
+  if (!cloudPrograms) throw new Error("invalid_cloud_programs");
+  // A successful empty server collection is authoritative. Never upload defaults
+  // or stale cached programs. Retain a non-empty old cache only for offline recovery.
+  if (cloudPrograms.length || !loadStoredProgramCache()?.length) persistPrograms(cloudPrograms);
+  return cloudPrograms;
 }
 
 async function persistProgramDefinitions(
@@ -442,9 +413,9 @@ function loadStoredActiveProgramId() {
       ACTIVE_PROGRAM_STORAGE_KEY,
     );
 
-    return storedProgramId || defaultProgramId;
+    return storedProgramId || null;
   } catch {
-    return defaultProgramId;
+    return null;
   }
 }
 
@@ -781,7 +752,7 @@ function getCurrentPlanningState({
 }) {
   return {
     schedule,
-    activeProgramId: selectedProgramId || defaultProgramId,
+    activeProgramId: selectedProgramId || null,
     cycleStartDate: cycleStartDate || "",
     cycleLengthWeeks: cycleLengthWeeks || "",
   };
@@ -808,7 +779,7 @@ function normalizePlanningState(value, fallbackState = null) {
     activeProgramId:
       typeof value.activeProgramId === "string" && value.activeProgramId.trim()
         ? value.activeProgramId
-        : fallback.activeProgramId,
+        : value.activeProgramId === null ? null : fallback.activeProgramId,
     cycleStartDate:
       typeof value.cycleStartDate === "string" &&
       (value.cycleStartDate === "" || isValidDateInputValue(value.cycleStartDate))
@@ -926,7 +897,7 @@ function logHealthSync(actionName, uid, healthState, result, error = null) {
 }
 
 async function loadUserPlanningState(uid) {
-  const defaultPlanningState = normalizePlanningState(null);
+  const defaultPlanningState = createEmptyPlanningState();
   const cloudPlanningState = await loadPlanningState(uid);
   assertCurrentCache(uid);
 
@@ -941,7 +912,6 @@ async function loadUserPlanningState(uid) {
   }
 
   persistPlanningCache(defaultPlanningState);
-  await savePlanningState(uid, defaultPlanningState);
   logPlanningSync("planning-initialize", uid, defaultPlanningState, "success");
   return defaultPlanningState;
 }
@@ -1797,7 +1767,7 @@ function AccountApp({ currentUser }) {
     loadStoredActiveProgramId,
   );
   const [selectedProgramDayId, setSelectedProgramDayId] = useState(
-    starterProgram.days[0]?.id ?? null,
+    null,
   );
   const [newProgramName, setNewProgramName] = useState("");
   const [isProgramCreatorOpen, setIsProgramCreatorOpen] = useState(false);
@@ -1966,6 +1936,9 @@ function AccountApp({ currentUser }) {
     currentUserUidRef.current = currentUser.uid;
     return () => { currentUserUidRef.current = null; };
   }, [currentUser.uid]);
+  const planningHydratedRef = useRef(false);
+  const programsHydratedRef = useRef(false);
+  const planningBaselineRef = useRef(null);
   const activeWorkoutLoadedRef = useRef(false);
   const workoutSetInputRefs = useRef(new Map());
   const backupFileInputRef = useRef(null);
@@ -2062,12 +2035,14 @@ function AccountApp({ currentUser }) {
     setProgramsLoading(true);
     setProgramSyncError("");
 
+    programsHydratedRef.current = false;
     loadUserPrograms(loadUid)
       .then((loadedPrograms) => {
         if (!shouldApplyResults) {
           return;
         }
 
+        programsHydratedRef.current = true;
         setProgramDefinitions(loadedPrograms);
         setProgramDrafts(loadedPrograms);
         setSelectedProgramDayId(loadedPrograms[0]?.days[0]?.id ?? null);
@@ -2113,12 +2088,15 @@ function AccountApp({ currentUser }) {
     setPlanningLoading(true);
     setAppStateSyncError("");
 
+    planningHydratedRef.current = false;
     loadUserPlanningState(loadUid)
       .then((loadedPlanningState) => {
         if (!shouldApplyResults) {
           return;
         }
 
+        planningHydratedRef.current = true;
+        planningBaselineRef.current = JSON.stringify(loadedPlanningState);
         setSchedule(loadedPlanningState.schedule);
         setSelectedProgramId(loadedPlanningState.activeProgramId);
         setCycleStartDate(loadedPlanningState.cycleStartDate);
@@ -2615,9 +2593,12 @@ function AccountApp({ currentUser }) {
   }, [cycleLengthWeeks, accountStorage]);
 
   useEffect(() => {
-    if (!currentUser || planningLoading) {
+    if (!currentUser || planningLoading || programsLoading || !planningHydratedRef.current || !programsHydratedRef.current) {
       return;
     }
+    // Let the selection reconciliation effect finish before persisting a stale
+    // cached ID against a newly confirmed empty/different server program list.
+    if (selectedProgramId && !programDefinitions.some((program) => program.id === selectedProgramId)) return;
 
     const planningState = getCurrentPlanningState({
       schedule,
@@ -2625,6 +2606,9 @@ function AccountApp({ currentUser }) {
       cycleStartDate,
       cycleLengthWeeks,
     });
+    const signature = JSON.stringify(planningState);
+    if (planningBaselineRef.current === signature) return;
+    planningBaselineRef.current = signature;
     const queuedPersist = planningPersistQueueRef.current.then(
       () =>
         persistPlanningStateForUser(
@@ -2652,6 +2636,8 @@ function AccountApp({ currentUser }) {
   }, [
     currentUser,
     planningLoading,
+    programsLoading,
+    programDefinitions,
     schedule,
     selectedProgramId,
     cycleStartDate,
@@ -2818,6 +2804,7 @@ function AccountApp({ currentUser }) {
   }, [isWorkoutActive]);
 
   useEffect(() => {
+    if (programsLoading || planningLoading || !programsHydratedRef.current) return;
     if (
       programDefinitions.some((program) => program.id === selectedProgramId)
     ) {
@@ -2830,7 +2817,7 @@ function AccountApp({ currentUser }) {
       null;
 
     setSelectedProgramId(nextProgramId);
-  }, [programDefinitions, selectedProgramId]);
+  }, [programDefinitions, selectedProgramId, programsLoading, planningLoading]);
 
   useEffect(() => {
     if (selectedProgramId) {
@@ -4473,6 +4460,7 @@ function AccountApp({ currentUser }) {
   const cycleWeekLabel = getCycleWeekLabel(cycleStartDate, cycleLengthWeeks);
   const currentRobProfile = robCoachingProfileUid === currentUser?.uid ? robCoachingProfile : emptyRobCoachingProfile();
   const savedWeeklyReview = weeklySavedState.uid === currentUser?.uid && weeklySavedState.weekStart === weeklyPeriod.start ? weeklySavedState.review : null;
+  const canOpenWeeklyCheckIn = hasWeeklyCheckInEvidence({ period: weeklyPeriod, completedWorkouts, runs, stepsByDate, savedReview: savedWeeklyReview });
   const savedWeeklyStatus = weeklySavedState.uid === currentUser?.uid && weeklySavedState.weekStart === weeklyPeriod.start ? weeklySavedState.status : "loading";
 
   async function saveCurrentRobProfile(profile) {
@@ -4590,6 +4578,7 @@ function AccountApp({ currentUser }) {
   }
 
   function openWeeklyCheckIn() {
+    if (!canOpenWeeklyCheckIn) return;
     setRobPanelMode(ROB_WORKFLOW_STEPS.WEEKLY_REVIEW);
     setViewMode("rob");
   }
@@ -4902,7 +4891,7 @@ function AccountApp({ currentUser }) {
             </div>
             {robPanelMode === ROB_WORKFLOW_STEPS.HOME ? <div className="grid gap-3">
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.ADVICE)} className="rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 text-left transition hover:border-emerald-300"><h3 className="text-lg font-bold text-white">Ask Rob a question</h3><p className="mt-1 text-sm text-slate-300">Get help with training, exercises and progression.</p></button>
-              <button type="button" onClick={openWeeklyCheckIn} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Weekly Check-In</h3><p className="mt-1 text-sm text-slate-300">Review last week's activity or reopen your saved review.</p></button>
+              <button type="button" disabled={!canOpenWeeklyCheckIn} onClick={openWeeklyCheckIn} className="disabled:opacity-50 rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Weekly Check-In</h3><p className="mt-1 text-sm text-slate-300">Review last week's activity or reopen your saved review.</p></button>
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROFILE)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Coaching preferences</h3><p className="mt-1 text-sm text-slate-300">Set your goals, constraints and progression method for Rob.</p></button>
               <button type="button" onClick={() => openRobProgramReview(robSelectedProgramId)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Review my program</h3><p className="mt-1 text-sm text-slate-300">Have Rob analyse an existing training program.</p></button>
               <button type="button" onClick={() => setRobPanelMode(ROB_WORKFLOW_STEPS.PROGRAM_BUILD)} className="rounded-2xl border border-slate-700 bg-slate-900 p-5 text-left transition hover:border-slate-500"><h3 className="text-lg font-bold text-white">Build me a program</h3><p className="mt-1 text-sm text-slate-300">Work with Rob to design a complete training program.</p></button>
@@ -4974,11 +4963,11 @@ function AccountApp({ currentUser }) {
               <p className="text-slate-300" role="status">
                 <span className="font-semibold">Weekly Check-In</span>
                 {" · "}
-                {savedWeeklyStatus === "loading" ? "Checking saved review…" : savedWeeklyStatus === "error" ? "Saved status unavailable" : savedWeeklyReview ? `${weeklyPeriod.daysUntilNextMonday} ${weeklyPeriod.daysUntilNextMonday === 1 ? "day" : "days"} until next check-in` : <span className="font-semibold text-emerald-200">Check-in available now</span>}
+                {!canOpenWeeklyCheckIn ? "Log activity before your first check-in" : savedWeeklyStatus === "loading" ? "Checking saved review…" : savedWeeklyStatus === "error" ? "Saved status unavailable" : savedWeeklyReview ? `${weeklyPeriod.daysUntilNextMonday} ${weeklyPeriod.daysUntilNextMonday === 1 ? "day" : "days"} until next check-in` : <span className="font-semibold text-emerald-200">Check-in available now</span>}
               </p>
-              {savedWeeklyStatus === "loaded" && !savedWeeklyReview ? (
+              {canOpenWeeklyCheckIn && savedWeeklyStatus === "loaded" && !savedWeeklyReview ? (
                 <button type="button" onClick={openWeeklyCheckIn} className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-slate-950">Open check-in</button>
-              ) : savedWeeklyStatus === "error" ? (
+              ) : canOpenWeeklyCheckIn && savedWeeklyStatus === "error" ? (
                 <button type="button" onClick={openWeeklyCheckIn} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200">Check saved status</button>
               ) : null}
             </article>
@@ -5041,10 +5030,10 @@ function AccountApp({ currentUser }) {
                 ) : plannedWorkoutsThisWeek === 0 ? (
                   <button
                     type="button"
-                    onClick={() => setViewMode("planner")}
+                    onClick={() => setViewMode(programDefinitions.length ? "planner" : "routines")}
                     className="w-full rounded-xl border border-slate-700 px-5 py-4 font-semibold text-slate-200 transition hover:border-slate-500 md:w-auto"
                   >
-                    Assign in Week View
+                    {programDefinitions.length ? "Assign in Week View" : "Create a Program"}
                   </button>
                 ) : null}
               </div>
@@ -5080,14 +5069,14 @@ function AccountApp({ currentUser }) {
                           No Program Selected
                         </h2>
                         <p className="mt-2 text-sm text-slate-400">
-                          Create a Program to get started.
+                          Start a Quick Workout, or create a program.
                         </p>
                       </>
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                   <button type="button" onClick={() => setViewMode("routines")}
-                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500">View Program</button>
+                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500">{dashboardProgram ? "View Program" : "Create Program"}</button>
                   <button
                     type="button"
                     onClick={() => {
@@ -5649,6 +5638,7 @@ function AccountApp({ currentUser }) {
                 {trainingReadiness.status === "ready" ? <p role="status" className="mt-2 text-sm text-slate-300">
                   Download prepared: {trainingReadiness.counts.programs} programs, {trainingReadiness.counts.completedWorkouts} completed workouts, {trainingReadiness.counts.appState} app-state documents. SHA-256, fetched-source and typed round-trip checks passed. {trainingReadiness.errors} preflight issues recorded. Full-account coverage and restore testing are still required before cutover.
                 </p> : null}
+                {import.meta.env.DEV ? <TrainingStageDryRun uid={currentUser.uid} ownerUidRef={currentUserUidRef} /> : null}
               </div>
               <div className="mt-5 border-t border-slate-800 pt-4">
                 <h3 className="font-semibold text-white">Historical exercise ID preflight</h3>
@@ -6474,7 +6464,10 @@ function AccountApp({ currentUser }) {
                     </button>
                   </div>
                 </div>
-              ) : null}
+              ) : <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <h2 className="text-xl font-bold">No programs yet</h2>
+                <button type="button" onClick={() => setIsProgramCreatorOpen(true)} className="mt-3 rounded-lg border border-slate-700 px-4 py-2 font-semibold text-slate-200">Create Program</button>
+              </div>}
             </div>
           </section>
         ) : null}

@@ -876,11 +876,14 @@ routine exercises, archive/delete flags, optional description, and timestamps.
 The service also writes a `routines` alias from `days` for the cloud document
 while loading either shape back into the app's existing `days` model.
 
-On authenticated load, the app reads the UID-scoped `nevfit_programs` cache, then reads Firestore.
-Non-empty Firestore programs are treated as the source of truth and refresh the
-local cache. If Firestore is empty and local programs exist, the local programs
-are uploaded once. If both are empty, the starter program initializes and is
-cached locally. Explicit program saves, program creation, duplication, and
+On authenticated load, the app reads the UID-scoped `nevfit_programs` cache, then
+uses a server-only Firestore read. A successful collection read, including `[]`,
+is authoritative for runtime state. No cached/default program is uploaded at
+boot. A non-empty old cache is retained for offline recovery when the server is
+empty, but never seeds that empty server. Connectivity/pending-write failures
+keep the cached UI with a sync warning and never count as confirmed emptiness.
+New accounts start with no programs; genuine saved Starter Programs are retained.
+Explicit program saves, program creation, duplication, and
 archive actions save to localStorage first, then attempt Firestore. Routine
 exercise edits stay in the program draft until Save Program is selected.
 Firestore failures leave local data intact and show a non-blocking sync warning.
@@ -1121,11 +1124,13 @@ not feed the target back into this legacy converter.
 
 ### Required source-of-truth cutover (future work only)
 
-The proposed future paths are `users/{uid}/savedWorkouts/{workoutId}` and
-`users/{uid}/savedWorkoutPrograms/{programId}`. Original `programs` documents stay
+The isolated paths selected by 068 are `users/{uid}/workouts/{workoutId}` and
+`users/{uid}/programsV2/{programId}`. Original `programs` documents stay
 untouched during initial cutover. A future `appState/trainingModel` version marker
 selects the independent model only after target validation/readback succeeds.
-These paths, marker, rules and writer are not created or deployed by 066.
+These paths, marker, rules and writer were not created or deployed by 066.
+Checkpoint 068 adds a tested staging engine and development dry-run fallback;
+current production rules still deny the target paths and no live writer is wired.
 
 Before activation, every production reader/writer below must support the new
 model, including legitimate zero-program state. Once activated, independent
@@ -1163,7 +1168,7 @@ inventing an owner or changing historical records.
 
 | Current touchpoint | Required future change |
 | --- | --- |
-| App normalizeProgramDefinitions/loadStoredPrograms/getInitialPrograms/loadUserPrograms | Distinguish missing data from valid `[]`; remove starter auto-initialisation for new-model accounts. Currently empty cloud/cache data can trigger Starter Program uploads. This is a release blocker for zero-program accounts. |
+| App normalizeProgramDefinitions/loadStoredPrograms/loadUserPrograms | Empty-state bootstrapping is addressed in 068: confirmed `[]` is valid and no Starter Program is uploaded. A later v2 reader must retain this distinction and avoid reviving stale legacy caches. |
 | App program drafts, getProgramDay, routine builder and dashboard/planner lookups | Resolve independent templates by ID; keep edits draft-only until explicit save. Do not flatten embedded days as the authoritative store. Initialization/onboarding decisions remain separately gated. |
 | programData/programStore/programPersistence | Existing stores only upsert/merge documents; omitting a program never deletes it remotely. Add genuine scoped deletion APIs later. Coordinated save/move/detach must update template.programId and both affected ordered membership lists atomically, with stale-state checks. No independent partial saves. |
 | planningStore and App planning/cache defaults | Resolve mapped routineDayId, allow null activeProgramId, retain scheduling protections and persist zero-program accounts without default-program fallback. |
@@ -1391,3 +1396,141 @@ JSON file appears, the expected program/history/app-state counts are plausible,
 and the preflight errors/linkage classifications are reviewable locally. Do not
 paste the raw private export into public issues or commit it. Further account
 inspection, full backup/restore verification and actual cutover remain pending.
+
+## Empty Accounts and Controlled Staging (068)
+
+### Empty authenticated accounts
+
+`accountInitialization.js` supplies seven unassigned days, empty notes, null
+activeProgramId and empty cycle fields. App no longer initializes Starter Programs
+or day assignments on cloud-empty/cache-empty boot. `normalizeProgramDefinitions`
+accepts `[]`, while invalid/unavailable data remains distinct. Legacy saved Starter
+Program documents and their prescriptions remain ordinary existing data, not a
+default to regenerate or remove. Existing explicit program create/save paths
+still use legacy embedded days; no independent-workout UI or label rename exists.
+
+Program and planning loads require server responses and reject cached/pending-write
+snapshots. Initial cache data remains a fallback on read failure, without being
+automatically uploaded or causing a source-of-truth switch. In particular, stale
+non-empty program caches cannot refill a confirmed empty server account; they
+remain locally available only for recovery during unavailable reads. Missing
+planning uses blank defaults, not cached/default starter assignments. Explicit
+null selection is preserved. Planning auto-save waits for both program/planning
+hydration to succeed and skips an unchanged loaded baseline. Read failures cannot
+automatically persist a blank selection/schedule over an unavailable account.
+
+Dashboard retains Quick Workout with no program requirement, has an empty-state
+create-program route, and Programs retains its existing manual creator. Planner
+offers unassigned days without fabricated training expectations. Weekly Check-In
+is non-actionable until there is recorded activity on/before the reviewed week's
+end: meaningful logged workout effort, a positive run distance/duration, a recorded
+step day (including explicit zero), or a saved review to reopen. Experienced users
+retain review access even after an inactive week. Program existence/assignments
+are never eligibility evidence. No onboarding wizard or Rob format change was added.
+
+### Staging engine; activation explicitly blocked
+
+`independentWorkoutStage.js` provides a pure preparation step and an injected
+stage/verify engine. **There is no production Firestore write adapter, rule change,
+activation button or startup invocation in 068.** Existing owner-only rules deny
+reads/writes to workouts and programsV2. The approved fallback is used rather than
+expanding access during this checkpoint. Live manual staging remains blocked on
+independent review, a separately reviewed authenticated adapter and narrowly scoped
+owner-only rules. No staging, test-account migration or live account reads were run
+by the agent, tests, build or CI.
+
+The development build alone exposes Settings / Training backup and readiness /
+**Developer: staging dry run only**. The operator supplies their retained private
+067 JSON file, explicitly sees the signed-in UID, pauses edits on all devices,
+and initiates fresh server-only capture. Files stay local; no attachment is read
+by Codex. A successful dry run downloads a private
+`nevfit-training-stage-dry-run.json` with source/target fingerprints, live source
+counts, stable mappings and typed target content. Target conflict/lock checks are
+marked **not performed** because rules block target access. Both activationAllowed
+and cutoverAllowed remain false. Production Settings still offers the read-only
+067 export; ordinary new users have no live migration control.
+
+Preparation independently validates both files' identity, integrity and preflight.
+Fresh source fingerprint comparison includes exact document paths and SDK-typed
+contents of programs, completedWorkouts, planning, activeWorkout, exerciseNotes and
+health. Root last-login metadata and Rob preferences/reviews/proposals/experimental
+state are excluded from the migration comparison and never transformed, staged
+or deleted. Rob navigation remains on its current data path. A newer ordinary
+program/planning/history/activity edit requires a new retained export, not silent
+repair. No observed account counts, IDs, names or private data are embedded in code.
+
+Any active session (including blank Quick Workout) blocks preparation. Conversion,
+linkage, alias/identity and compatibility errors block it too. Original legacy
+program metadata and exercise prescriptions are recovered from the typed raw
+source, using 066's mapping for independent IDs, ownership and ordered workoutIds.
+This preserves native timestamps and other supported metadata; projected timestamp
+objects in the pure preflight are not written as substitutes. ProgramsV2 contains
+metadata plus ordered IDs; workouts contains independent definitions. Neither
+legacy programs nor completed snapshots, planning, health, notes or Rob are write
+targets. This is an isolated copy, never a dual-writable runtime source.
+
+The staging engine's future adapter contract is deliberately narrow:
+
+1. Bind every operation to the explicitly authenticated UID/project. Check the
+   current account before/after async work. `readSourceFromServer` returns a fresh
+   verified 067 capture plus `pendingWrites: false`; read targets/marker from the
+   server with an explicit pending-write check. Unknown inventory is not empty.
+2. Reject unexpected target paths/IDs or semantic differences. Existing identical
+   targets can be reused, never merged/replaced. Claim the staging marker using an
+   atomic expected-value comparison. Another attempt in progress, stale source/
+   target fingerprints, or an unknown marker state blocks execution.
+3. An in-progress lock at `appState/independentWorkoutStage` contains status staging,
+   attemptId and source/target fingerprints, with legacyAuthoritative true. It
+   makes no schema-verification claim. Resume an interrupted operation only with
+   the same explicit attempt ID and matching retained sources/targets.
+4. Before every group of at most 400 targets, refresh source validation and reject
+   drift/active sessions/pending writes. `createOrVerifyDocuments` must atomically
+   create absent entries or accept exact semantic matches, refusing conflicts and
+   never blindly overwriting them. These atomic guarantees are obligations of the
+   missing future adapter, not claims about an implemented Firebase transport.
+5. Read targets back from the server and compare canonical typed content, order,
+   ownership, counts and mappings to the plan; recheck sources. Only then compare-
+   and-set the marker to status verified, schemaVersion 2 and cutoverAllowed false.
+   A verified repeat reads/compares rather than writing targets again. Stage
+   results report live source counts and exact matching target paths. Failure
+   reports phase/error plus matching staged and observed target paths; unreadable
+   inventory remains null rather than an invented empty count. No cleanup deletes.
+
+Synthetic adapters test this contract, including an interrupted small batch,
+idempotent retry, conflicting targets, competing attempts, source drift, active
+sessions, pending writes and verification mismatch. No real adapter or emulator
+write was exercised. A future adapter must meet atomicity and rule/UID checks
+before manual activation can be enabled; mocks alone do not prove Firestore safety.
+
+### Later cutover and manual verification
+
+Staging is not authority. The existing app continues to read/write legacy programs,
+resume existing active sessions and calculate history/previous performance normally.
+No startup reader consults the staging marker. A program edit after staging makes
+the marker's fingerprint stale and must be reconciled explicitly before cutover;
+an old verified marker never grants permission to switch storage.
+
+The next authorized cutover would have to coordinate v2 program/workout reads and
+writes/CRUD, zero-program state, UID caches, backup v1/v2 conversion/restore and
+schedule routineDayId mappings. Keep completed history untouched and snapshots
+self-contained. Rob artifacts are not a migration preservation gate under the
+068 decision; avoid broad Rob refactoring. Existing v1/v2 imports remain supported
+on the legacy path (including valid empty programs) and are not a v2 cutover writer.
+Program deletion, independent saved-workout controls, Training labels/layout and
+eventual cleanup of legacy originals all require later approved work.
+
+Before any future operator activation, retain the private 067 file and optionally
+take a fresh ordinary Settings export. Neither is a tested full-account restore;
+legacy originals are a practical fallback, not a universal recovery guarantee.
+The full-coverage limitations from 067 remain; they must not be presented as solved
+by synthetic staging verification. Rules/adapter/manual activation are currently
+blocked, and no migration action should be attempted in the production console.
+
+After code review, manual user verification should confirm a genuinely new empty
+account stays empty after refresh/sign-in, has no selected program/cycle/assigned
+days, can start Quick Workout and manually create a program, and has no actionable
+check-in without prior activity. Existing accounts should retain their actual
+programs, schedule, history and resume behaviour. Optional developer dry-run
+verification is read-only and user-initiated; fresh source/backup/target review
+and any real writes are separate decisions. Do not upload private reports to Git
+or paste their contents into public issues.

@@ -14,6 +14,7 @@ eval-results/
 *.local
 nevfit-exercise-migration-dry-run-*.json
 nevfit-training-readiness-*.json
+nevfit-training-stage-dry-run*.json
 migration-files/
 
 # Editor directories and files

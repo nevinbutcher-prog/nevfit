@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SignInScreen from "./components/SignInScreen";
+import { exportTrainingReadiness, downloadTrainingReadiness } from "./services/trainingReadinessStore";
 import QuickWorkoutFooter from "./components/QuickWorkoutFooter";
 import { getRecentWorkoutExercises, groupRecentWorkoutExercises } from "./services/recentWorkoutExercises";
 import { createAccountCache } from "./services/accountCache.js";
@@ -1931,6 +1932,8 @@ function AccountApp({ currentUser }) {
   const [workoutSyncError, setWorkoutSyncError] = useState("");
   const [exerciseNotesSyncError, setExerciseNotesSyncError] = useState("");
   const [backupMessage, setBackupMessage] = useState("");
+  const [trainingReadiness, setTrainingReadiness] = useState({ status: "idle" });
+  const trainingReadinessBusyRef = useRef(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [isCycleEditorOpen, setIsCycleEditorOpen] = useState(false);
   const [restTimer, setRestTimer] = useState(null);
@@ -2977,6 +2980,24 @@ function AccountApp({ currentUser }) {
     } catch (error) {
       console.error("Exercise migration preflight failed:", error);
       setMigrationPreflightStatus("error");
+    }
+  }
+
+  async function handleTrainingReadinessExport() {
+    if (trainingReadinessBusyRef.current) return;
+    const uid = currentUser.uid;
+    const isCurrent = () => currentUserUidRef.current === uid;
+    trainingReadinessBusyRef.current = true;
+    setTrainingReadiness({ status: "loading" });
+    try {
+      const exported = await exportTrainingReadiness(uid, isCurrent);
+      if (!isCurrent()) return;
+      downloadTrainingReadiness(exported);
+      setTrainingReadiness({ status: "ready", counts: exported.manifest.counts, errors: exported.preflight.errors.length });
+    } catch {
+      if (isCurrent()) setTrainingReadiness({ status: "error" });
+    } finally {
+      trainingReadinessBusyRef.current = false;
     }
   }
 
@@ -5597,7 +5618,7 @@ function AccountApp({ currentUser }) {
                 <button
                   type="button"
                   onClick={() => backupFileInputRef.current?.click()}
-                  disabled={isImportingBackup}
+                  disabled={isImportingBackup || trainingReadiness.status === "loading"}
                   className="rounded-lg border border-slate-700 px-4 py-3 font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isImportingBackup ? "Importing..." : "Import Backup"}
@@ -5615,6 +5636,20 @@ function AccountApp({ currentUser }) {
                   {backupMessage}
                 </p>
               ) : null}
+              <div className="mt-5 border-t border-slate-800 pt-4">
+                <h3 className="font-semibold text-white">Training backup and readiness</h3>
+                <p className="mt-1 break-words text-sm text-slate-300">Account: {currentUser.email ?? "Signed-in user"} · UID {currentUser.uid}</p>
+                <p className="mt-2 text-sm text-slate-300">Download server data for your user profile, programs, completed history and all app state, including notes, Rob preferences and saved reviews. Pause edits on all devices first.</p>
+                <p className="mt-2 text-sm text-amber-200">Known account data only: unknown subcollections cannot be enumerated. Integrity checks do not prove a tested restore. Cutover remains blocked. Keep this private file safe; it cannot be restored through Import Backup.</p>
+                <button type="button" onClick={handleTrainingReadinessExport} disabled={trainingReadiness.status === "loading" || isImportingBackup}
+                  className="mt-3 rounded-lg border border-emerald-400/50 px-4 py-3 font-semibold text-emerald-200 disabled:opacity-50">
+                  {trainingReadiness.status === "loading" ? "Reading and verifying…" : "Download training backup + preflight"}
+                </button>
+                {trainingReadiness.status === "error" ? <p role="alert" className="mt-2 text-sm text-amber-200">Could not read all server data or verify the export. No verified file was downloaded. Check your connection and account, then retry.</p> : null}
+                {trainingReadiness.status === "ready" ? <p role="status" className="mt-2 text-sm text-slate-300">
+                  Download prepared: {trainingReadiness.counts.programs} programs, {trainingReadiness.counts.completedWorkouts} completed workouts, {trainingReadiness.counts.appState} app-state documents. SHA-256, fetched-source and typed round-trip checks passed. {trainingReadiness.errors} preflight issues recorded. Full-account coverage and restore testing are still required before cutover.
+                </p> : null}
+              </div>
               <div className="mt-5 border-t border-slate-800 pt-4">
                 <h3 className="font-semibold text-white">Historical exercise ID preflight</h3>
                 <p className="mt-1 text-sm text-slate-300">Read your account data and download a migration plan. This does not change any workouts or routines.</p>

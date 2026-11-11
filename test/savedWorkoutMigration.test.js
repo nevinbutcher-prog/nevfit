@@ -113,7 +113,7 @@ test("missing legacy row IDs and group aliases are mapped explicitly; malformed 
   assert.equal(plan([{ ...program("p", []), createdAt: new Date() }]).target, null);
 });
 
-test("foundation has no persistence dependency or production entry-point activation", () => {
+test("foundation has no persistence dependency or direct App import", () => {
   for (const file of ["savedWorkoutModel.js", "savedWorkoutMigration.js"]) {
     const source = readFileSync(new URL(`../src/services/${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /(?:from|import)\s*["'][^"']*(?:firebase|Store|backupService)/);

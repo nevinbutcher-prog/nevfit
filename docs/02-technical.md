@@ -1052,7 +1052,8 @@ be added under `public/sounds/`.
 ## Independent Saved Workout Foundation (066; unactivated)
 
 This section is the future transition contract, not a description of deployed
-storage. No UI, startup, persistence, Rob or backup code imports the foundation.
+storage. Checkpoint 067's optional read-only export now invokes the pure planner;
+startup, persistence and Rob still use the legacy model, with no migration writer.
 `savedWorkoutModel.js` and `savedWorkoutMigration.js` only validate/transform
 plain JSON in memory. They perform no account discovery, reads, writes, deletes
 or automatic migrations. Screen mockups for Training, My Workouts, Program
@@ -1249,3 +1250,144 @@ or deleting staged/legacy documents requires separate explicit authorization.
 Keep legacy originals until independent review, user verification and a later
 approved cleanup decision. No migration, restore or subsequent UI checkpoint is
 automatically authorized by this foundation.
+
+## Training Backup and Read-Only Readiness (067)
+
+Settings / Data Management has a separate **Download training backup + preflight**
+action. The existing v1/v2 Export Backup / Import Backup paths and data formats
+are unchanged; import is temporarily disabled during this capture to avoid a
+local replacement racing the reads. No export runs on startup. The signed-in
+email/UID is shown before capture; only the currently authenticated UID is
+accepted, with SDK auth and mounted-account checks before reading, after reading,
+after integrity verification and before download. No account data is cached by
+this facility, logged to the console, uploaded, migrated or written to Firestore.
+
+### Exact coverage and limits
+
+`trainingReadinessStore.js` uses `getDocFromServer` / `getDocsFromServer`, with no
+offline/cache fallback, query filters or limits. It fetches:
+
+| Scope in the configured default database | Captured representation |
+| --- | --- |
+| `users/{uid}` | Raw user document, or an explicit absent-root entry |
+| `users/{uid}/programs/*` | Every direct document, exact path/ID and all raw fields, retaining both days/routines aliases and archived/deleted metadata |
+| `users/{uid}/completedWorkouts/*` | Every direct completed-workout document without normalisation, including original stored ID fields, sets, units and unknown metadata |
+| `users/{uid}/appState/*` | Every direct app-state document, including planning, activeWorkout, health, exerciseNotes, robCoaching, all saved weeklyCheckIn-* reviews, migration markers and any other direct appState records |
+
+This covers every known relevant account location found in current stores and
+allowed by current owner-only rules. It is **not an exhaustive full-account
+backup**. The browser SDK cannot enumerate unknown subcollections or descendants
+under documents. Future/unknown collections, including any independently created
+savedWorkouts/savedWorkoutPrograms, are not probed or declared absent. The export
+does not capture Firebase Authentication records/credentials, Storage files or
+other services. No privileged API, credentials, rules or collections were added.
+
+Pause editing/training on all devices and wait for existing sync to complete
+before export. The four server requests are separate reads, not an atomic
+account-wide snapshot. Cached or pending-write snapshots, failed reads, unsupported
+values, verification failures and account changes cancel the export; no partial
+or stale-cache package is downloaded. Existing ordinary app startup/sync behaviour
+is unchanged, so this is not a client-wide write lock. A future operator must
+compare fresh sources against the retained file before any migration approval.
+
+### File, typed representation and actual verification
+
+`nevfit-training-readiness-YYYY-MM-DD.json` is a private, separate format:
+
+```text
+format: nevfit-training-readiness; version: 1
+account: { uid, projectId, databaseId: "(default)" }
+capturedAt: UTC capture-start time
+coverage: known scopes, limitations, exhaustiveAccountBackup=false,
+          testedDestructiveRestore=false, cutoverAllowed=false
+documents: sorted [{ path, exists, value: typed encoding }]
+preflight: deterministic source counts, validation, linkage and 066 candidate
+manifest: SHA-256 of the body, per-document SHA-256 and existing-document counts
+```
+
+`firestoreValueCodec.js` tags every value, including maps/arrays and primitives,
+so ordinary user fields cannot masquerade as type markers. It preserves the
+SDK-observed Timestamp (seconds/nanoseconds), Bytes, GeoPoint, VectorValue and
+DocumentReference types using the installed SDK's public JSON methods, plus
+NaN, positive/negative infinity and negative zero. References also retain their
+project/database identity: SDK DocumentReference.toJSON alone only stores a
+relative path. Decode refuses a reference from another database/project rather
+than rebinding it. Unsupported types fail closed. This is a codec, not a writer.
+The installed SDK's Firestore.toJSON database identity is read for that check;
+SDK upgrades must retain/retest this codec contract.
+
+The client cannot recover Firestore integer-vs-double wire distinctions or numeric
+precision already lost by SDK decoding. Thus even an exact round trip proves
+fidelity to fetched **SDK values**, not to every underlying server wire type.
+No file is described as a comprehensive raw server recovery backup.
+
+`trainingReadinessBackup.js` validates UID/project scope, direct paths, duplicate
+paths, collection inventory counts and hashes. It serializes the actual package
+to JSON, parses it, decodes/re-encodes every typed document and compares it with
+the fetched source encoding, then recomputes the preflight. No decoder performs
+a Firestore write. `verifyTrainingReadinessExport` can perform the same local
+checks later; comparison to source data only happens when those source values
+are explicitly supplied. Digests detect changes and bind this representation;
+they do not prove exhaustive server coverage or successful restore. Keep the file
+privately outside Git; its filename pattern is ignored in the repository.
+
+### Preflight interpretation
+
+`trainingReadinessReport.js` derives its input from raw captured documents, never
+App-normalized program caches. Document path IDs are authoritative; conflicting
+stored program IDs are reported while the raw backup retains both. Timestamps
+are projected as seconds/nanoseconds JSON metadata for pure 066 validation; the
+typed original remains separate. Unexpected noncanonical planner values yield
+explicit errors and no partial candidate. Nothing is repaired or filtered out
+for live use. Empty accounts and archived/empty programs remain inspectable.
+
+The downloaded report includes source program/routine counts, 066 validation
+errors, duplicate/colliding routine occurrences, deterministic collision mappings
+and reported row/superset additions when a valid candidate exists. Invalid IDs,
+noncanonical set/rest fields, alias conflicts and target ID compatibility limits
+are reported. Weekly and active routine references are classified as resolved,
+unassigned (weekly rest only), ambiguous, missing, invalid or plan-invalid. A
+Quick Workout needs no routine association. No ownership is guessed from the
+selected program. Missing selected programs and inconsistent stored UID fields
+are also reported. Completed history is captured without modification and is
+not subjected to a template rewrite.
+
+`legacyValidationPassed` only describes the inspected graph. **cutoverAllowed is
+always false**, even with zero preflight errors. The report retains blockers for
+unknown-subcollection coverage, independent full-account backup verification,
+untested destructive restore and lack of live-cutover authorization. The candidate
+target is local report data, not a command for an importer or startup migration.
+
+### Remaining independent recovery requirement and manual handoff
+
+This checkpoint cannot fulfill the exhaustive full-account/faithful-restore gate
+with the current browser SDK. It stops at a truthful known-data export and
+read-only preflight. Do not use the existing replacing v1/v2 importer to load this
+file or to test a live restore.
+
+Before future live migration, an authorized project owner/operator must provide
+an independently reviewed read-only administrative export of the explicitly
+identified account. Appropriate existing admin tooling can recursively inventory
+that user's subcollections and preserve raw Firestore field types/paths in a
+full JSON recovery artifact; its scope and exact restoration procedure must be
+reviewed first. Use existing authorized local authentication, never credentials
+in source or supplied through chat. No privileged exporter or credential flow is
+implemented or executed here. If suitable tooling is unavailable, resolve that
+prerequisite in a separately approved step; do not promote the partial browser
+artifact to comprehensive status. Project-level managed export/import may be an
+additional owner-managed recovery option, with separately approved scope; it is
+not this account-scoped JSON format.
+
+The user retains untouched private copies. Verify the complete inventory against
+fresh server data and test the reviewed reconstruction/restore contract in an
+isolated environment before considering live writes. An export plus codec dry
+run is not that restore test. Preserve legacy originals and completed history
+as specified in 066, and keep all later migration/destructive work separately
+authorized. No live-account data was accessed or exported during implementation.
+
+After independent code review, the user can pause edits, confirm the displayed
+account, initiate the Settings download and retain it privately. Confirm that a
+JSON file appears, the expected program/history/app-state counts are plausible,
+and the preflight errors/linkage classifications are reviewable locally. Do not
+paste the raw private export into public issues or commit it. Further account
+inspection, full backup/restore verification and actual cutover remain pending.

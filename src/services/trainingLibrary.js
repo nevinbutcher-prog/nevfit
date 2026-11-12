@@ -99,6 +99,19 @@ export function applyTrainingOperation(library, operation) {
       if (!program) throw new Error("missing_program");
       for (const field of ["name", "description", "archived"]) if (Object.hasOwn(operation.program, field)) program[field] = operation.program[field];
       break;
+    case "duplicateProgram": {
+      if (!program || next.programs.some((entry) => entry.id === operation.newId) || operation.workoutCopies?.length !== program.workoutIds.length) throw new Error("invalid_program_duplicate");
+      const copies = program.workoutIds.map((id, index) => {
+        const source = next.workouts.find((entry) => entry.id === id);
+        const target = operation.workoutCopies[index];
+        if (target.id !== id || next.workouts.some((entry) => entry.id === target.newId) || target.rowIds?.length !== source.exercises.length) throw new Error("invalid_program_duplicate");
+        return { ...source, id: target.newId, archived: false, programId: operation.newId,
+          exercises: source.exercises.map((entry, row) => ({ ...entry, routineExerciseId: target.rowIds[row] })) };
+      });
+      next.workouts.push(...copies);
+      next.programs.push({ ...program, id: operation.newId, name: operation.name ?? `${program.name} Copy`, archived: false, workoutIds: copies.map((entry) => entry.id) });
+      break;
+    }
     case "deleteProgram":
       if (!program) throw new Error("missing_program");
       next.workouts.filter((entry) => entry.programId === program.id).forEach((entry) => move(entry, null));

@@ -1,10 +1,11 @@
 # Technical Notes
 
-**Current release state (070):** reviewed 069 rules from `b54cdd7` were separately
-deployed successfully, rules only, to `nevfit-fa139`. The expanded 070 rules below
-are not deployed. Earlier numbered sections record their checkpoint's state;
-the 070 section supersedes their future-runtime/release instructions. No live
-staging or activation has been performed during implementation.
+**Current release state:** reviewed 070 rules from `8936bcb` were separately
+deployed successfully, rules only, to `nevfit-fa139`. The user performed the
+controlled account transition and confirmed the activated Independent mode UI.
+Earlier numbered sections record their checkpoint's historical state. The 071
+Training UI uses those existing permissions; no rules release or live migration
+is part of 071. Full user data/experience acceptance remains separate.
 
 ## Startup recovery
 
@@ -1843,3 +1844,83 @@ have not been exercised.
 6. Disable the operator flag after the approved attempt. Record live release and
    user-verification evidence separately. Independent review and user acceptance
    precede the next visual redesign brief; do not generate another card here.
+
+## Training Workspace, Summary and Editor (071)
+
+Activated accounts use `components/training/TrainingWorkspace.jsx` from the
+existing internal `routines` route; visible top navigation is Training. Workouts
+is the default tab and inventories the full v2 library rather than program
+projections. Archived items have a separate filter. Cards show exercise/set
+counts and any program association without explanatory independence banners.
+The program organiser uses ordered workoutIds, explicit add/move/detach controls,
+rename/description, current-program selection, archive/restore, duplication and
+confirmed deletion. Program deletion keeps templates; workout deletion uses the
+existing store's schedule cleanup and never rewrites completed history.
+
+Workout Summary is a read-only prescription/notes preview with consistent
+superset labels. Start uses the saved v2 identity without creating a schedule
+assignment. An existing session with the same template resumes; another saved
+or Quick session uses the existing Finish/Discard/Cancel safeguard, including
+its failure behavior. Archived templates cannot start new sessions; an existing
+snapshot can still resume. Dashboard View Program opens that program's organiser.
+
+`WorkoutEditor.jsx` holds a shallow draft preserving native metadata and stable
+workout/row identities. `trainingEditor.js` prepares explicit saves and validates
+prescriptions. Add/Swap reuses `exerciseProvider` search, aliases, filters and
+catalogue metadata; order/remove/superset operations reuse `routineBuilder` and
+rep bounds reuse `RepRangeEditor`. New and duplicate records use fresh UUIDs.
+Descriptions, display names and row notes are retained. Native modal dialogs
+provide focus containment/Escape handling; tabs support arrow/Home/End keys.
+Internal navigation, app navigation and unload guard unsaved changes. Cancel
+returns to the original summary or organiser; Save opens the same workout summary.
+
+All mutations call `trainingStore.operate` through App's existing serialized
+program queue, with the baseline captured when the draft/dialog opened. Normal
+successful commits update the raw runtime and program projection together, plus
+local schedule links after deletion. Cache failure after cloud success is a cache
+warning, not a false failed save. Stale or unavailable writes retain the draft
+and show a real error. Reload updates the library but deliberately retains an
+old draft baseline: cancel/reopen to reconcile rather than blindly overwriting
+another device's edits. `duplicateProgram` is the one new domain operation,
+atomically cloning its ordered templates with fresh workout/row IDs. No writes
+go to legacy programs from this workspace. Legacy-mode accounts keep their
+existing program editor; Rob's existing projection/save path is retained.
+
+### Verification evidence and user route
+
+Focused domain/App regression tests cover first standalone creation with zero
+programs, create inside a program, stable-ID edits, prescriptions, program
+creation/rename/archive, order/move/detach, duplicate identities, current projection
+refresh, failed stale writes and saved-session safeguards. Existing builder,
+Quick Workout, history, startup, account-cache, navigation and Rob tests are run.
+The isolated `trainingRuntime.emulator.mjs` suite additionally verifies new
+organiser operations and atomic program duplication, fresh server reload,
+detach-on-delete, denied legacy writes and retained original/history/session
+records under the unchanged current rules. It refuses production project/hosts.
+No production account CRUD or migration is tested by the agent.
+
+A separate, uncommitted synthetic preview exercised the actual React components
+in an isolated headless browser at 375px and 1280px. It checked list, summary,
+editor, catalogue picker, empty account, draft-cancel guard, failed stale save
+with retained draft followed by successful save, membership and duplication,
+with no browser exceptions or control overflow. The browser preview has no
+Firebase connection. Evidence screenshots use synthetic names/data only:
+
+- `screenshots/071-training-workouts-desktop.png`
+- `screenshots/071-training-workouts-mobile.png`
+- `screenshots/071-workout-summary-mobile.png`
+- `screenshots/071-workout-editor-mobile.png`
+- `screenshots/071-program-organiser-mobile.png`
+
+After independent review, open the ordinary signed-in app, then **Training**.
+Check that Workouts includes actual standalone and program-owned templates.
+Open one summary; verify names/order/prescriptions/rest, supersets and notes.
+Edit one intended change, save and refresh to verify server persistence. Cancel
+an unsaved edit and confirm it does not change the template. Start a saved workout
+without a weekly assignment; check that another active session requires an
+explicit decision, resume works and finishing preserves normal history behavior.
+Use a disposable account/template for duplicate/archive/restore/move/detach and
+delete checks. In Programs check ordering/current-program selection and dashboard
+and planner consistency. Confirm phone keyboard/touch ergonomics on the real
+375px-class device; synthetic checks do not establish product acceptance.
+No new migration, Firebase rules release or next brief is queued by 071.

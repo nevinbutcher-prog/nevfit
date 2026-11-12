@@ -22,6 +22,7 @@ mobile-first app for planning, starting, logging, and reviewing workouts.
 
 ## Implemented Features
 
+- Training replaces the Programs navigation item. Activated accounts open Workouts by default, with all saved templates across programs plus standalone workouts and an archive filter. Workout Summary previews exercise order, prescriptions, supersets and notes before Start or Edit. A focused editor saves explicitly and guards unsaved changes. Programs is a compact organiser for ordered membership, moves, duplication, archive/restore and detach-on-delete. No program is required; Quick Workout remains on Dashboard. Legacy accounts retain their existing program editor.
 - Dashboard default landing screen
 - Compact Dashboard with today's strength/run context, current plan, weekly metrics, and Muscle Workload summary and detail view
 - Today-focused workout card with Start/Resume action

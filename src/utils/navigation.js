@@ -9,7 +9,7 @@ export function getViewModeForLoadedActiveWorkout(activeWorkoutSession) {
 }
 
 export function getViewModeAfterWorkout(action) {
-  if (action?.type === "open-workout") return "workout";
+  if (action?.type === "open-workout" || action?.type === "open-saved-workout") return "workout";
   if (action?.type === "change-assignment") return "planner";
   return DEFAULT_VIEW_MODE;
 }

@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createEmptySchedule, createEmptyPlanningState, hasWeeklyCheckInEvidence } from "./services/accountInitialization";
 import TrainingTransition from "./components/TrainingTransition";
+import TrainingWorkspace from "./components/training/TrainingWorkspace";
+import { savedWorkoutStartAction } from "./services/trainingEditor";
 import { auth as firebaseAuth, db as firestoreDb, firebaseApp } from "./services/firebase";
 import { createTrainingRuntimeStore } from "./services/trainingRuntimeStore";
 import { getPendingStartupOperations, reportStartupDiagnostic, runStartupOperation, STARTUP_TIMEOUT_MS, startupFailureDetails } from "./services/startupDiagnostics";
@@ -1858,7 +1860,12 @@ function AccountApp({ currentUser }) {
   const [exerciseNotesRevision, setExerciseNotesRevision] = useState(0);
   const [exerciseNotesOwnerUid, setExerciseNotesOwnerUid] = useState(null);
   const [expandedPersonalNoteExerciseId, setExpandedPersonalNoteExerciseId] = useState(null);
-  const [viewMode, setViewMode] = useState(getInitialViewMode);
+  const trainingNavigationGuard = useRef(() => true);
+  const [trainingOpenProgramId, setTrainingOpenProgramId] = useState(null);
+  const [viewMode, setRawViewMode] = useState(getInitialViewMode);
+  const setViewMode = useCallback((next) => {
+    if (trainingNavigationGuard.current()) setRawViewMode(next);
+  }, []);
   const [robQuestion, setRobQuestion] = useState("");
   const [robExchange, setRobExchange] = useState(null);
   const [robStatus, setRobStatus] = useState("idle");
@@ -2268,7 +2275,7 @@ function AccountApp({ currentUser }) {
     return () => {
       shouldApplyResults = false;
     };
-  }, [currentUser]);
+  }, [currentUser, setViewMode]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -3192,6 +3199,40 @@ function AccountApp({ currentUser }) {
     }
   }
 
+  function applyTrainingRuntime(saved) {
+    trainingRuntimeRef.current = saved;
+    setTrainingRuntime(saved);
+    const projection = projectTrainingPrograms(saved.library);
+    setProgramDefinitions(projection);
+    setProgramDrafts(projection);
+    setProgramSyncError("");
+    try { accountStorage.setItem("nevfit_independent_runtime", JSON.stringify(encodeFirestoreValue(saved))); }
+    catch { setProgramSyncError("Training is saved to cloud. This device's cache could not be updated."); }
+  }
+
+  function operateTraining(operation, baseline) {
+    const uid = currentUser.uid;
+    const save = async () => {
+      if (currentUserUidRef.current !== uid || trainingRuntimeRef.current.mode !== "v2") throw new Error("Training account changed. Reload before saving.");
+      const saved = await trainingStore.operate(baseline, operation);
+      if (currentUserUidRef.current !== uid) throw new Error("Training account changed. Reload before saving.");
+      applyTrainingRuntime(saved);
+      const removed = baseline.library.workouts.filter((workout) => !saved.library.workouts.some((entry) => entry.id === workout.id)).map((workout) => workout.id);
+      if (removed.length) setSchedule((days) => days.map((day) => removed.includes(day.routineDayId) ? { ...day, routineDayId: null } : day));
+      return saved;
+    };
+    const queued = programPersistQueueRef.current.then(save, save);
+    programPersistQueueRef.current = queued.catch(() => {});
+    return queued;
+  }
+
+  async function reloadTraining() {
+    await programPersistQueueRef.current;
+    const saved = await trainingStore.load();
+    if (saved.mode !== "v2" || currentUserUidRef.current !== currentUser.uid) throw new Error("Training account changed. Reload the app.");
+    applyTrainingRuntime(saved);
+  }
+
   async function persistRuntimePrograms(programs, user, actionName) {
     const runtime = trainingRuntimeRef.current;
     if (runtime.mode === "legacy") return persistProgramDefinitions(programs, user, actionName);
@@ -3666,6 +3707,17 @@ function AccountApp({ currentUser }) {
     setViewMode("workout");
   }
 
+  function openSavedWorkout(workout) {
+    const action = savedWorkoutStartAction(activeWorkoutSession, workout);
+    if (action === "confirm") {
+      setPendingWorkoutAction({ type: "open-saved-workout", workout });
+      return;
+    }
+    if (action === "start") setActiveWorkoutSession(createRuntimeWorkoutSession({ id: null }, workout, exerciseLibrary));
+    setRestTimer(null);
+    setViewMode("workout");
+  }
+
   function openWorkout(scheduleDay, routineDay) {
     if (
       activeWorkoutSession &&
@@ -3857,6 +3909,11 @@ function AccountApp({ currentUser }) {
       setActiveWorkoutSession(
         createRuntimeWorkoutSession(action.scheduleDay, action.routineDay, exerciseLibrary),
       );
+      setRestTimer(null);
+    }
+
+    if (action.type === "open-saved-workout") {
+      setActiveWorkoutSession(createRuntimeWorkoutSession({ id: null }, action.workout, exerciseLibrary));
       setRestTimer(null);
     }
 
@@ -4893,14 +4950,14 @@ function AccountApp({ currentUser }) {
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode("routines")}
+                onClick={() => { setTrainingOpenProgramId(null); setViewMode("routines"); }}
                 className={`min-w-0 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-semibold transition sm:px-4 sm:text-sm ${
                   viewMode === "routines"
                     ? "bg-emerald-400 text-slate-950"
                     : "text-slate-300 hover:bg-slate-800"
                 }`}
               >
-                Programs
+                Training
               </button>
               <button
                 type="button"
@@ -5138,7 +5195,7 @@ function AccountApp({ currentUser }) {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                  <button type="button" onClick={() => setViewMode("routines")}
+                  <button type="button" onClick={() => { setTrainingOpenProgramId(dashboardProgram?.id ?? null); setViewMode("routines"); }}
                     className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500">{dashboardProgram ? "View Program" : "Create Program"}</button>
                   <button
                     type="button"
@@ -5729,8 +5786,14 @@ function AccountApp({ currentUser }) {
           </section>
         ) : null}
 
-        {viewMode === "routines" ? (
+        {viewMode === "routines" && trainingRuntime.mode === "v2" ? <TrainingWorkspace runtime={trainingRuntime}
+          onOperate={operateTraining} onReload={reloadTraining} onStart={openSavedWorkout} activeSession={activeWorkoutSession}
+          getExercise={getExercise} onExerciseLoaded={(exercise) => setExerciseLibrary((library) => library.some((entry) => entry.id === exercise.id) ? library : [...library, exercise])}
+          renderMetadata={(exercise) => <ExerciseMetadata exercise={exercise} instructionMode="full" />}
+          navigationGuardRef={trainingNavigationGuard} selectedProgramId={selectedProgramId} onSelectProgram={setSelectedProgramId} exerciseNotes={exerciseNotes} initialProgramId={trainingOpenProgramId} /> : null}
+        {viewMode === "routines" && trainingRuntime.mode === "legacy" ? (
           <section className="min-w-0">
+            <h2 className="mb-4 flex flex-wrap items-center gap-3 text-2xl font-bold">Programs <span className="rounded-lg border border-slate-700 px-2 py-1 text-xs font-medium text-slate-400">Legacy editor</span></h2>
             {selectedProgramSaveStatus ? (
               <p
                 className={`mb-4 rounded-lg border px-4 py-3 text-sm font-semibold ${

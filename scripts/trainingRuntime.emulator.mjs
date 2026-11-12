@@ -123,5 +123,17 @@ try {
   assert.equal(emptyRuntime.library.programs.length, 0);
   assert.equal(emptyRuntime.library.workouts[0].programId, null);
   assert.equal((await getDocsFromServer(collection(empty.db, "users", empty.uid, "programs"))).size, 0);
+  emptyRuntime = await empty.store.operate(emptyRuntime, { type: "createProgram", program: { id: "organiser", name: "New plan" } });
+  emptyRuntime = await empty.store.operate(emptyRuntime, { type: "moveWorkout", id: "solo", programId: "organiser" });
+  emptyRuntime = await empty.store.operate(emptyRuntime, { type: "saveWorkout", id: "solo", workout: { name: "Edited standalone", exercises: [{ routineExerciseId: "solo-row", exerciseId: "wger-1", sets: 4, repRange: "8-12", restSeconds: 90, supersetGroupId: null }] } });
+  emptyRuntime = await empty.store.operate(emptyRuntime, { type: "duplicateProgram", id: "organiser", newId: "plan-copy", workoutCopies: [{ id: "solo", newId: "solo-copy", rowIds: ["copy-row"] }] });
+  let reloaded = await empty.store.load();
+  same(reloaded, emptyRuntime);
+  assert.deepEqual(reloaded.library.programs.find((program) => program.id === "plan-copy").workoutIds, ["solo-copy"]);
+  assert.equal(reloaded.library.workouts.find((workout) => workout.id === "solo-copy").exercises[0].routineExerciseId, "copy-row");
+  reloaded = await empty.store.operate(reloaded, { type: "deleteProgram", id: "plan-copy" });
+  assert.equal(reloaded.library.workouts.find((workout) => workout.id === "solo-copy").programId, null);
+  assert.equal((await getDocsFromServer(collection(empty.db, "users", empty.uid, "programs"))).size, 0);
+  process.stdout.write("PASS Training organiser create/edit/move, atomic program duplication, fresh server reload and detach-on-delete without legacy writes\n");
   process.stdout.write("PASS drift/active-session activation rejection, verified-stage gate and zero-program/standalone runtime\n");
 } finally { await Promise.all(apps.map((app) => deleteApp(app))); }

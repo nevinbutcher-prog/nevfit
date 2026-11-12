@@ -13,6 +13,8 @@ import SignInScreen from "./components/SignInScreen";
 import TrainingStageDryRun from "./components/TrainingStageDryRun";
 import { exportTrainingReadiness, downloadTrainingReadiness } from "./services/trainingReadinessStore";
 import QuickWorkoutFooter from "./components/QuickWorkoutFooter";
+import WorkoutRecovery from "./components/WorkoutRecovery";
+import { getWorkoutPresentation, invalidActiveWorkoutError } from "./services/workoutRecovery";
 import { getRecentWorkoutExercises, groupRecentWorkoutExercises } from "./services/recentWorkoutExercises";
 import { createAccountCache } from "./services/accountCache.js";
 import { authErrorMessage } from "./services/authFlow.js";
@@ -1476,8 +1478,8 @@ async function loadUserActiveWorkout(uid) {
   assertCurrentCache(uid);
 
   if (typeof cloudSession !== "undefined") {
-    const activeSession = isValidWorkoutSession(cloudSession) ? cloudSession : null;
-    persistActiveWorkoutSession(activeSession);
+    if (cloudSession !== null && !isValidWorkoutSession(cloudSession)) throw invalidActiveWorkoutError();
+    const activeSession = cloudSession;
     logActiveWorkoutSync("active-workout-load", uid, activeSession, "success");
     return activeSession;
   }
@@ -1485,17 +1487,13 @@ async function loadUserActiveWorkout(uid) {
   const localSession = loadStoredActiveWorkoutSession();
 
   if (localSession) {
-    await saveActiveWorkout(uid, localSession);
-    logActiveWorkoutSync(
-      "active-workout-migrate-local",
-      uid,
-      localSession,
-      "success",
-    );
+    // A missing server document is not authorization to upload device state.
+    // Keep the same-account snapshot available; validation/recovery gates its UI.
+    logActiveWorkoutSync("active-workout-device-only", uid, localSession, "local");
     return localSession;
   }
 
-  persistActiveWorkoutSession(null);
+  if (accountStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY)) throw invalidActiveWorkoutError();
   logActiveWorkoutSync("active-workout-load-empty", uid, null, "success");
   return null;
 }
@@ -1856,6 +1854,10 @@ function AccountApp({ currentUser }) {
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(
     loadStoredActiveWorkoutSession,
   );
+  const [activeWorkoutRestoreIssue, setActiveWorkoutRestoreIssue] = useState(null);
+  const [workoutRecoveryDiscarding, setWorkoutRecoveryDiscarding] = useState(false);
+  const [workoutRecoveryError, setWorkoutRecoveryError] = useState("");
+  const workoutRecoveryDiscardingRef = useRef(false);
   const [exerciseNotes, setExerciseNotes] = useState({});
   const [exerciseNotesRevision, setExerciseNotesRevision] = useState(0);
   const [exerciseNotesOwnerUid, setExerciseNotesOwnerUid] = useState(null);
@@ -1953,9 +1955,7 @@ function AccountApp({ currentUser }) {
   const initialSelectedDayScrollDoneRef = useRef(false);
   const selectedDayCardRef = useRef(null);
   const lastProfileSyncUidRef = useRef(null);
-  const lastPlanningLoadUidRef = useRef(null);
   const lastHealthLoadUidRef = useRef(null);
-  const lastActiveWorkoutLoadUidRef = useRef(null);
   const lastWorkoutHistoryLoadUidRef = useRef(null);
   const programPersistQueueRef = useRef(Promise.resolve());
   const planningPersistQueueRef = useRef(Promise.resolve());
@@ -1988,11 +1988,22 @@ function AccountApp({ currentUser }) {
     };
   }
   const activeWorkoutLoadedRef = useRef(false);
+  const activeWorkoutBaselineRef = useRef(null);
   const workoutSetInputRefs = useRef(new Map());
   const backupFileInputRef = useRef(null);
   const exerciseSearchInputRef = useRef(null);
-  const isWorkoutActive =
-    viewMode === "workout" && Boolean(activeWorkoutSession);
+  const workoutPresentation = getWorkoutPresentation({ session: activeWorkoutSession, mode: trainingRuntime.mode,
+    programs: programDefinitions, workouts: trainingRuntime.library?.workouts, schedule,
+    loading: activeWorkoutLoading || programsLoading || planningLoading || trainingRuntime.mode === "loading",
+    restoreIssue: activeWorkoutRestoreIssue });
+  const workoutNeedsRecovery = workoutPresentation.status === "recovery";
+  const isWorkoutActive = viewMode === "workout" && workoutPresentation.status === "ready";
+  useEffect(() => {
+    if (workoutNeedsRecovery) {
+      setRestTimer(null);
+      console.warn("Active workout recovery required", { reason: workoutPresentation.reason });
+    }
+  }, [workoutNeedsRecovery, workoutPresentation.reason]);
   const getExercise = (exerciseId) =>
     getExerciseFromLibrary(exerciseId, exerciseLibrary);
 
@@ -2113,20 +2124,13 @@ function AccountApp({ currentUser }) {
 
   useEffect(() => {
     if (!currentUser) {
-      lastPlanningLoadUidRef.current = null;
       setPlanningLoading(false);
       return undefined;
     }
 
     const loadUid = currentUser.uid;
 
-    if (lastPlanningLoadUidRef.current === loadUid) {
-      setPlanningLoading(false);
-      return undefined;
-    }
-
     let shouldApplyResults = true;
-    lastPlanningLoadUidRef.current = loadUid;
     setPlanningLoading(true);
     setAppStateSyncError("");
 
@@ -2150,7 +2154,6 @@ function AccountApp({ currentUser }) {
         }
 
         console.error("Planning state sync failed:", error);
-        lastPlanningLoadUidRef.current = null;
         setAppStateSyncError(
           "Planning data is using this device cache. Cloud sync is unavailable.",
         );
@@ -2222,7 +2225,6 @@ function AccountApp({ currentUser }) {
 
   useEffect(() => {
     if (!currentUser) {
-      lastActiveWorkoutLoadUidRef.current = null;
       activeWorkoutLoadedRef.current = false;
       setActiveWorkoutLoading(false);
       return undefined;
@@ -2230,13 +2232,7 @@ function AccountApp({ currentUser }) {
 
     const loadUid = currentUser.uid;
 
-    if (lastActiveWorkoutLoadUidRef.current === loadUid) {
-      setActiveWorkoutLoading(false);
-      return undefined;
-    }
-
     let shouldApplyResults = true;
-    lastActiveWorkoutLoadUidRef.current = loadUid;
     activeWorkoutLoadedRef.current = false;
     setActiveWorkoutLoading(true);
     setWorkoutSyncError("");
@@ -2248,6 +2244,10 @@ function AccountApp({ currentUser }) {
         }
 
         setActiveWorkoutSession(loadedSession);
+        try { persistActiveWorkoutSession(loadedSession); }
+        catch { setWorkoutSyncError("Your active workout loaded from cloud, but this device's cache could not be updated."); }
+        setActiveWorkoutRestoreIssue(null);
+        activeWorkoutBaselineRef.current = JSON.stringify(loadedSession);
         setViewMode(getViewModeForLoadedActiveWorkout(loadedSession));
         activeWorkoutLoadedRef.current = true;
       })
@@ -2257,14 +2257,16 @@ function AccountApp({ currentUser }) {
         }
 
         console.error("Active workout sync failed:", error);
-        lastActiveWorkoutLoadUidRef.current = null;
+        const invalid = error.code === "invalid-active-workout";
+        const fallback = invalid ? null : loadStoredActiveWorkoutSession();
+        setActiveWorkoutSession(fallback);
+        setActiveWorkoutRestoreIssue(invalid ? "invalid-session" : null);
+        activeWorkoutBaselineRef.current = JSON.stringify(fallback);
         activeWorkoutLoadedRef.current = true;
-        setViewMode(
-          getViewModeForLoadedActiveWorkout(loadStoredActiveWorkoutSession()),
-        );
-        setWorkoutSyncError(
-          "Active workout is using this device cache. Cloud sync is unavailable.",
-        );
+        setViewMode(invalid ? "workout" : getViewModeForLoadedActiveWorkout(fallback));
+        setWorkoutSyncError(invalid
+          ? "The saved active workout couldn't be restored. Review the recovery options before starting another workout."
+          : "Active workout is using this device cache. Cloud sync is unavailable.");
       })
       .finally(() => {
         if (shouldApplyResults) {
@@ -2535,9 +2537,12 @@ function AccountApp({ currentUser }) {
 
   useEffect(() => {
     if (!currentUser || activeWorkoutLoading || !activeWorkoutLoadedRef.current) {
-      persistActiveWorkoutSession(activeWorkoutSession);
       return;
     }
+    if (activeWorkoutRestoreIssue || (activeWorkoutSession && workoutPresentation.status !== "ready")) return;
+    const signature = JSON.stringify(activeWorkoutSession);
+    if (signature === activeWorkoutBaselineRef.current) return;
+    activeWorkoutBaselineRef.current = signature;
 
     const queuedPersist = activeWorkoutPersistQueueRef.current.then(
       () =>
@@ -2563,7 +2568,7 @@ function AccountApp({ currentUser }) {
           : "Active workout is saved on this device. Cloud sync is unavailable.",
       );
     });
-  }, [activeWorkoutLoading, activeWorkoutSession, currentUser]);
+  }, [activeWorkoutLoading, activeWorkoutSession, activeWorkoutRestoreIssue, workoutPresentation.status, currentUser]);
 
   useEffect(() => {
     if (
@@ -3703,11 +3708,13 @@ function AccountApp({ currentUser }) {
   }
 
   function openQuickWorkout() {
+    if (workoutNeedsRecovery) { setViewMode("workout"); return; }
     setActiveWorkoutSession((session) => session ?? createQuickWorkoutSession());
     setViewMode("workout");
   }
 
   function openSavedWorkout(workout) {
+    if (workoutNeedsRecovery) { setViewMode("workout"); return; }
     const action = savedWorkoutStartAction(activeWorkoutSession, workout);
     if (action === "confirm") {
       setPendingWorkoutAction({ type: "open-saved-workout", workout });
@@ -3719,6 +3726,7 @@ function AccountApp({ currentUser }) {
   }
 
   function openWorkout(scheduleDay, routineDay) {
+    if (workoutNeedsRecovery) { setViewMode("workout"); return; }
     if (
       activeWorkoutSession &&
       (activeWorkoutSession.scheduleDayId !== scheduleDay.id ||
@@ -3826,6 +3834,26 @@ function AccountApp({ currentUser }) {
     setActiveWorkoutSession(null);
     setRestTimer(null);
     setViewMode("dashboard");
+  }
+
+  async function discardRecoveredWorkout() {
+    if (workoutRecoveryDiscardingRef.current || !window.confirm("Discard this unfinished workout and its logged sets? Completed workout history will be kept.")) return;
+    const uid = currentUser.uid;
+    workoutRecoveryDiscardingRef.current = true;
+    setWorkoutRecoveryDiscarding(true); setWorkoutRecoveryError("");
+    try {
+      await activeWorkoutPersistQueueRef.current;
+      if (currentUserUidRef.current !== uid) return;
+      await clearActiveWorkout(uid);
+      if (currentUserUidRef.current !== uid) return;
+      let cacheUpdated = true;
+      try { persistActiveWorkoutSession(null); } catch { cacheUpdated = false; }
+      activeWorkoutBaselineRef.current = JSON.stringify(null);
+      setActiveWorkoutRestoreIssue(null); setActiveWorkoutSession(null); setRestTimer(null);
+      setPendingWorkoutAction(null); setViewMode("dashboard"); setWorkoutSyncError(cacheUpdated ? "" : "The workout was discarded from your account, but this device's cache could not be updated. Reload to verify.");
+    } catch {
+      if (currentUserUidRef.current === uid) setWorkoutRecoveryError("Couldn't discard the saved workout. Return to Dashboard, check your connection and try again. Your session has been kept.");
+    } finally { workoutRecoveryDiscardingRef.current = false; if (currentUserUidRef.current === uid) setWorkoutRecoveryDiscarding(false); }
   }
 
   function requestFooterFinishWorkout() {
@@ -4079,22 +4107,19 @@ function AccountApp({ currentUser }) {
     return <LoadingScreen pending={pendingStartup} />;
   }
 
-  const activeWorkoutDay = schedule.find(
-    (day) => day.id === activeWorkoutSession?.scheduleDayId,
-  );
-  const activeRoutineDay = trainingRuntime.mode === "v2" && activeWorkoutSession?.routineDayId
-    ? { name: activeWorkoutSession.routineDayName ?? trainingRuntime.library.workouts.find((workout) => workout.id === activeWorkoutSession.routineDayId)?.name ?? "Saved Workout" }
-    : getRuntimeWorkout(activeWorkoutSession?.routineDayId, programDefinitions);
+  const activeWorkoutDay = workoutPresentation.day;
+  const activeRoutineDay = workoutPresentation.routine;
   const isQuickWorkout = activeWorkoutSession?.sessionKind === "quick";
   const WorkoutFooterContainer = isQuickWorkout ? QuickWorkoutFooter : "div";
-  const activeWorkoutName = isQuickWorkout ? "Quick Workout" : activeRoutineDay?.name;
+  const activeWorkoutName = workoutPresentation.name;
+  const displayedWorkoutExercises = workoutPresentation.status === "ready" ? activeWorkoutSession.exercises : [];
   const activeWorkoutSetCount =
-    activeWorkoutSession?.exercises.reduce(
+    displayedWorkoutExercises.reduce(
       (total, exercise) => total + exercise.sets.length,
       0,
     ) ?? 0;
   const activeWorkoutCompletedSetCount =
-    activeWorkoutSession?.exercises.reduce(
+    displayedWorkoutExercises.reduce(
       (total, exercise) =>
         total + exercise.sets.filter(isWorkoutSetComplete).length,
       0,
@@ -4922,7 +4947,7 @@ function AccountApp({ currentUser }) {
       }`}
     >
       <div className="mx-auto w-full max-w-7xl min-w-0 overflow-x-hidden">
-        {viewMode !== "workout" ? (
+        {!isWorkoutActive ? (
           <header className="mb-5">
             <div className="flex min-w-0 items-center justify-between gap-3">
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">NevFit</h1>
@@ -4999,6 +5024,10 @@ function AccountApp({ currentUser }) {
           </p>
         ) : null}
 
+        {viewMode === "dashboard" && workoutNeedsRecovery ? <section role="status" className="mb-4 rounded-xl border border-amber-400/40 bg-slate-900 p-4">
+          <p className="font-semibold text-amber-200">An unfinished workout needs attention</p>
+          <button type="button" onClick={() => setViewMode("workout")} className="mt-3 min-h-11 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold">Review Workout Recovery</button>
+        </section> : null}
         {viewMode === "rob" ? (
           <section className="mx-auto max-w-2xl space-y-4">
             <div className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-400/40 bg-slate-900 p-5 shadow-2xl shadow-emerald-950/30">
@@ -6830,9 +6859,9 @@ function AccountApp({ currentUser }) {
           </div>
         ) : null}
 
-        {viewMode === "workout" &&
-        activeWorkoutSession &&
-        (isQuickWorkout || (activeRoutineDay && (activeWorkoutDay || trainingRuntime.mode === "v2"))) ? (
+        {viewMode === "workout" && !isWorkoutActive ? <WorkoutRecovery reason={workoutNeedsRecovery ? workoutPresentation.reason : null}
+          onReturn={() => setViewMode("dashboard")} onDiscard={discardRecoveredWorkout} busy={workoutRecoveryDiscarding} error={workoutRecoveryError} /> : null}
+        {isWorkoutActive ? (
           <section className="mt-3 min-w-0 overflow-x-hidden rounded-2xl border border-slate-800 bg-slate-900 p-2.5 sm:p-3">
             <button
               type="button"

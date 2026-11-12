@@ -25,6 +25,42 @@ obsolete `_smokeTest` query and its caller are removed, since that top-level
 collection is denied by the rules and was unrelated to startup hydration.
 Normal runtime reads/writes and data-transition confirmation gates are unchanged.
 
+## Active-workout recovery
+
+`workoutRecovery.js` supplies a single presentation decision for the workout
+body, fixed timer/footer and normal navigation. A truthy session alone cannot
+enter full-screen workout mode. Legacy missing program/workout/day references,
+malformed sessions, empty planned sessions and model mismatches enter recovery.
+Returning to Dashboard retains the snapshot; a visible reminder links back to
+recovery. Starting another workout cannot silently overwrite a recovery session.
+An empty Quick Workout remains valid and supports Add Exercise; complete v2 saved
+snapshots need neither a current template/program nor an assigned schedule day.
+
+`WorkoutRecovery.jsx` always offers Return to Dashboard and, for stored-session
+problems, explicitly confirmed Discard Workout. The latter drains pending active
+writes, clears only the scoped active-workout document, then clears that session's
+cache/state. A failed cloud clear leaves the session/recovery available, with a
+retry message and Dashboard access. Completed history/templates are not changed.
+Recovery stops the ephemeral rest timer; disabled Skip is never an exit control.
+
+Active reads are server-only. A missing document may retain a valid same-UID
+device snapshot for display, but does not upload it; a recreated UID cannot read
+the prior UID's cache. Invalid raw source data stays untouched for explicit
+recovery. Hydration captures a baseline and does not trigger autosave until an
+actual edit/discard; incomplete/recovery state cannot overwrite cloud data.
+The active/session and schedule effects each restart safely after Strict Mode
+cleanup, so cancelled reads cannot drop the only valid restoration result.
+No Auth account deletion, data migration, storage reset or rule change is part of
+this fix. Fresh/Incognito sign-in can still see account-owned cloud snapshots;
+the agent did not inspect the affected account to identify its specific orphan.
+
+Focused recovery, startup, account-isolation, navigation, Quick Workout,
+snapshot and Training-domain checks passed (34 tests), along with lint and the
+production build. Real-device verification: reload the affected account, use
+Return to Dashboard, reopen recovery and explicitly discard only if the unfinished
+session is no longer wanted; separately resume a valid legacy/v2 session and
+confirm its logged sets survive. No affected-account destructive test was run.
+
 ## Stack
 
 - Vite

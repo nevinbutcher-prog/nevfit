@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, runTransaction } from "firebase/firestore";
+import { doc, getDocFromServer, serverTimestamp, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 
 const ACTIVE_WORKOUT_DOC_ID = "activeWorkout";
@@ -34,7 +34,7 @@ function removeUndefinedValues(value) {
 }
 
 export async function loadActiveWorkout(uid) {
-  const snapshot = await getDoc(activeWorkoutDocument(uid));
+  const snapshot = await getDocFromServer(activeWorkoutDocument(uid));
 
   return snapshot.exists() ? snapshot.data().activeWorkoutSession ?? null : undefined;
 }
